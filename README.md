@@ -2,32 +2,41 @@
 
 # Browser scripts: Oolio
 
-Small browser add-ons that make day-to-day work in Oolio Office and HubSpot quicker. They run in [Tampermonkey](https://www.tampermonkey.net/) and use your own login, so there are no passwords or keys in here.
-
-## Install
-
-1. Install the Tampermonkey extension for Chrome: [Chrome Web Store](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo).
-2. Chrome only: open `chrome://extensions`, click **Details** on Tampermonkey and turn on **Allow User Scripts**. On older Chrome versions, turn on **Developer mode** (top right) instead. Scripts won't run without this.
-3. Open the script file below and click **Raw**. Tampermonkey shows its install screen. Click **Install**.
-
-   If the install screen doesn't appear, copy the whole file, open the Tampermonkey dashboard, click **+**, paste over the template and press Ctrl+S (Cmd+S on Mac).
-
-This repo is private, so scripts don't update themselves. When a script changes, you'll get a message. Reinstall it the same way.
+Small add-ons that make Oolio Office and HubSpot quicker to use. They run in Tampermonkey and use your own login, so there are no passwords or keys in here.
 
 ## Scripts
 
-| Script | What it does | File |
-|---|---|---|
-| **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets. The scheduler opens on top of Help Desk with the title set to the ticket name and a link back to the ticket in the invite. | [prefill-meeting.user.js](hubspot/prefill-meeting.user.js) |
-| **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for the current venue, date range and filters as CSV (for Excel) or JSON. | [device-logs.user.js](oolio-office/device-logs.user.js) |
+| Script | What it does |
+|---|---|
+| [Oolio Office: Download Device Logs](oolio-office/device-logs.user.js) | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. |
+| [HubSpot: Prefill meeting from ticket](hubspot/prefill-meeting.user.js) | Adds a **Book meeting** button to Help Desk tickets. Fills in the title and a link back to the ticket. |
+| [HubSpot: Cmd/Ctrl + Enter to send](hubspot/send-shortcut.user.js) | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. |
+
+## Set up (once, about 3 minutes)
+
+1. **Install Tampermonkey.** In Chrome, open the [Tampermonkey page on the Chrome Web Store](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) and click **Add to Chrome**, then **Add extension**.
+2. **Pin it.** Click the puzzle piece icon in the Chrome toolbar and click the pin next to Tampermonkey.
+3. **Let it run scripts.** Go to `chrome://extensions`, click **Details** on Tampermonkey and turn on **Allow User Scripts**. If you don't see that option, turn on **Developer mode** (top right) instead. Nothing will run without this step.
+
+## Install a script
+
+1. Open the script from the table above and click **Raw**.
+2. Tampermonkey opens its install screen. Click **Install**.
+3. Refresh the page you'll use it on.
+
+If the install screen doesn't appear: copy the whole file, click the Tampermonkey icon, choose **Create a new script**, paste over everything and press **Cmd + S** (Mac) or **Ctrl + S** (Windows).
+
+## Updates
+
+The repo is private, so scripts don't update themselves. When a script changes you'll get a message. Install it again the same way and it replaces the old version.
+
+## Using the scripts
 
 ### Download Device Logs
 
-1. In Oolio Office, go to **Logs > Devices** and set the venue, date range and any filters.
-2. Click **Download logs** (bottom right) and pick **CSV** or **JSON**.
-3. The file saves to your Downloads folder, named with the date range.
-
-The CSV has local time, UTC time, level, tag, device, message, order, user and the full context for each line.
+1. In Oolio Office, go to **Logs > Devices** and set the venue, date range and filters.
+2. Click **Download logs** (bottom right) and pick **CSV** (for Excel) or **JSON**.
+3. The file saves to Downloads, named with the date range.
 
 ### Prefill meeting from ticket
 
@@ -35,22 +44,25 @@ The CSV has local time, UTC time, level, tag, device, message, order, user and t
 
 1. Open a ticket in HubSpot Help Desk.
 2. Click **Book meeting** (bottom right).
-3. Pick a time. The title and ticket link are already filled in.
-4. Book it, or press **Esc** or **×** to close.
+3. Pick a time and book. Press **Esc** to close without booking.
 
-Good to know:
+The ticket link goes to everyone invited, customers included, but only HubSpot users can open it. In Outlook, **Cmd + click** (or **Ctrl + click**) the link to open it.
 
-- The Attendee description goes to everyone invited, customers included. Customers can't open a HubSpot link, so the link is mainly for us.
-- In Outlook, your own events open in edit mode. **Cmd + click** (Mac) or **Ctrl + click** (Windows) the link to open it.
-- To change the meeting title, edit `TITLE_FORMAT` near the top of the script, for example `` (t) => `Bepoz: ${t.name}` ``.
+### Cmd/Ctrl + Enter to send
+
+1. Type a comment, note or email reply in HubSpot.
+2. Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows).
+3. It presses that box's **Send**, **Comment**, **Save** or **OK** button, and a small message shows which one.
+
+It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
 
 ## Problems or ideas
 
-Raise an issue on this repo, or message Stephen Balderson.
+Raise an issue on this repo, or message Stephen.
 
 ## For maintainers
 
 - One script per file, grouped by site (`oolio-office/`, `hubspot/`).
+- Keep `@namespace oolio-userscripts` on every script. Changing it makes Tampermonkey install a second copy.
 - Bump `@version` on every change, add a line to [CHANGELOG.md](CHANGELOG.md) and tell colleagues to reinstall.
-- Keep `@namespace oolio-userscripts` on every script. Changing it makes Tampermonkey treat the script as a new one.
-- The repo is private, so there's no `@updateURL`. If it ever goes public, add `@updateURL` and `@downloadURL` pointing at each raw file on `main` and updates become automatic.
+- UI follows the Oolio brand: Oolio Purple `#673AB6`, Inter, Lucide line icons.

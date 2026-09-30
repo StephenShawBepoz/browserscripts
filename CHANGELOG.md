@@ -1,5 +1,10 @@
 # Changelog
 
+## HubSpot: Cmd/Ctrl + Enter to send
+
+### 1.0.0 (30/09/2026)
+- New. Cmd + Enter or Ctrl + Enter presses Send, Comment, Save or OK for the box you're typing in, with a small Oolio-branded confirmation.
+
 ## HubSpot: Prefill meeting from ticket
 
 ### 2.3.0 (30/09/2026)
