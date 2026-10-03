@@ -1,5 +1,14 @@
 # Changelog
 
+## HubSpot: Quick actions
+
+### 0.1.0 (03/10/2026, beta)
+- New. Replaces *Prefill meeting from ticket* with a toolbar: **Meeting** (same as before) and **Directions**.
+- Directions finds the record's primary company, shows the drive time and distance from your saved places or your current location, a small map, and links to Google Maps, OpenStreetMap and (on a Mac) Apple Maps.
+- Optional public transport times from Transitous, off by default.
+- Handles records with several companies, missing or wrong addresses (edit kept per company in your browser), and swapping the trip to go from the customer.
+- Hides the old *Prefill meeting* button if that script is still installed.
+
 ## HubSpot: Cmd/Ctrl + Enter to send
 
 ### 1.0.1 (03/10/2026)
