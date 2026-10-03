@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         HubSpot: Prefill meeting from ticket
 // @namespace    oolio-userscripts
-// @version      2.3.0
-// @description  Book meetings from Help Desk without leaving the page; prefills title with the ticket name and adds a ticket link to the Attendee description.
+// @version      2.4.0
+// @description  Book meeting button on Help Desk tickets and on contact, company, deal and ticket records; prefills title with the ticket or deal name and adds a link to the Attendee description.
 // @match        https://app.hubspot.com/help-desk/*
+// @match        https://app.hubspot.com/contacts/*
 // @match        https://app.hubspot.com/calendar-select-iframe/*
 // @icon         data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTQwLjA5OSAwQzE3My4xODEgMCAyMDAgMjYuNjk3OSAyMDAgNTkuNjMxNEMyMDAgOTIuNTY0OSAxNzMuMTgxIDExOS4yNjMgMTQwLjA5OSAxMTkuMjYzQzEyNC42NzcgMTE5LjI2MyAxMTAuNjE2IDExMy40NjEgOTkuOTk4NiAxMDMuOTNDODkuMzgzNyAxMTMuNDYxIDc1LjMyMjkgMTE5LjI2MyA1OS45MDEgMTE5LjI2M0MyNi44MTg2IDExOS4yNjMgMCA5Mi41NjQ5IDAgNTkuNjMxNEMwIDI2LjY5NzkgMjYuODE4NiAwIDU5LjkwMSAwQzc1LjMyMzIgMCA4OS4zODQxIDUuODAxOTUgMTAwLjAwMSAxNS4zMzI5QzExMC42MTYgNS44MDE3NyAxMjQuNjc3IDAgMTQwLjA5OSAwWk0xNDAuMDk5IDM5LjkxODVDMTI5LjE2MyAzOS45MTg1IDEyMC4yOTcgNDguNzQ0MyAxMjAuMjk3IDU5LjYzMTRDMTIwLjI5NyA3MC41MTg1IDEyOS4xNjMgNzkuMzQ0MiAxNDAuMDk5IDc5LjM0NDJDMTUxLjAzNSA3OS4zNDQyIDE1OS45MDEgNzAuNTE4NSAxNTkuOTAxIDU5LjYzMTRDMTU5LjkwMSA0OC43NDQzIDE1MS4wMzUgMzkuOTE4NSAxNDAuMDk5IDM5LjkxODVaTTU5LjkwMSAzOS45MTg1QzQ4Ljk2NDcgMzkuOTE4NSA0MC4wOTkgNDguNzQ0MyA0MC4wOTkgNTkuNjMxNEM0MC4wOTkgNzAuNTE4NSA0OC45NjQ3IDc5LjM0NDIgNTkuOTAxIDc5LjM0NDJDNzAuODM3MyA3OS4zNDQyIDc5LjcwMyA3MC41MTg1IDc5LjcwMyA1OS42MzE0Qzc5LjcwMyA0OC43NDQzIDcwLjgzNzMgMzkuOTE4NSA1OS45MDEgMzkuOTE4NVoiIGZpbGw9IiM2NzNBQjYiLz4KPC9zdmc+Cg==
 // @grant        none
@@ -84,26 +85,56 @@
 
   const OOLIO_MARK_WHITE = OOLIO_MARK.replace('class="tm-mark" ', '').replace('fill="#673AB6"', 'fill="#fff"');
 
-  /* ---------------- Help Desk: "Book meeting" button + modal ---------------- */
-  function helpDesk() {
+  // Floating "Book meeting" button. HubSpot is a single-page app, so the URL is
+  // re-checked every second and the button only shows when isActive() is true.
+  function addButton(onClick, isActive) {
     injectBrand();
-
-    const getTicket = () => {
-      const m = location.pathname.match(/^\/help-desk\/(\d+)\/(?:.*\/)?ticket\/(\d+)/);
-      return m ? { portal: m[1], id: m[2] } : null;
-    };
-
     const btn = document.createElement('button');
     btn.id = 'tm-book-meeting';
     btn.className = 'tm-oolio';
     btn.type = 'button';
     btn.innerHTML = '<span class="tm-btn-mark">' + OOLIO_MARK_WHITE + '</span><span class="tm-btn-sep"></span>' +
       ICON_CALENDAR_PLUS + '<span>Book meeting</span>';
-    btn.addEventListener('click', open);
+    btn.addEventListener('click', onClick);
     document.body.appendChild(btn);
+    setInterval(() => { btn.style.display = isActive() ? 'inline-flex' : 'none'; }, 1000);
+    return btn;
+  }
 
-    // Help Desk is a single-page app, so re-check the URL as you move between tickets
-    setInterval(() => { btn.style.display = getTicket() ? 'inline-flex' : 'none'; }, 1000);
+  /* ---------------- Record pages: "Book meeting" button ---------------- */
+  // Contact, company, deal and ticket records already have HubSpot's own
+  // "Schedule a meeting" button, so this just presses it for you.
+  function recordPage() {
+    const isRecord = () =>
+      /^\/contacts\/\d+\/(?:record\/0-[1235]|contact|company|deal|ticket)\/\d+/.test(location.pathname);
+
+    const btn = addButton(() => {
+      if (btn.dataset.tmBusy) return;
+      btn.dataset.tmBusy = '1';
+      let tries = 0;
+      const timer = setInterval(() => {
+        const schedBtn = document.querySelector('[data-selenium-test="create-engagement-schedule-button"]');
+        if (schedBtn) {
+          clearInterval(timer);
+          delete btn.dataset.tmBusy;
+          schedBtn.click();
+        } else if (++tries > 20) {
+          clearInterval(timer);
+          delete btn.dataset.tmBusy;
+          alert('Couldn\'t find the meeting button on this record. Try again once the page has finished loading.');
+        }
+      }, 250);
+    }, isRecord);
+  }
+
+  /* ---------------- Help Desk: "Book meeting" button + modal ---------------- */
+  function helpDesk() {
+    const getTicket = () => {
+      const m = location.pathname.match(/^\/help-desk\/(\d+)\/(?:.*\/)?ticket\/(\d+)/);
+      return m ? { portal: m[1], id: m[2] } : null;
+    };
+
+    addButton(open, getTicket);
 
     let overlay = null;
     let meetingOpen = false;
@@ -191,16 +222,21 @@
 
   /* ---------------- Scheduler iframe: prefill title + attendee description ---------------- */
   function scheduler() {
-    // The parent is the ticket record page (either the normal tab or the Help Desk modal)
+    // The parent is the record page (either the normal tab or the Help Desk modal).
+    // Only tickets and deals are prefilled; contacts and companies are left as HubSpot sets them.
+    const TYPES = { '0-5': 'Ticket', ticket: 'Ticket', '0-3': 'Deal', deal: 'Deal' };
+    const TYPE_IDS = { Ticket: '0-5', Deal: '0-3' };
+
     function getTicket() {
       try {
         const host = window.parent;
-        const m = host.location.pathname.match(/^\/contacts\/(\d+)\/(?:record\/0-5|ticket)\/(\d+)/);
-        if (!m) return null; // not a ticket
+        const m = host.location.pathname.match(/^\/contacts\/(\d+)\/(?:record\/(0-\d+)|(ticket|deal))\/(\d+)/);
+        const label = m && TYPES[m[2] || m[3]];
+        if (!label) return null;
         const titleEl = host.document.querySelector('[data-selenium-test="highlightTitle"]');
         const name = (titleEl ? titleEl.innerText : host.document.title).trim();
-        const url = `${location.origin}/contacts/${m[1]}/record/0-5/${m[2]}`;
-        return name ? { name, url } : null;
+        const url = `${location.origin}/contacts/${m[1]}/record/${TYPE_IDS[label]}/${m[4]}`;
+        return name ? { name, url, label } : null;
       } catch (e) {
         return null;
       }
@@ -262,8 +298,8 @@
       // the invite, so a bare URL is what lets Outlook make it clickable.
       const dt = new DataTransfer();
       dt.setData('text/html',
-        `<p>Ticket: ${escapeHtml(ticket.name)}<br><a href="${ticket.url}">${ticket.url}</a></p>`);
-      dt.setData('text/plain', `Ticket: ${ticket.name}\n${ticket.url}`);
+        `<p>${ticket.label}: ${escapeHtml(ticket.name)}<br><a href="${ticket.url}">${ticket.url}</a></p>`);
+      dt.setData('text/plain', `${ticket.label}: ${ticket.name}\n${ticket.url}`);
       editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
       if (title) title.focus();
     }
@@ -280,5 +316,7 @@
   /* ---------------- Start ---------------- */
   const path = location.pathname;
   if (path.startsWith('/help-desk/') && window.top === window) helpDesk();
+  // Skip the record page loaded inside the Help Desk modal, which has its own button
+  else if (path.startsWith('/contacts/') && window.top === window) recordPage();
   else if (path.startsWith('/calendar-select-iframe/')) scheduler();
 })();

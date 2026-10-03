@@ -9,7 +9,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in Tam
 | Script | What it does |
 |---|---|
 | [Oolio Office: Download Device Logs](oolio-office/device-logs.user.js) | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. |
-| [HubSpot: Prefill meeting from ticket](hubspot/prefill-meeting.user.js) | Adds a **Book meeting** button to Help Desk tickets. Fills in the title and a link back to the ticket. |
+| [HubSpot: Prefill meeting from ticket](hubspot/prefill-meeting.user.js) | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. |
 | [HubSpot: Cmd/Ctrl + Enter to send](hubspot/send-shortcut.user.js) | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. |
 
 ## Set up (once, about 3 minutes)
@@ -42,11 +42,11 @@ The repo is private, so scripts don't update themselves. When a script changes y
 
 <img src="assets/screenshots/hubspot-book-meeting-button.png" width="260" alt="Book meeting button">
 
-1. Open a ticket in HubSpot Help Desk.
+1. Open a ticket in HubSpot Help Desk, or any contact, company, deal or ticket record.
 2. Click **Book meeting** (bottom right).
 3. Pick a time and book. Press **Esc** to close without booking.
 
-The ticket link goes to everyone invited, customers included, but only HubSpot users can open it. In Outlook, **Cmd + click** (or **Ctrl + click**) the link to open it.
+On tickets and deals, the title and link are filled in for you. The link goes to everyone invited, customers included, but only HubSpot users can open it. In Outlook, **Cmd + click** (or **Ctrl + click**) the link to open it.
 
 ### Cmd/Ctrl + Enter to send
 

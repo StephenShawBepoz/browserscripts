@@ -7,6 +7,10 @@
 
 ## HubSpot: Prefill meeting from ticket
 
+### 2.4.0 (03/10/2026)
+- The **Book meeting** button now also shows on contact, company, deal and ticket record pages, not just Help Desk. On a record it opens HubSpot's own Schedule window straight away.
+- Meetings booked from a deal get the deal name as the title and a deal link in the description, the same as tickets. Contacts and companies are left as HubSpot fills them.
+
 ### 2.3.0 (30/09/2026)
 - Added to this repo.
 - Oolio branding to match the other scripts: purple pill button with the logomark, Lucide calendar icon, Inter, and a branded loading card with clearer error messages.
