@@ -2,33 +2,35 @@
 
 # Browser scripts: Oolio
 
-Small add-ons that make Oolio Office and HubSpot quicker to use. They run in Tampermonkey and use your own login, so there are no passwords or keys in here.
+Small add-ons that make Oolio Office and HubSpot quicker to use. They run in your browser through Tampermonkey and use your own login, so there are no passwords or keys in here. Once installed, they keep themselves up to date.
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| [Oolio Office: Download Device Logs](oolio-office/device-logs.user.js) | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. |
-| [HubSpot: Prefill meeting from ticket](hubspot/prefill-meeting.user.js) | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. |
-| [HubSpot: Cmd/Ctrl + Enter to send](hubspot/send-shortcut.user.js) | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. |
+| Script | What it does | Install |
+|---|---|---|
+| **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
+| **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
+| **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 
-## Set up (once, about 3 minutes)
+## Set up Tampermonkey (once, about 3 minutes)
 
-1. **Install Tampermonkey.** In Chrome, open the [Tampermonkey page on the Chrome Web Store](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) and click **Add to Chrome**, then **Add extension**.
+1. **Install it.** In Chrome, open the [Tampermonkey page on the Chrome Web Store](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) and click **Add to Chrome**, then **Add extension**.
 2. **Pin it.** Click the puzzle piece icon in the Chrome toolbar and click the pin next to Tampermonkey.
 3. **Let it run scripts.** Go to `chrome://extensions`, click **Details** on Tampermonkey and turn on **Allow User Scripts**. If you don't see that option, turn on **Developer mode** (top right) instead. Nothing will run without this step.
 
 ## Install a script
 
-1. Open the script from the table above and click **Raw**.
+1. Click **Install** next to the script in the table above.
 2. Tampermonkey opens its install screen. Click **Install**.
 3. Refresh the page you'll use it on.
 
-If the install screen doesn't appear: copy the whole file, click the Tampermonkey icon, choose **Create a new script**, paste over everything and press **Cmd + S** (Mac) or **Ctrl + S** (Windows).
-
 ## Updates
 
-The repo is private, so scripts don't update themselves. When a script changes you'll get a message. Install it again the same way and it replaces the old version.
+Tampermonkey checks for new versions once a day and installs them for you. To get one straight away, click the Tampermonkey icon, then **Utilities** > **Check for userscript updates**.
+
+**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ## Using the scripts
 
@@ -46,7 +48,7 @@ The repo is private, so scripts don't update themselves. When a script changes y
 2. Click **Book meeting** (bottom right).
 3. Pick a time and book. Press **Esc** to close without booking.
 
-On tickets and deals, the title and link are filled in for you. The link goes to everyone invited, customers included, but only HubSpot users can open it. In Outlook, **Cmd + click** (or **Ctrl + click**) the link to open it.
+On tickets and deals, the meeting title and a link back to the record are filled in for you. The link goes to everyone invited, customers included, but only HubSpot users can open it. In Outlook, **Cmd + click** (or **Ctrl + click**) the link to open it.
 
 ### Cmd/Ctrl + Enter to send
 
@@ -58,11 +60,13 @@ It never presses Cancel, Delete or Schedule, and does nothing if it can't tell w
 
 ## Problems or ideas
 
-Raise an issue on this repo, or message Stephen.
+Message Stephen Shaw on Teams.
 
 ## For maintainers
 
 - One script per file, grouped by site (`oolio-office/`, `hubspot/`).
-- Keep `@namespace oolio-userscripts` on every script. Changing it makes Tampermonkey install a second copy.
-- Bump `@version` on every change, add a line to [CHANGELOG.md](CHANGELOG.md) and tell colleagues to reinstall.
+- Every script header needs `@namespace oolio-userscripts`, `@author Stephen Shaw`, and `@updateURL` and `@downloadURL` pointing at its raw file on `main`. Changing the namespace or name makes Tampermonkey install a second copy.
+- Bump `@version` on every change and add a line to [CHANGELOG.md](CHANGELOG.md). Tampermonkey only updates when the version goes up.
+- Updates go out from `main`, so anything merged there reaches everyone within a day. Test before merging.
 - UI follows the Oolio brand: Oolio Purple `#673AB6`, Inter, Lucide line icons.
+- Never commit screenshots that show customer, venue or ticket details.

@@ -3,6 +3,10 @@
 // @namespace    oolio-userscripts
 // @version      2.4.0
 // @description  Book meeting button on Help Desk tickets and on contact, company, deal and ticket records; prefills title with the ticket or deal name and adds a link to the Attendee description.
+// @author       Stephen Shaw
+// @homepageURL  https://github.com/StephenShawBepoz/browserscripts
+// @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js
+// @downloadURL  https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js
 // @match        https://app.hubspot.com/help-desk/*
 // @match        https://app.hubspot.com/contacts/*
 // @match        https://app.hubspot.com/calendar-select-iframe/*
