@@ -2,6 +2,12 @@
 
 ## HubSpot: Quick actions
 
+### 0.2.0 (04/10/2026, beta)
+- The bar is now four icon buttons: meeting, drive, public transport and trip. Each one opens straight to its own view; the same button again closes it.
+- Trips: collect up to 9 customers from the records open in your tabs (or **Add to trip** under a drive time), work out the best order, see the total and each leg on the map, optionally come back to the start, and open the whole trip in Google Maps.
+- Public transport shows each step, the line numbers and the next departures, and draws the route on the map.
+- Fixes from review: a slow address lookup can no longer put the wrong customer's pin and time on screen; a service outage is no longer reported as a wrong address; Google Maps links work in **Add a place**; unit and level prefixes (and address line 2) are handled better, without eating street names like *Bay Road*; Esc closes the panel straight after opening; long company names no longer spill out of the panel; the Transitous link no longer sends names; "Use where I am now" rounds your spot to about 100 m.
+
 ### 0.1.0 (03/10/2026, beta)
 - New. Replaces *Prefill meeting from ticket* with a toolbar: **Meeting** (same as before) and **Directions**.
 - Directions finds the record's primary company, shows the drive time and distance from your saved places or your current location, a small map, and links to Google Maps, OpenStreetMap and (on a Mac) Apple Maps.

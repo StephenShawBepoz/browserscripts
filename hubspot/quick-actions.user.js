@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.1.0
-// @description  Meeting and Directions buttons on HubSpot tickets, deals, companies and contacts. Directions shows the drive (and optionally public transport) time from your saved places to the customer's company.
+// @version      0.2.0
+// @description  Meeting, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js
@@ -14,6 +14,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_addValueChangeListener
 // @connect      nominatim.openstreetmap.org
 // @connect      routing.openstreetmap.de
 // @connect      api.transitous.org
@@ -31,19 +32,21 @@
 
   // Free, open services, so there are no keys to keep out of this public repo.
   // Each one asks for light use only. Read their rules before changing how often
-  // this calls them. All three can be swapped in Directions > settings > Advanced.
+  // this calls them. All three can be swapped in the panel's settings > Advanced.
   //   Address lookup:   https://operations.osmfoundation.org/policies/nominatim/
-  //   Driving routes:   https://fossgis.de/arbeitsgruppen/osm-server/nutzungsbedingungen/
+  //   Driving routes:   https://routing.openstreetmap.de/about.html
   //   Public transport: https://transitous.org/api/  (off until you turn it on)
   const SERVICES = {
     geocode: 'https://nominatim.openstreetmap.org/search',
-    drive: 'https://routing.openstreetmap.de/routed-car/route/v1/driving',
+    drive: 'https://routing.openstreetmap.de/routed-car',
     transit: 'https://api.transitous.org/api/v6/plan',
   };
   const TILES = 'https://tile.openstreetmap.org';
   const REPO = 'https://github.com/StephenShawBepoz/browserscripts';
   const VERSION = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.version : '0';
   const USER_AGENT = `OolioQuickActions/${VERSION} (+${REPO})`;
+  // Google Maps links take up to 9 stops on top of the start
+  const MAX_STOPS = 9;
 
   /* ---------------- Oolio brand styles ---------------- */
   function injectBrand() {
@@ -75,12 +78,14 @@
         box-shadow:0 6px 20px rgba(103,58,182,.35), 0 1px 3px rgba(34,34,34,.2); }
       #oqa-bar .oqa-mark svg { width:24px; height:auto; }
       #oqa-bar .oqa-sep { width:1px; height:18px; margin:0 6px 0 10px; background:rgba(255,255,255,.35); }
-      #oqa-bar button { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border:0;
-        border-radius:999px; background:transparent; color:#fff; cursor:pointer; font:inherit; font-size:14px;
-        font-weight:700; letter-spacing:-0.01em; transition:background .15s; }
-      #oqa-bar button:hover, #oqa-bar button[aria-pressed="true"] { background:rgba(255,255,255,.18); }
-      #oqa-bar button:focus-visible { outline:2px solid var(--oolio-blue); outline-offset:1px; }
-      #oqa-bar button svg { width:16px; height:16px; }
+      #oqa-bar button { position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:36px;
+        padding:0; border:0; border-radius:999px; background:transparent; color:#fff; cursor:pointer; transition:background .15s; }
+      #oqa-bar button:hover, #oqa-bar button[aria-pressed="true"] { background:rgba(255,255,255,.2); }
+      #oqa-bar button:focus-visible { outline:2px solid #fff; outline-offset:-2px; }
+      #oqa-bar button svg { width:18px; height:18px; }
+      #oqa-bar .oqa-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
+        background:#fff; color:var(--oolio-purple); font:700 10px/16px Inter, system-ui, sans-serif; text-align:center; }
+      #oqa-bar .oqa-badge:empty { display:none; }
 
       /* ---------- Meeting loading overlay (Help Desk) ---------- */
       #oqa-overlay { position:fixed; inset:0; z-index:2147483002; background:rgba(34,34,34,.55); }
@@ -102,26 +107,30 @@
       #oqa-close:hover { background:var(--oolio-tint); }
       #oqa-close svg { width:18px; height:18px; }
 
-      /* ---------- Directions panel ---------- */
+      /* ---------- Panel ---------- */
       #oqa-panel { position:fixed; right:24px; bottom:146px; z-index:2147483001; width:360px; max-width:calc(100vw - 32px);
         max-height:calc(100vh - 170px); display:flex; flex-direction:column; overflow:hidden; border-radius:16px;
         background:#fff; color:var(--oolio-charcoal); font-size:13px; line-height:1.4; text-align:left;
         box-shadow:0 12px 40px rgba(34,34,34,.22), 0 0 0 1px rgba(34,34,34,.06); }
       #oqa-panel * { box-sizing:border-box; }
       #oqa-panel [hidden] { display:none !important; }
-      #oqa-panel header { display:flex; align-items:center; gap:2px; padding:10px 8px 8px 16px;
+      #oqa-panel header { display:flex; align-items:center; gap:8px; padding:10px 8px 8px 16px;
         border-top:4px solid var(--oolio-purple); }
+      #oqa-panel header .oqa-hicon { color:var(--oolio-purple); }
+      #oqa-panel header .oqa-hicon svg { width:18px; height:18px; }
       #oqa-panel header b { flex:1; font-size:15px; font-weight:900; }
       #oqa-panel .oqa-body { overflow:auto; padding:2px 16px 14px; }
       #oqa-panel button, #oqa-panel input, #oqa-panel select { font:inherit; color:inherit; margin:0; }
       #oqa-panel .oqa-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
         padding:0; border:0; border-radius:8px; background:transparent; color:var(--oolio-grey); cursor:pointer; flex:none; }
       #oqa-panel .oqa-icon-btn:hover { background:var(--oolio-tint); color:var(--oolio-purple); }
+      #oqa-panel .oqa-icon-btn[disabled] { opacity:.35; cursor:default; background:transparent; color:var(--oolio-grey); }
       #oqa-panel .oqa-icon-btn svg { width:18px; height:18px; }
-      #oqa-panel :focus-visible { outline:2px solid var(--oolio-blue); outline-offset:1px; }
+      #oqa-panel :focus-visible { outline:2px solid var(--oolio-purple); outline-offset:1px; }
 
-      #oqa-panel .oqa-ends { position:relative; display:grid; gap:4px; padding:0 40px 12px 0; }
-      #oqa-panel .oqa-end { display:flex; align-items:flex-start; gap:10px; min-height:36px; }
+      #oqa-panel .oqa-ends { position:relative; display:grid; grid-template-columns:minmax(0, 1fr); gap:4px; padding:0 40px 12px 0; }
+      #oqa-panel .oqa-ends.oqa-solo { padding-right:0; }
+      #oqa-panel .oqa-end { display:flex; align-items:flex-start; gap:10px; min-height:36px; min-width:0; }
       #oqa-panel .oqa-dot { width:12px; height:12px; margin-top:12px; border-radius:50%; flex:none;
         border:3px solid var(--oolio-charcoal); background:#fff; }
       #oqa-panel .oqa-dot.oqa-cust-dot { border-color:#fff; background:var(--oolio-purple); box-shadow:0 0 0 1px var(--oolio-purple); }
@@ -130,28 +139,32 @@
         border-radius:8px; background:#fff; }
       #oqa-panel select:focus, #oqa-panel input[type="text"]:focus { border-color:var(--oolio-purple); outline:none; }
       #oqa-panel .oqa-cust { padding-top:6px; }
-      #oqa-panel .oqa-cust b { display:block; font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      #oqa-panel .oqa-name { display:flex; align-items:baseline; gap:6px; min-width:0; }
+      #oqa-panel .oqa-name b { min-width:0; font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       #oqa-panel .oqa-cust small, #oqa-panel .oqa-muted { color:var(--oolio-grey); font-size:12px; }
-      #oqa-panel .oqa-tag { display:inline-block; margin-left:6px; padding:0 6px; border-radius:999px; background:var(--oolio-tint);
-        color:var(--oolio-purple); font-size:11px; font-weight:700; vertical-align:1px; }
+      #oqa-panel .oqa-tag { flex:none; padding:0 6px; border-radius:999px; background:var(--oolio-tint);
+        color:var(--oolio-purple); font-size:11px; font-weight:700; }
       #oqa-panel .oqa-swap { position:absolute; right:0; top:50%; margin-top:-22px; }
       #oqa-panel .oqa-link { padding:0; border:0; background:none; color:var(--oolio-purple); font-size:12px;
         font-weight:500; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
       #oqa-panel .oqa-inline { display:flex; gap:6px; margin-top:6px; }
-      #oqa-panel .oqa-btn { height:36px; padding:0 14px; border:0; border-radius:8px; background:var(--oolio-purple);
-        color:#fff; font-weight:700; cursor:pointer; white-space:nowrap; }
+      #oqa-panel .oqa-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:36px; padding:0 14px;
+        border:0; border-radius:8px; background:var(--oolio-purple); color:#fff; font-weight:700; cursor:pointer; white-space:nowrap;
+        text-decoration:none; }
+      #oqa-panel .oqa-btn svg { width:16px; height:16px; }
       #oqa-panel .oqa-btn:hover { background:var(--oolio-deep); }
       #oqa-panel .oqa-btn.oqa-quiet { background:var(--oolio-tint); color:var(--oolio-purple); }
-      #oqa-panel .oqa-btn[disabled] { opacity:.6; cursor:progress; }
+      #oqa-panel .oqa-btn.oqa-quiet:hover { background:#E8DEF5; }
+      #oqa-panel .oqa-btn[disabled] { opacity:.6; cursor:default; }
+      #oqa-panel .oqa-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
 
-      #oqa-panel .oqa-map { position:relative; height:150px; margin:0 0 10px; overflow:hidden; border-radius:10px;
+      #oqa-panel .oqa-map { position:relative; height:160px; margin:0 0 10px; overflow:hidden; border-radius:10px;
         background:var(--oolio-tint); }
       #oqa-panel .oqa-map img { position:absolute; width:256px; height:256px; max-width:none; user-select:none; }
       #oqa-panel .oqa-map svg { position:absolute; left:0; top:0; }
       #oqa-panel .oqa-map .oqa-osm { position:absolute; right:0; bottom:0; padding:1px 5px; border-top-left-radius:6px;
         background:rgba(255,255,255,.85); color:var(--oolio-charcoal); font-size:10px; text-decoration:none; }
 
-      #oqa-panel .oqa-modes { display:grid; gap:6px; }
       #oqa-panel .oqa-mode { display:flex; align-items:center; gap:12px; padding:10px; border-radius:10px;
         background:#fff; border:1px solid var(--oolio-line); color:inherit; text-decoration:none; }
       #oqa-panel a.oqa-mode:hover { border-color:var(--oolio-purple); background:var(--oolio-tint); }
@@ -159,10 +172,18 @@
         background:var(--oolio-tint); color:var(--oolio-purple); }
       #oqa-panel .oqa-mode .oqa-ic svg { width:18px; height:18px; }
       #oqa-panel .oqa-mode > div { flex:1; min-width:0; }
-      #oqa-panel .oqa-mode b { display:block; font-size:16px; font-weight:900; }
+      #oqa-panel .oqa-mode b { display:block; font-size:18px; font-weight:900; }
       #oqa-panel .oqa-mode .oqa-sub { display:block; color:var(--oolio-grey); font-size:12px; }
       #oqa-panel .oqa-mode .oqa-go { color:var(--oolio-grey); flex:none; }
       #oqa-panel .oqa-mode .oqa-go svg { width:16px; height:16px; }
+
+      #oqa-panel .oqa-legs { margin:8px 0 0; padding:0; list-style:none; display:grid; gap:4px; }
+      #oqa-panel .oqa-legs li { display:flex; gap:8px; align-items:baseline; font-size:12px; }
+      #oqa-panel .oqa-legs .oqa-line { flex:none; min-width:34px; padding:0 6px; border-radius:6px; background:var(--oolio-purple);
+        color:#fff; font-weight:700; text-align:center; }
+      #oqa-panel .oqa-legs .oqa-line.oqa-walkline { background:var(--oolio-tint); color:var(--oolio-grey); font-weight:500; }
+      #oqa-panel .oqa-callout { margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--oolio-tint); font-size:12px; }
+      #oqa-panel .oqa-callout p { margin:0 0 8px; }
       #oqa-panel .oqa-note { margin:10px 0 0; color:var(--oolio-grey); font-size:12px; }
       #oqa-panel .oqa-note.oqa-warn { color:#8a5300; }
       #oqa-panel .oqa-more { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-top:10px; }
@@ -170,14 +191,35 @@
       #oqa-panel footer { padding:8px 16px; border-top:1px solid var(--oolio-line); color:var(--oolio-grey); font-size:10px; }
       #oqa-panel footer a { color:inherit; }
 
+      #oqa-panel .oqa-stops { margin:0 0 8px; padding:0; list-style:none; display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; }
+      #oqa-panel .oqa-stops li { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 2px 6px 8px;
+        border:1px solid var(--oolio-line); border-radius:10px; }
+      #oqa-panel .oqa-stops li > div { flex:1; min-width:0; }
+      #oqa-panel .oqa-stops a.oqa-stop-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        color:inherit; font-weight:700; text-decoration:none; }
+      #oqa-panel .oqa-stops a.oqa-stop-name:hover { color:var(--oolio-purple); text-decoration:underline; }
+      #oqa-panel .oqa-stops small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--oolio-grey); font-size:11px; }
+      #oqa-panel .oqa-stops .oqa-legtime { color:var(--oolio-purple); font-weight:700; }
+      #oqa-panel .oqa-num { display:grid; place-items:center; width:22px; height:22px; flex:none; border-radius:50%;
+        background:var(--oolio-purple); color:#fff; font-size:11px; font-weight:700; }
+      #oqa-panel .oqa-suggest { display:grid; gap:4px; margin:8px 0; }
+      #oqa-panel .oqa-suggest button { display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; border:1px dashed var(--oolio-line);
+        border-radius:10px; background:#fff; cursor:pointer; text-align:left; min-width:0; }
+      #oqa-panel .oqa-suggest button:hover { border-color:var(--oolio-purple); background:var(--oolio-tint); }
+      #oqa-panel .oqa-suggest button svg { width:16px; height:16px; color:var(--oolio-purple); }
+      #oqa-panel .oqa-suggest button span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      #oqa-panel .oqa-suggest button small { flex:none; color:var(--oolio-grey); font-size:11px; }
+      #oqa-panel .oqa-total { margin:4px 0 8px; font-size:13px; }
+      #oqa-panel .oqa-total b { font-size:18px; font-weight:900; }
+
       #oqa-panel .oqa-skel { display:block; height:12px; margin:4px 0; border-radius:6px; background:linear-gradient(90deg,
         var(--oolio-tint) 0%, #fff 50%, var(--oolio-tint) 100%); background-size:200% 100%; animation:oqa-shimmer 1.2s linear infinite; }
       @keyframes oqa-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
 
       #oqa-panel h3 { margin:12px 0 4px; font-size:14px; font-weight:900; }
       #oqa-panel .oqa-places { margin:8px 0; padding:0; list-style:none; display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; }
-      #oqa-panel .oqa-places li { min-width:0; display:flex; align-items:center; gap:4px; padding:6px 4px 6px 10px; border:1px solid var(--oolio-line);
-        border-radius:10px; }
+      #oqa-panel .oqa-places li { min-width:0; display:flex; align-items:center; gap:4px; padding:6px 4px 6px 10px;
+        border:1px solid var(--oolio-line); border-radius:10px; }
       #oqa-panel .oqa-places li > div { flex:1; min-width:0; }
       #oqa-panel .oqa-places li b { display:block; font-weight:700; }
       #oqa-panel .oqa-places li small { display:block; color:var(--oolio-grey); font-size:11px; overflow:hidden;
@@ -208,6 +250,10 @@
     external: lucide('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
     trash: lucide('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>'),
     star: lucide('<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'),
+    route: lucide('<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>'),
+    plus: lucide('<path d="M5 12h14"/><path d="M12 5v14"/>'),
+    up: lucide('<path d="m18 15-6-6-6 6"/>'),
+    down: lucide('<path d="m6 9 6 6 6-6"/>'),
     back: lucide('<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>'),
   };
   const MARK_PATH = 'd="M140.099 0C173.181 0 200 26.6979 200 59.6314C200 92.5649 173.181 119.263 140.099 119.263C124.677 119.263 110.616 113.461 99.9986 103.93C89.3837 113.461 75.3229 119.263 59.901 119.263C26.8186 119.263 0 92.5649 0 59.6314C0 26.6979 26.8186 0 59.901 0C75.3232 0 89.3841 5.80195 100.001 15.3329C110.616 5.80177 124.677 0 140.099 0ZM140.099 39.9185C129.163 39.9185 120.297 48.7443 120.297 59.6314C120.297 70.5185 129.163 79.3442 140.099 79.3442C151.035 79.3442 159.901 70.5185 159.901 59.6314C159.901 48.7443 151.035 39.9185 140.099 39.9185ZM59.901 39.9185C48.9647 39.9185 40.099 48.7443 40.099 59.6314C40.099 70.5185 48.9647 79.3442 59.901 79.3442C70.8373 79.3442 79.703 70.5185 79.703 59.6314C79.703 48.7443 70.8373 39.9185 59.901 39.9185Z"';
@@ -220,7 +266,8 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const log = (...a) => console.info('[Oolio quick actions]', ...a);
 
-  // Saved places and caches live in Tampermonkey's storage for this script, on this computer only
+  // Saved places, the trip and caches live in Tampermonkey's storage for this script, on this computer only.
+  // Every HubSpot tab shares it, which is how a trip collects stops from several tabs.
   const store = {
     get(name, fallback) {
       try {
@@ -234,6 +281,9 @@
         if (typeof GM_setValue === 'function') GM_setValue(name, value);
         else localStorage.setItem('oolio-qa:' + name, JSON.stringify(value));
       } catch (e) { /* storage full or blocked */ }
+    },
+    watch(name, fn) {
+      if (typeof GM_addValueChangeListener === 'function') GM_addValueChangeListener(name, (n, oldV, newV, remote) => fn(newV, remote));
     },
   };
 
@@ -289,6 +339,7 @@
 
   // Which record is on screen? Record pages and Help Desk tickets.
   const TYPE_IDS = { contact: '0-1', company: '0-2', deal: '0-3', ticket: '0-5' };
+  const TYPE_NAMES = { '0-1': 'Contact', '0-2': 'Company', '0-3': 'Deal', '0-5': 'Ticket' };
   function getRecord() {
     let m = location.pathname.match(/^\/contacts\/(\d+)\/(?:record\/(0-[1235])|(contact|company|deal|ticket))\/(\d+)/);
     if (m) return { portal: m[1], type: m[2] || TYPE_IDS[m[3]], id: m[4], helpDesk: false };
@@ -297,8 +348,52 @@
     return null;
   }
   const recordKey = (r) => (r ? `${r.type}/${r.id}` : '');
+  const recordUrl = (r) => `${location.origin}/contacts/${r.portal}/record/${r.type}/${r.id}`;
+  function recordTitle() {
+    const el = document.querySelector('[data-selenium-test="highlightTitle"]');
+    return clean(el ? el.innerText : document.title.replace(/\s*\|\s*HubSpot.*$/i, ''));
+  }
+
+  /* ---------------- Open records in other tabs ---------------- */
+  // Each tab notes which record it is showing (nothing is fetched), so a trip can offer them as stops.
+  const TAB_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const TAB_TTL = 60 * 1000;
+  let tabNote = { key: '', title: '', at: 0 };
+
+  function noteThisTab(rec) {
+    const key = recordKey(rec), title = rec ? recordTitle() : '';
+    if (key === tabNote.key && title === tabNote.title && Date.now() - tabNote.at < 20000) return;
+    tabNote = { key, title, at: Date.now() };
+    const tabs = store.get('tabs', {}) || {};
+    Object.keys(tabs).forEach((k) => { if (!tabs[k] || Date.now() - tabs[k].at > TAB_TTL) delete tabs[k]; });
+    if (rec) tabs[TAB_ID] = { portal: rec.portal, type: rec.type, id: rec.id, title, at: tabNote.at };
+    else delete tabs[TAB_ID];
+    store.set('tabs', tabs);
+  }
+  function forgetThisTab() {
+    const tabs = store.get('tabs', {}) || {};
+    if (tabs[TAB_ID]) { delete tabs[TAB_ID]; store.set('tabs', tabs); }
+  }
+  function openRecords() {
+    const tabs = store.get('tabs', {}) || {};
+    const seen = new Set(), out = [];
+    Object.values(tabs).forEach((t) => {
+      if (!t || Date.now() - t.at > TAB_TTL) return;
+      const key = `${t.type}/${t.id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ ...t, key });
+    });
+    return out;
+  }
 
   /* ---------------- Toolbar ---------------- */
+  const MODES = {
+    drive: { icon: 'car', title: 'Drive time to the customer', heading: 'Drive' },
+    transit: { icon: 'train', title: 'Public transport to the customer', heading: 'Public transport' },
+    trip: { icon: 'route', title: 'Trip with several stops', heading: 'Trip' },
+  };
+
   function toolbar() {
     injectBrand();
 
@@ -309,8 +404,10 @@
     bar.setAttribute('aria-label', 'Oolio quick actions');
     bar.innerHTML =
       '<span class="oqa-mark">' + OOLIO_MARK_WHITE + '</span><span class="oqa-sep"></span>' +
-      '<button type="button" data-act="meeting" title="Book a meeting">' + ICON.calendarPlus + '<span>Meeting</span></button>' +
-      '<button type="button" data-act="directions" title="Directions to the customer" aria-pressed="false">' + ICON.car + '<span>Directions</span></button>';
+      `<button type="button" data-act="meeting" title="Book a meeting" aria-label="Book a meeting">${ICON.calendarPlus}</button>` +
+      Object.entries(MODES).map(([mode, m]) =>
+        `<button type="button" data-mode="${mode}" title="${m.title}" aria-label="${m.title}" aria-pressed="false">${ICON[m.icon]}` +
+        (mode === 'trip' ? '<span class="oqa-badge" aria-hidden="true"></span>' : '') + '</button>').join('');
     document.body.appendChild(bar);
 
     bar.querySelector('[data-act="meeting"]').addEventListener('click', () => {
@@ -319,24 +416,38 @@
       if (rec.helpDesk) meetingModal(rec);
       else meetingOnRecord();
     });
-    const dirBtn = bar.querySelector('[data-act="directions"]');
-    dirBtn.addEventListener('click', () => toggleDirections(getRecord()));
+    bar.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => openPanel(btn.dataset.mode)));
 
     // HubSpot is a single-page app, so re-check the URL every second
     let lastKey = recordKey(getRecord());
+    const badge = bar.querySelector('.oqa-badge');
+    const setBadge = () => { const n = tripStops().length; badge.textContent = n ? String(n) : ''; };
     const sync = () => {
       const rec = getRecord();
       bar.style.display = rec ? 'inline-flex' : 'none';
       const key = recordKey(rec);
       if (key !== lastKey) {
         lastKey = key;
-        closeDirections();
+        // The trip isn't tied to one record, so it stays open (with a fresh lookup context for the new record)
+        if (!rec || panel.mode !== 'trip') closePanel();
+        else if (panel.el) {
+          Object.assign(panel, { rec, linked: null, companies: new Map(), picked: '', customer: null, dest: null });
+          if (panel.el.dataset.view === 'trip') showTrip();
+        }
       }
-      dirBtn.setAttribute('aria-pressed', String(!!directions.el));
+      bar.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(!!panel.el && panel.mode === b.dataset.mode)));
+      setBadge();
+      noteThisTab(rec);
     };
     setInterval(sync, 1000);
     sync();
+    window.addEventListener('pagehide', forgetThisTab);
+    // Another tab changed the trip, or opened or closed a record: refresh the trip view if it's showing
+    const tripShowing = () => panel.el && panel.el.dataset.view === 'trip';
+    store.watch('trip', (v, remote) => { setBadge(); if (remote && tripShowing()) showTrip(); });
+    store.watch('tabs', () => { if (tripShowing() && suggestionKey() !== panel.suggestKey) showTrip(); });
   }
+
 
   /* ---------------- Meeting ---------------- */
 
@@ -446,7 +557,7 @@
   /* ---------------- The customer's company and address, from HubSpot ---------------- */
   // There's no public way to read this without an API key, so this asks HubSpot the same way
   // its own pages do, with your login. If one way stops working it tries the next, and the
-  // browser console shows which one answered. Calls only happen when you click Directions.
+  // browser console shows which one answered. Calls only happen when you click.
 
   const OBJECT_NAMES = { '0-1': 'contacts', '0-3': 'deals', '0-5': 'tickets' };
   const PRIMARY_TYPE = { '0-1': 'contact_to_company', '0-3': 'deal_to_company', '0-5': 'ticket_to_company' };
@@ -490,6 +601,15 @@
     throw err;
   }
 
+  // "1 Spender Lane, Kings Beach, Kings Beach, QLD, 4551, Australia" style strings: drop blanks and repeats
+  function tidyAddress(s) {
+    const out = [];
+    String(s || '').split(',').map(clean).forEach((part) => {
+      if (part && (!out.length || out[out.length - 1].toLowerCase() !== part.toLowerCase())) out.push(part);
+    });
+    return out.join(', ');
+  }
+
   // Companies linked to the record: { primary, all, mirror, via }
   async function linkedCompanies(rec) {
     if (rec.type === '0-2') return { primary: rec.id, all: [rec.id], via: 'this company' };
@@ -516,7 +636,8 @@
         const p = rows.find(isPrimary);
         return { primary: p ? String(p.toObjectId) : '', all: [...new Set(rows.map((r) => String(r.toObjectId)))] };
       }],
-      ['page', async () => companiesOnPage()],
+      // Only the record on screen has its sidebar to read
+      ['page', async () => (recordKey(getRecord()) === recordKey(rec) ? companiesOnPage() : null)],
     ];
 
     for (const [via, attempt] of attempts) {
@@ -593,62 +714,80 @@
     throw lastErr || new Error('No reply');
   }
 
-  // "1 Spender Lane, Kings Beach, Kings Beach, QLD, 4551, Australia" style strings: drop blanks and repeats
-  function tidyAddress(s) {
-    const out = [];
-    String(s || '').split(',').map(clean).forEach((part) => {
-      if (part && (!out.length || out[out.length - 1].toLowerCase() !== part.toLowerCase())) out.push(part);
-    });
-    return out.join(', ');
+  // Each company is read once per lookup context (the open panel, or one trip stop), however often it's shown
+  function companyOnce(ctx, portal, id) {
+    if (!ctx.companies.has(id)) {
+      const p = readCompany(portal, id);
+      ctx.companies.set(id, p);
+      p.catch(() => ctx.companies.delete(id));
+    }
+    return ctx.companies.get(id);
   }
 
-  // The customer shown in the panel. Everything here comes back usable, even when HubSpot doesn't answer.
-  async function getCustomer(rec, pickedId) {
+  // The customer for a record. Always comes back usable, even when HubSpot doesn't answer:
+  // { key, name, parts | text | override, lat, lon, count, isPrimary, error? }
+  async function getCustomer(rec, ctx, pickedId) {
     const recKey = 'rec:' + recordKey(rec);
-    const linked = directions.linked || (directions.linked = await linkedCompanies(rec));
+    let linked = ctx.linked;
+    if (!linked) {
+      linked = await linkedCompanies(rec);
+      // A slow answer for an earlier panel mustn't land in this one
+      if (ctx.rec === rec) ctx.linked = linked;
+    }
     const id = pickedId || linked.primary || linked.all[0];
-    const base = { count: linked.all.length, isPrimary: !!id && id === linked.primary };
+    const base = { count: linked.all.length, isPrimary: !!id && id === linked.primary, via: linked.via };
+    let c;
 
     if (!id) {
-      if (linked.mirror) return { ...base, key: recKey, name: linked.mirror.name || 'Customer', text: linked.mirror.text, via: 'ticket copy' };
-      return { ...base, key: recKey, name: 'No company', error: linked.via === 'none'
-        ? 'Couldn\'t read the linked company from HubSpot.'
-        : 'No company is linked to this record.' };
-    }
-    try {
-      const c = await companyOnce(rec.portal, id);
-      return { ...base, ...c, key: 'co:' + id };
-    } catch (e) {
-      if (linked.mirror && id === linked.primary) {
-        return { ...base, id, key: 'co:' + id, name: linked.mirror.name || 'Customer', text: linked.mirror.text, via: 'ticket copy' };
+      c = linked.mirror
+        ? { ...base, key: recKey, name: linked.mirror.name || 'Customer', text: linked.mirror.text }
+        : { ...base, key: recKey, name: 'No company', error: linked.via === 'none'
+          ? 'Couldn\'t read the linked company from HubSpot.'
+          : 'No company is linked to this record.' };
+    } else {
+      try {
+        c = { ...base, ...(await companyOnce(ctx, rec.portal, id)), key: 'co:' + id };
+        c.via = base.via + ' / ' + c.via;
+      } catch (e) {
+        c = linked.mirror && id === linked.primary
+          ? { ...base, id, key: 'co:' + id, name: linked.mirror.name || 'Customer', text: linked.mirror.text }
+          : { ...base, id, key: 'co:' + id, name: 'Customer', error: 'Couldn\'t read the company from HubSpot (' + e.message + ').' };
       }
-      return { ...base, id, key: 'co:' + id, name: 'Customer', error: 'Couldn\'t read the company from HubSpot (' + e.message + ').' };
     }
-  }
-
-  // Each company is read once per panel, however often it's shown
-  function companyOnce(portal, id) {
-    const cache = directions.companies;
-    if (!cache.has(id)) {
-      const p = readCompany(portal, id);
-      cache.set(id, p);
-      p.catch(() => cache.delete(id));
-    }
-    return cache.get(id);
+    // A typed-in address wins over HubSpot's
+    const o = store.get('overrides', {}) || {};
+    if (o[c.key]) Object.assign(c, { override: o[c.key], error: null, lat: null, lon: null });
+    return c;
   }
 
   // Names and suburbs of every linked company, for the "pick another company" list
-  async function companyChoices(rec) {
-    const linked = directions.linked;
+  async function companyChoices(rec, ctx) {
+    const linked = ctx.linked;
     const ids = linked.all.slice(0, 15);
     const out = [];
     for (let i = 0; i < ids.length; i += 3) {
       const batch = await Promise.all(ids.slice(i, i + 3).map((id) =>
-        companyOnce(rec.portal, id).then((c) => c, () => ({ id, name: 'Company ' + id, parts: {} }))));
+        companyOnce(ctx, rec.portal, id).then((c) => c, () => ({ id, name: 'Company ' + id, parts: {} }))));
       out.push(...batch);
     }
     out.sort((a, b) => (b.id === linked.primary) - (a.id === linked.primary));
     return { list: out, more: linked.all.length - ids.length };
+  }
+
+  function addressLine(c) {
+    if (c.override) return c.override;
+    if (c.text) return c.text;
+    const p = c.parts || {};
+    const country = clean(p.country);
+    return [p.street, p.street2, [p.city, p.state, p.zip].filter(Boolean).join(' '),
+      /^(australia|au)$/i.test(country) ? '' : country].map(clean).filter(Boolean).join(', ');
+  }
+
+  // What Google Maps gets: the address text (it finds the venue better than a pin), with the country if missing
+  function addressQuery(c, point) {
+    const line = addressLine(c);
+    if (!line) return pt(point);
+    return line + (/\b(australia|new zealand|united kingdom|united states)\b/i.test(line) ? '' : ', Australia');
   }
 
   /* ---------------- Finding places on the map (OpenStreetMap Nominatim) ---------------- */
@@ -670,43 +809,60 @@
     });
   }
 
-  // "Shop 3/123 Smith St" and "Level 2, 45 King St" confuse the geocoder; keep the street number and name
+  // "Shop 3/123 Smith St", "Level 2, 45 King St" and "Shops 3-4, 1 Smith St" confuse the geocoder;
+  // keep the street number and name. A unit word only counts with a number (or one letter) after it,
+  // so "Bay Road" and "Level Crossing Road" are left alone.
   function streetOnly(street) {
     let s = clean(street), prev;
     do {
       prev = s;
-      s = s.replace(/^(shop|unit|suite|ste|level|lvl|tenancy|kiosk|lot|bay|building|bldg|floor|office)\s*[\w.-]+\s*[,/]?\s*/i, '');
-      s = s.replace(/^[\w-]+\s*\/\s*(?=\d)/, '');
+      s = s.replace(/^(?:shops?|units?|suites?|ste|levels?|lvl|tenanc(?:y|ies)|kiosks?|lots?|bays?|building|bldg|floor|office)\.?\s*(?:[a-z]?\d[\w.-]*(?:\s*(?:&|and)\s*[a-z]?\d[\w.-]*)?|[a-z](?![a-z]))\s*[,/]?\s*/i, '');
+      s = s.replace(/^(?:ground|first|second|third|upper|lower)\s+(?:floor|level)\s*,?\s*/i, '');
+      s = s.replace(/^[a-z]?\d+[a-z]?\s*\/\s*(?=\d)/i, '');
     } while (s !== prev);
     return s;
   }
 
-  // "-31.95, 115.86" or a Google Maps link with @lat,lon: no lookup needed
+  // "-31.95, 115.86", or a Google Maps link: the place pin (!3d…!4d…) beats the map centre (@…)
   function parseCoords(text) {
-    const m = String(text).match(/@?(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
+    const t = String(text);
+    const m = t.match(/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/) || t.match(/(?:^|[^\d.])@?(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
     if (!m) return null;
     const lat = +m[1], lon = +m[2];
     return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon, display: `${lat.toFixed(5)}, ${lon.toFixed(5)}` } : null;
   }
 
   const COUNTRY_CODES = { australia: 'au', au: 'au', 'new zealand': 'nz', nz: 'nz', 'united kingdom': 'gb', uk: 'gb', 'united states': 'us', usa: 'us' };
+  const MISS_DAYS = 3;
 
-  // { lat, lon, display, approx } or null. Answers are kept, so each address is only looked up once.
+  // { lat, lon, display, approx } or null for "not found". Throws if the service can't be reached.
+  // Answers (and misses, for a few days) are kept, so each address is only looked up once.
   async function geocode(a) {
-    const coords = a.text ? parseCoords(a.text) : null;
-    if (coords && clean(a.text).replace(/[@\d.,\s-]/g, '').length < 3) return { ...coords, approx: false };
+    const raw = clean(a.text);
+    const isLink = /^https?:\/\//i.test(raw);
+    if (raw) {
+      const coords = parseCoords(raw);
+      if (coords && (isLink || raw.replace(/[@\d.,\s-]/g, '').length < 3)) return { ...coords, approx: false };
+      if (isLink) return null;
+    }
 
-    const cacheKey = 'v2|' + clean([a.street, a.city, a.state, a.zip, a.country, a.text].join('|')).toLowerCase();
-    const cache = store.get('geo', {}) || {};
-    if (cache[cacheKey]) return cache[cacheKey];
+    if (!raw && !clean(a.street) && !clean(a.street2) && !clean(a.city) && !clean(a.zip)) return null;
+    const cacheKey = 'v3|' + clean([a.street, a.street2, a.city, a.state, a.zip, a.country, raw].join('|')).toLowerCase();
+    const cached = (store.get('geo', {}) || {})[cacheKey];
+    if (cached && !cached.miss) return cached;
+    if (cached && Date.now() - cached.miss < MISS_DAYS * 864e5) return null;
 
     const cc = COUNTRY_CODES[clean(a.country).toLowerCase()] || (clean(a.country) ? '' : 'au');
     let hit = null, approx = false;
-    if (a.text) {
-      hit = await nominatim({ q: clean(a.text), countrycodes: 'au,nz' });
-      if (!hit) hit = await nominatim({ q: clean(a.text) });
+    if (raw) {
+      const tidy = raw.split(',').map(streetOnly).filter(Boolean).join(', ') || raw;
+      hit = await nominatim({ q: tidy, countrycodes: 'au,nz' });
+      if (!hit && tidy !== raw) hit = await nominatim({ q: raw, countrycodes: 'au,nz' });
+      if (!hit) hit = await nominatim({ q: tidy });
     } else {
-      const street = streetOnly(a.street);
+      // One street line: whichever has the street number ("570 Bourke St", not "Level 24")
+      const lines = [a.street, a.street2].map(streetOnly).filter(Boolean);
+      const street = lines.find((l) => /^\d/.test(l)) || lines[0] || '';
       if (street) hit = await nominatim({ street, city: a.city, state: a.state, postalcode: a.zip, countrycodes: cc });
       if (!hit && street) hit = await nominatim({ q: [street, a.city, a.state, a.zip].filter(Boolean).join(', '), countrycodes: cc });
       // Last resort: the suburb, so there is at least a rough time
@@ -715,37 +871,87 @@
         approx = !!hit;
       }
     }
-    if (!hit) return null;
-    const out = { ...hit, approx };
 
-    const keys = Object.keys(cache);
-    if (keys.length >= 300) keys.slice(0, keys.length - 299).forEach((k) => delete cache[k]);
-    cache[cacheKey] = out;
-    store.set('geo', cache);
-    return out;
+    // Read the cache again just before writing, in case another lookup saved meanwhile
+    const out = hit ? { ...hit, approx } : { miss: Date.now() };
+    const fresh = store.get('geo', {}) || {};
+    const keys = Object.keys(fresh);
+    if (keys.length >= 300) keys.slice(0, keys.length - 299).forEach((k) => delete fresh[k]);
+    fresh[cacheKey] = out;
+    store.set('geo', fresh);
+    return hit ? out : null;
+  }
+
+  // Map point for a customer: HubSpot's own lat/long when it has them, otherwise a lookup
+  function pointFor(c) {
+    if (c.lat != null && isFinite(c.lat) && isFinite(c.lon)) return Promise.resolve({ lat: +c.lat, lon: +c.lon, approx: false, fromHubSpot: true });
+    if (c.override || c.text) return geocode({ text: c.override || c.text });
+    const p = c.parts || {};
+    return geocode({ street: p.street, street2: p.street2, city: p.city, state: p.state, zip: p.zip, country: p.country });
   }
 
   /* ---------------- Travel times ---------------- */
   const routeCache = new Map();
   const pt = (p) => `${(+p.lat).toFixed(5)},${(+p.lon).toFixed(5)}`;
+  const lonlat = (p) => `${(+p.lon).toFixed(5)},${(+p.lat).toFixed(5)}`;
 
-  async function remember(key, maxAgeMs, fn) {
+  // Answers are kept for a while, and a request already on its way is shared rather than sent twice
+  function remember(key, maxAgeMs, fn) {
     const hit = routeCache.get(key);
-    if (hit && Date.now() - hit.at < maxAgeMs) return hit.value;
-    const value = await fn();
-    routeCache.set(key, { at: Date.now(), value });
-    return value;
+    if (hit && Date.now() - hit.at < maxAgeMs) return hit.promise;
+    const promise = fn();
+    routeCache.set(key, { at: Date.now(), promise });
+    promise.catch(() => routeCache.delete(key));
+    return promise;
   }
 
-  // Driving: FOSSGIS's OSRM server. No live traffic, so it's a guide; Google has the live time.
-  function driveRoute(a, z) {
-    return remember('drive:' + pt(a) + ';' + pt(z), 6 * 3600 * 1000, () => oneAtATime('drive', async () => {
-      const d = await getJson(`${service('drive')}/${a.lon},${a.lat};${z.lon},${z.lat}?overview=simplified&geometries=geojson&alternatives=false&steps=false`);
+  // Driving through two or more points, in order: FOSSGIS's OSRM server.
+  // No live traffic, so it's a guide; Google has the live time.
+  function driveRoute(points) {
+    const coords = points.map(lonlat).join(';');
+    return remember('drive:' + coords, 6 * 3600 * 1000, () => oneAtATime('drive', async () => {
+      const d = await getJson(`${service('drive')}/route/v1/driving/${coords}?overview=simplified&geometries=geojson&alternatives=false&steps=false`);
       const r = d && d.code === 'Ok' && d.routes && d.routes[0];
       if (!r) throw new Error((d && d.message) || 'No route');
-      return { seconds: r.duration, metres: r.distance, line: r.geometry && r.geometry.coordinates };
+      return { seconds: r.duration, metres: r.distance, line: r.geometry && r.geometry.coordinates,
+        legs: (r.legs || []).map((l) => ({ seconds: l.duration, metres: l.distance })) };
     }));
   }
+
+  // Quickest order for the stops, starting at points[0]: OSRM's trip service.
+  // Returns the stops' indexes (1..n) in visiting order.
+  function bestOrder(points, roundTrip) {
+    const coords = points.map(lonlat).join(';');
+    return oneAtATime('drive', async () => {
+      const d = await getJson(`${service('drive')}/trip/v1/driving/${coords}?source=first&roundtrip=${roundTrip}` +
+        (roundTrip ? '' : '&destination=any') + '&overview=false');
+      if (!d || d.code !== 'Ok' || !d.waypoints) throw new Error((d && d.message) || 'No trip');
+      return d.waypoints.map((w, i) => ({ i, at: w.waypoint_index })).filter((x) => x.i > 0)
+        .sort((x, y) => x.at - y.at).map((x) => x.i);
+    });
+  }
+
+  // Google's encoded polyline, used by Transitous for each leg's shape
+  function decodePolyline(str, precision) {
+    const f = Math.pow(10, precision || 6), out = [];
+    let i = 0, lat = 0, lon = 0;
+    const next = () => {
+      let b, shift = 0, result = 0;
+      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20 && i < str.length + 1);
+      return result & 1 ? ~(result >> 1) : result >> 1;
+    };
+    while (i < str.length) {
+      lat += next();
+      lon += next();
+      out.push([lon / f, lat / f]);
+    }
+    return out;
+  }
+
+  const MODE_WORDS = { BUS: 'Bus', COACH: 'Coach', TRAM: 'Tram', SUBWAY: 'Metro', METRO: 'Metro', FERRY: 'Ferry', AIRPLANE: 'Flight',
+    RAIL: 'Train', REGIONAL_RAIL: 'Train', REGIONAL_FAST_RAIL: 'Train', HIGHSPEED_RAIL: 'Train', LONG_DISTANCE: 'Train',
+    NIGHT_RAIL: 'Train', SUBURBAN: 'Train', CABLE_CAR: 'Cable car', FUNICULAR: 'Funicular', AERIAL_LIFT: 'Gondola' };
+  const isWalk = (mode) => /^(WALK|BIKE|CAR|RENTAL|FLEX|ODM)/.test(mode);
 
   // Public transport: Transitous, a volunteer service for personal, non-commercial use.
   // Off until you turn it on in settings, as they ask to hear from you first.
@@ -755,18 +961,28 @@
       u.searchParams.set('fromPlace', pt(a));
       u.searchParams.set('toPlace', pt(z));
       u.searchParams.set('time', new Date().toISOString());
-      u.searchParams.set('numItineraries', '3');
+      u.searchParams.set('numItineraries', '4');
       const d = await getJson(u.toString(), 25000);
-      const trips = (d && d.itineraries) || [];
-      const walk = d && d.direct && d.direct[0];
+      const trips = ((d && d.itineraries) || []).filter((t) => (t.legs || []).some((l) => !isWalk(l.mode)));
+      const walk = d && d.direct && d.direct.find((x) => (x.legs || []).every((l) => l.mode === 'WALK'));
       if (!trips.length) return walk ? { walkOnly: true, seconds: walk.duration } : null;
-      // Earliest arrival wins; fewer changes breaks a tie
-      const best = trips.slice().sort((x, y) => (new Date(x.endTime) - new Date(y.endTime)) || (x.transfers - y.transfers))[0];
-      const lines = (best.legs || [])
-        .filter((l) => !/^(WALK|BIKE|CAR|RENTAL|FLEX|ODM)/.test(l.mode))
-        .map((l) => clean(l.routeShortName || l.displayName || l.mode.toLowerCase().replace(/_/g, ' ')));
-      const tz = ((best.legs || []).find((l) => l.from && l.from.tz) || { from: {} }).from.tz;
-      return { seconds: best.duration, leave: best.startTime, arrive: best.endTime, changes: best.transfers, lines, tz };
+      const options = trips.map((t) => {
+        const legs = (t.legs || []).map((l) => ({
+          walk: isWalk(l.mode),
+          mode: MODE_WORDS[l.mode] || clean(String(l.mode).toLowerCase().replace(/_/g, ' ')),
+          line: clean(l.routeShortName || l.displayName || ''),
+          from: clean(l.from && l.from.name),
+          to: clean(l.to && l.to.name),
+          leave: l.startTime || (l.from && l.from.departure),
+          seconds: l.duration,
+          shape: l.legGeometry && l.legGeometry.points ? decodePolyline(l.legGeometry.points, l.legGeometry.precision) : null,
+        }));
+        return { seconds: t.duration, leave: t.startTime, arrive: t.endTime, changes: t.transfers, legs };
+      }).sort((x, y) => new Date(x.leave) - new Date(y.leave));
+      // Earliest arrival is the one to show; fewer changes breaks a tie
+      const best = options.slice().sort((x, y) => (new Date(x.arrive) - new Date(y.arrive)) || (x.changes - y.changes))[0];
+      const tz = ((d.itineraries[0].legs || []).find((l) => l.from && l.from.tz) || { from: {} }).from.tz;
+      return { best, options, tz };
     }));
   }
 
@@ -783,20 +999,12 @@
     catch (e) { return new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }); }
   }
 
-  // Free links, no keys: each opens the same trip in a full map app for live traffic, turn by turn and timetables
-  const gmaps = (a, z, mode) => 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(a.query) +
-    '&destination=' + encodeURIComponent(z.query) + '&travelmode=' + mode;
-  function moreLinks(a, z, transitOn) {
-    const link = (href, text) => `<a class="oqa-link" href="${esc(href)}" target="_blank" rel="noopener">${text}</a>`;
-    const out = [link(`https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${pt(a)}%3B${pt(z)}`, 'OpenStreetMap')];
-    if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) {
-      out.push(link(`https://maps.apple.com/directions?source=${encodeURIComponent(a.query)}&destination=${encodeURIComponent(z.query)}&mode=driving`, 'Apple Maps'));
-    }
-    if (transitOn) {
-      out.push(link(`https://api.transitous.org/?fromPlace=${pt(a)}&fromName=${encodeURIComponent(a.label || '')}&toPlace=${pt(z)}&toName=${encodeURIComponent(z.label || '')}`, 'Transitous'));
-    }
-    return '<span class="oqa-muted">Also open in</span> ' + out.join('');
-  }
+  // Free links, no keys: each opens the trip in a full map app for live traffic, turn by turn and timetables
+  const gmaps = (a, z, mode, via) => 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(a.query) +
+    '&destination=' + encodeURIComponent(z.query) + '&travelmode=' + mode +
+    (via && via.length ? '&waypoints=' + encodeURIComponent(via.map((v) => v.query).join('|')) : '');
+  const isApple = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const link = (href, text) => `<a class="oqa-link" href="${esc(href)}" target="_blank" rel="noopener">${text}</a>`;
 
   /* ---------------- Map preview (OpenStreetMap tiles, no library) ---------------- */
   function project(lat, lon, z) {
@@ -805,9 +1013,12 @@
     return [((lon + 180) / 360) * size, (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * size];
   }
 
-  function drawMap(box, from, to, line) {
-    const W = box.clientWidth || 328, H = box.clientHeight || 150, PAD = 24;
-    const pts = (line && line.length ? line.map(([lon, lat]) => [lat, lon]) : []).concat([[from.lat, from.lon], [to.lat, to.lon]]);
+  // markers: [{ lat, lon, kind: 'you' | 'cust' | 'stop', label }]; lines: [{ coords: [[lon, lat]], kind: 'drive' | 'transit' | 'walk' | 'guess' }]
+  function drawMap(box, markers, lines) {
+    if (!box || !markers.length) return;
+    const W = box.clientWidth || 328, H = box.clientHeight || 160, PAD = 24;
+    const pts = markers.map((m) => [m.lat, m.lon]);
+    (lines || []).forEach((l) => (l.coords || []).forEach(([lo, la]) => pts.push([la, lo])));
     const extent = (z) => {
       const px = pts.map(([la, lo]) => project(la, lo, z));
       const xs = px.map((p) => p[0]), ys = px.map((p) => p[1]);
@@ -825,29 +1036,39 @@
       }
     }
     const xy = (la, lo) => { const p = project(la, lo, z); return [(p[0] - left).toFixed(1), (p[1] - top).toFixed(1)]; };
-    const route = line && line.length ? line.map(([lo, la]) => xy(la, lo).join(',')).join(' ') : '';
-    const [fx, fy] = xy(from.lat, from.lon), [cx, cy] = xy(to.lat, to.lon);
-    html +=
-      `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">` +
-      (route
-        ? `<polyline points="${route}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>` +
-          `<polyline points="${route}" fill="none" stroke="#673AB6" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`
-        : `<line x1="${fx}" y1="${fy}" x2="${cx}" y2="${cy}" stroke="#673AB6" stroke-width="2" stroke-dasharray="4 4"/>`) +
-      `<circle cx="${fx}" cy="${fy}" r="6" fill="#fff" stroke="#222" stroke-width="3"/>` +
-      `<circle cx="${cx}" cy="${cy}" r="7" fill="#673AB6" stroke="#fff" stroke-width="3"/></svg>` +
+    const poly = (l) => l.coords.map(([lo, la]) => xy(la, lo).join(',')).join(' ');
+    let svg = '';
+    (lines || []).filter((l) => l.coords && l.coords.length > 1).forEach((l) => {
+      const p = poly(l);
+      if (l.kind === 'walk' || l.kind === 'guess') {
+        svg += `<polyline points="${p}" fill="none" stroke="${l.kind === 'walk' ? '#6F6F6F' : '#673AB6'}" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/>`;
+      } else {
+        svg += `<polyline points="${p}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>` +
+          `<polyline points="${p}" fill="none" stroke="${l.kind === 'transit' ? '#03A9F4' : '#673AB6'}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+      }
+    });
+    markers.forEach((m) => {
+      const [x, y] = xy(m.lat, m.lon);
+      if (m.kind === 'you') svg += `<circle cx="${x}" cy="${y}" r="6" fill="#fff" stroke="#222" stroke-width="3"/>`;
+      else if (m.kind === 'stop') svg += `<circle cx="${x}" cy="${y}" r="9" fill="#673AB6" stroke="#fff" stroke-width="2"/>` +
+        `<text x="${x}" y="${(+y + 3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" font-family="Inter, system-ui, sans-serif" fill="#fff">${esc(m.label)}</text>`;
+      else svg += `<circle cx="${x}" cy="${y}" r="7" fill="#673AB6" stroke="#fff" stroke-width="3"/>`;
+    });
+    html += `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg}</svg>` +
       '<a class="oqa-osm" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>';
     box.innerHTML = html;
   }
 
-  /* ---------------- Directions panel ---------------- */
-  const directions = { el: null, rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
+  /* ---------------- Panel: drive, public transport and trip ---------------- */
+  // The panel is also the lookup context for the record on screen (linked companies, company cache)
+  const panel = { el: null, mode: 'drive', rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
 
-  // Where directions start: your default place, or whatever you picked earlier in this tab
+  // Where you start: your default place, or whatever you picked earlier in this tab
   function currentFrom(s) {
     let v = '';
     try { v = sessionStorage.getItem('oolio-qa:from') || ''; } catch (e) { /* ignore */ }
     const valid = (x) => x === 'here' || x === 'other' || s.places.some((p) => p.id === x);
-    if (valid(v) && (v !== 'other' || directions.oneOff)) return v;
+    if (valid(v) && (v !== 'other' || panel.oneOff)) return v;
     if (valid(s.defaultFrom)) return s.defaultFrom;
     return s.places.length ? s.places[0].id : 'here';
   }
@@ -855,238 +1076,130 @@
     try { sessionStorage.setItem('oolio-qa:from', v); } catch (e) { /* ignore */ }
   }
 
-  function toggleDirections(rec) {
-    if (directions.el) closeDirections();
-    else if (rec) openDirections(rec);
+  // Toolbar buttons: the same button again closes, another one switches
+  function openPanel(mode) {
+    const rec = getRecord();
+    if (!rec) return;
+    if (panel.el && panel.mode === mode) return closePanel();
+    panel.mode = mode;
+    if (!panel.el || recordKey(panel.rec) !== recordKey(rec)) {
+      closePanel(true);
+      buildPanel(rec);
+    }
+    render();
   }
 
-  function closeDirections() {
-    if (!directions.el) return;
-    directions.el.remove();
-    directions.el = null;
-    directions.run++;
-    document.removeEventListener('keydown', onDirectionsKey);
+  function closePanel(quiet) {
+    if (!panel.el) return;
+    const refocus = !quiet && panel.el.contains(document.activeElement);
+    panel.el.remove();
+    panel.el = null;
+    panel.run++;
+    document.removeEventListener('keydown', onPanelKey);
+    const btn = refocus && document.querySelector(`#oqa-bar [data-mode="${panel.mode}"]`);
+    if (btn) btn.focus();
   }
-  function onDirectionsKey(e) {
-    if (e.key !== 'Escape' || overlay || !directions.el) return;
-    const a = document.activeElement;
-    if (!a || a === document.body || directions.el.contains(a)) closeDirections();
+  const closeDirections = () => closePanel();
+
+  // Esc closes the panel (or just cancels an edit), but not while you're typing somewhere in HubSpot
+  function onPanelKey(e) {
+    if (e.key !== 'Escape' || overlay || !panel.el) return;
+    const a = document.activeElement, bar = document.getElementById('oqa-bar');
+    const inPanel = !!a && panel.el.contains(a);
+    if (a && a !== document.body && !inPanel && !(bar && bar.contains(a))) return;
+    const cancel = inPanel && panel.el.querySelector('.oqa-cust [data-act="cancel"]');
+    if (cancel) cancel.click();
+    else closePanel();
   }
 
-  function openDirections(rec) {
+  function buildPanel(rec) {
     injectBrand();
     const el = document.createElement('div');
     el.id = 'oqa-panel';
     el.className = 'tm-oolio';
     el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-label', 'Directions');
     el.innerHTML =
-      '<header><b>Directions</b>' +
+      '<header><span class="oqa-hicon"></span><b></b>' +
       '<button type="button" class="oqa-icon-btn" data-act="settings" title="Your places and settings" aria-label="Your places and settings">' + ICON.settings + '</button>' +
       '<button type="button" class="oqa-icon-btn" data-act="close" title="Close (Esc)" aria-label="Close">' + ICON.x + '</button></header>' +
       '<div class="oqa-body"></div><footer></footer>';
     document.body.appendChild(el);
-    Object.assign(directions, { el, rec, linked: null, companies: new Map(), picked: '', customer: null, dest: null });
-    el.querySelector('[data-act="close"]').addEventListener('click', closeDirections);
+    Object.assign(panel, { el, rec, linked: null, companies: new Map(), picked: '', customer: null, dest: null });
+    el.querySelector('[data-act="close"]').addEventListener('click', () => closePanel());
     el.querySelector('[data-act="settings"]').addEventListener('click', () => {
-      if (el.dataset.view === 'settings') showRoute();
+      if (el.dataset.view === 'settings') render();
       else showSettings();
     });
-    document.addEventListener('keydown', onDirectionsKey);
-    showRoute();
+    document.addEventListener('keydown', onPanelKey);
   }
 
-  const body = () => directions.el.querySelector('.oqa-body');
+  function render() {
+    if (!panel.el) return;
+    const m = MODES[panel.mode];
+    panel.el.querySelector('.oqa-hicon').innerHTML = ICON[m.icon];
+    panel.el.querySelector('header b').textContent = m.heading;
+    panel.el.setAttribute('aria-label', m.heading);
+    setFooter();
+    if (panel.mode === 'trip') showTrip();
+    else showRoute();
+  }
+
+  const body = () => panel.el.querySelector('.oqa-body');
   const skeleton = (w) => `<i class="oqa-skel" style="width:${w}px"></i>`;
 
   function setFooter() {
     const s = loadSettings();
-    directions.el.querySelector('footer').innerHTML =
+    const transit = panel.mode === 'transit' && s.transit;
+    panel.el.querySelector('footer').innerHTML =
       'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. ' +
-      'Drive times: <a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener">FOSSGIS</a>' +
-      (s.transit ? '. Public transport: <a href="https://transitous.org/sources/" target="_blank" rel="noopener">Transitous</a>' : '') + '.';
-  }
-
-  function addressLine(c) {
-    if (c.override) return c.override;
-    if (c.text) return c.text;
-    const p = c.parts || {};
-    const country = clean(p.country);
-    return [p.street, p.street2, [p.city, p.state, p.zip].filter(Boolean).join(' '),
-      /^(australia|au)$/i.test(country) ? '' : country].map(clean).filter(Boolean).join(', ');
-  }
-
-  /* ----- Route view ----- */
-  function showRoute() {
-    const el = directions.el;
-    if (!el) return;
-    el.dataset.view = 'route';
-    setFooter();
-    const s = loadSettings();
-    const from = currentFrom(s);
-    const options = s.places.map((p) => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('') +
-      '<option value="here">My current location</option><option value="other">Another address…</option>';
-
-    const you =
-      '<div class="oqa-end"><span class="oqa-dot"></span><div>' +
-      `<select class="oqa-from" aria-label="${s.direction === 'to' ? 'Start from' : 'Go to'}">${options}</select>` +
-      '<div class="oqa-inline oqa-other" hidden><input type="text" class="oqa-other-input" placeholder="Type an address" aria-label="Address">' +
-      '<button type="button" class="oqa-btn" data-act="other-go">Go</button></div>' +
-      (s.places.length ? '' : '<div class="oqa-muted" style="margin-top:4px">Save your office or home: <button type="button" class="oqa-link" data-act="add-place">add a place</button></div>') +
-      '</div></div>';
-    const cust = '<div class="oqa-end"><span class="oqa-dot oqa-cust-dot"></span><div class="oqa-cust">' + skeleton(160) + skeleton(220) + '</div></div>';
-
-    body().innerHTML =
-      '<div class="oqa-ends">' + (s.direction === 'to' ? you + cust : cust + you) +
-      `<button type="button" class="oqa-icon-btn oqa-swap" data-act="swap" title="Swap start and end" aria-label="Swap start and end">${ICON.swap}</button></div>` +
-      '<div class="oqa-map"></div><div class="oqa-modes"></div><p class="oqa-note" hidden></p><div class="oqa-more"></div>';
-
-    const b = body();
-    const sel = b.querySelector('.oqa-from');
-    sel.value = from;
-    const other = b.querySelector('.oqa-other');
-    const otherInput = b.querySelector('.oqa-other-input');
-    other.hidden = from !== 'other';
-    otherInput.value = directions.oneOff;
-
-    sel.addEventListener('change', () => {
-      setCurrentFrom(sel.value);
-      other.hidden = sel.value !== 'other';
-      if (sel.value === 'other') {
-        otherInput.focus();
-        if (!directions.oneOff) return;
-      }
-      calculate();
-    });
-    const goOther = () => {
-      directions.oneOff = clean(otherInput.value);
-      if (directions.oneOff) calculate();
-    };
-    b.querySelector('[data-act="other-go"]').addEventListener('click', goOther);
-    otherInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') goOther(); });
-    b.querySelector('[data-act="swap"]').addEventListener('click', () => {
-      const st = loadSettings();
-      st.direction = st.direction === 'to' ? 'from' : 'to';
-      saveSettings(st);
-      showRoute();
-    });
-    const add = b.querySelector('[data-act="add-place"]');
-    if (add) add.addEventListener('click', showSettings);
-
-    calculate();
+      (transit
+        ? 'Public transport: <a href="https://transitous.org/sources/" target="_blank" rel="noopener">Transitous</a>. '
+        : 'Drive times: <a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener">FOSSGIS</a>. ') +
+      '<a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">Report a map error</a>.';
   }
 
   function setNote(text, warn) {
-    const n = body().querySelector('.oqa-note');
+    const n = panel.el && body().querySelector('.oqa-note');
     if (!n) return;
     n.hidden = !text;
     n.textContent = text || '';
     n.classList.toggle('oqa-warn', !!warn);
   }
 
-  // Customer card. "Edit" keeps a corrected address for that company in this browser.
-  function renderCustomer() {
-    const box = body().querySelector('.oqa-cust');
-    const c = directions.customer;
-    if (!box || !c) return;
-    const line = c.error ? '' : addressLine(c);
-    const many = c.count > 1
-      ? `<button type="button" class="oqa-link" data-act="pick">${c.count} companies, pick another</button>` : '';
-    box.innerHTML =
-      `<b title="${esc(c.name)}">${esc(c.name || 'Customer')}${c.isPrimary && c.count > 1 ? '<span class="oqa-tag">Primary</span>' : ''}</b>` +
-      `<small>${esc(c.error || line || 'No address in HubSpot')}${c.override ? ' (your edit)' : ''}</small> ` +
-      `<div><button type="button" class="oqa-link" data-act="edit">${line ? 'Edit address' : 'Type the address'}</button>${many ? ' · ' + many : ''}</div>`;
-    box.querySelector('[data-act="edit"]').addEventListener('click', () => editCustomer(box));
-    const pick = box.querySelector('[data-act="pick"]');
-    if (pick) pick.addEventListener('click', () => pickCompany(box));
+  // The "where you are" picker, shared by every view
+  function fromPicker(s, label) {
+    const options = s.places.map((p) => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('') +
+      '<option value="here">My current location</option><option value="other">Another address…</option>';
+    return `<select class="oqa-from" aria-label="${label}">${options}</select>` +
+      '<div class="oqa-inline oqa-other" hidden><input type="text" class="oqa-other-input" placeholder="Type an address" aria-label="Address">' +
+      '<button type="button" class="oqa-btn" data-act="other-go">Go</button></div>' +
+      (s.places.length ? '' : '<div class="oqa-muted" style="margin-top:4px">Save your office or home: <button type="button" class="oqa-link" data-act="add-place">add a place</button></div>');
   }
-
-  function editCustomer(box) {
-    const c = directions.customer || {};
-    const overrides = store.get('overrides', {}) || {};
-    box.innerHTML = `<b>${esc(c.name || 'Customer')}</b>` +
-      '<div class="oqa-inline"><input type="text" class="oqa-addr" aria-label="Customer address" placeholder="Street, suburb, state, postcode">' +
-      '<button type="button" class="oqa-btn" data-act="save">Save</button></div>' +
-      '<div style="margin-top:4px"><button type="button" class="oqa-link" data-act="cancel">Cancel</button>' +
-      (overrides[c.key] ? ' · <button type="button" class="oqa-link" data-act="reset">Use the HubSpot address</button>' : '') + '</div>' +
-      '<small>Kept in this browser only. To fix it for everyone, update the company in HubSpot.</small>';
-    const input = box.querySelector('.oqa-addr');
-    input.value = c.error ? '' : addressLine(c);
-    input.focus();
-    input.select();
-    const save = (value) => {
-      const o = store.get('overrides', {}) || {};
-      if (value) o[c.key] = value;
-      else delete o[c.key];
-      store.set('overrides', o);
-      directions.customer = null;
-      directions.dest = null;
-      calculate();
-    };
-    box.querySelector('[data-act="save"]').addEventListener('click', () => save(clean(input.value)));
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(clean(input.value)); });
-    box.querySelector('[data-act="cancel"]').addEventListener('click', renderCustomer);
-    const reset = box.querySelector('[data-act="reset"]');
-    if (reset) reset.addEventListener('click', () => save(''));
-  }
-
-  // More than one company on the record (often a Head Office plus the venue): let you choose
-  async function pickCompany(box) {
-    const rec = directions.rec;
-    box.innerHTML = '<b>Linked companies</b>' + skeleton(200) + skeleton(160);
-    const run = directions.run;
-    let choices;
-    try { choices = await companyChoices(rec); } catch (e) { choices = { list: [], more: 0 }; }
-    if (!directions.el || run !== directions.run) return;
-    if (!choices.list.length) { renderCustomer(); return; }
-    const current = directions.customer && directions.customer.id;
-    box.innerHTML = '<b>Linked companies</b>' +
-      `<select class="oqa-company" aria-label="Company">${choices.list.map((c) =>
-        `<option value="${esc(c.id)}"${c.id === current ? ' selected' : ''}>${esc(c.name || 'Company ' + c.id)}` +
-        `${c.parts && c.parts.city ? ' (' + esc(c.parts.city) + ')' : ''}${c.id === directions.linked.primary ? ', primary' : ''}</option>`).join('')}</select>` +
-      (choices.more > 0 ? `<small>And ${choices.more} more not shown.</small>` : '') +
-      '<div style="margin-top:4px"><button type="button" class="oqa-link" data-act="cancel">Cancel</button></div>';
-    const sel = box.querySelector('.oqa-company');
-    sel.focus();
+  function wireFromPicker(b, s, onChange) {
+    const sel = b.querySelector('.oqa-from');
+    const from = currentFrom(s);
+    sel.value = from;
+    const other = b.querySelector('.oqa-other');
+    const otherInput = b.querySelector('.oqa-other-input');
+    other.hidden = from !== 'other';
+    otherInput.value = panel.oneOff;
     sel.addEventListener('change', () => {
-      directions.picked = sel.value;
-      directions.customer = null;
-      directions.dest = null;
-      calculate();
-    });
-    box.querySelector('[data-act="cancel"]').addEventListener('click', renderCustomer);
-  }
-
-  async function loadCustomer(run) {
-    if (!directions.customer) {
-      let c;
-      try {
-        c = await getCustomer(directions.rec, directions.picked);
-      } catch (e) {
-        c = { key: 'rec:' + recordKey(directions.rec), name: 'Customer', error: 'Couldn\'t read the company from HubSpot.' };
+      setCurrentFrom(sel.value);
+      other.hidden = sel.value !== 'other';
+      if (sel.value === 'other') {
+        otherInput.focus();
+        if (!panel.oneOff) return;
       }
-      if (run !== directions.run || !directions.el) return null;
-      // A typed-in address wins over HubSpot's
-      const o = store.get('overrides', {}) || {};
-      if (o[c.key]) Object.assign(c, { override: o[c.key], error: null, lat: null, lon: null });
-      directions.customer = c;
-      directions.lastVia = (directions.linked ? directions.linked.via : '') + (c.via ? ' / ' + c.via : '');
-    }
-    renderCustomer();
-    return directions.customer;
-  }
-
-  async function customerPoint(c) {
-    if (directions.dest) return directions.dest;
-    if (c.lat !== null && c.lat !== undefined && isFinite(c.lat) && isFinite(c.lon)) {
-      directions.dest = { lat: +c.lat, lon: +c.lon, approx: false, fromHubSpot: true };
-    } else if (c.override || c.text) {
-      directions.dest = await geocode({ text: c.override || c.text });
-    } else {
-      const p = c.parts || {};
-      directions.dest = await geocode({ street: [p.street, p.street2].filter(Boolean).join(' '), city: p.city, state: p.state, zip: p.zip, country: p.country });
-    }
-    return directions.dest;
+      onChange();
+    });
+    const goOther = () => {
+      panel.oneOff = clean(otherInput.value);
+      if (panel.oneOff) onChange();
+    };
+    b.querySelector('[data-act="other-go"]').addEventListener('click', goOther);
+    otherInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') goOther(); });
+    const add = b.querySelector('[data-act="add-place"]');
+    if (add) add.addEventListener('click', showSettings);
   }
 
   function getPosition() {
@@ -1101,6 +1214,8 @@
     });
   }
 
+  const LOOKUP_DOWN = 'The map service didn\'t answer. Try again in a minute.';
+
   // Where you are: a saved place, your current location, or a one-off address
   async function yourPoint(from) {
     if (from === 'here') {
@@ -1108,39 +1223,170 @@
       return { ...p, label: 'My location', query: pt(p) };
     }
     if (from === 'other') {
-      const g = await geocode({ text: directions.oneOff });
-      if (!g) throw new Error(`Couldn't find "${directions.oneOff}" on the map. Try adding the suburb and postcode.`);
-      return { ...g, label: directions.oneOff, query: directions.oneOff };
+      if (!panel.oneOff) throw new Error('Type an address above, then press Go.');
+      const g = await geocode({ text: panel.oneOff }).catch(() => { throw new Error(LOOKUP_DOWN); });
+      if (!g) throw new Error(`Couldn't find "${panel.oneOff}" on the map. Try adding the suburb and postcode.`);
+      return { ...g, label: panel.oneOff, query: parseCoords(panel.oneOff) ? pt(g) : panel.oneOff };
     }
     const p = loadSettings().places.find((x) => x.id === from);
     if (!p) throw new Error('That saved place has gone. Pick another.');
     return { lat: p.lat, lon: p.lon, label: p.label, query: parseCoords(p.address) ? pt(p) : p.address };
   }
 
-  function modeRow(kind, icon, href) {
-    return `<a class="oqa-mode" data-mode="${kind}" href="${esc(href)}" target="_blank" rel="noopener" title="Open in Google Maps">` +
+  /* ----- Customer (drive and public transport views) ----- */
+
+  async function loadCustomer(run) {
+    if (!panel.customer) {
+      let c;
+      try {
+        c = await getCustomer(panel.rec, panel, panel.picked);
+      } catch (e) {
+        c = { key: 'rec:' + recordKey(panel.rec), name: 'Customer', error: 'Couldn\'t read the company from HubSpot.' };
+      }
+      if (run !== panel.run || !panel.el) return null;
+      panel.customer = c;
+      panel.lastVia = c.via || '';
+    }
+    renderCustomer();
+    return panel.customer;
+  }
+
+  // The customer's map point, kept for this panel. A slow lookup for a customer that's
+  // no longer showing (another company picked, an edit saved) is thrown away.
+  async function customerPoint(c) {
+    if (panel.dest && panel.dest.of === c) return panel.dest;
+    const p = await pointFor(c);
+    if (p && panel.customer === c) panel.dest = { ...p, of: c };
+    return p;
+  }
+
+  function renderCustomer() {
+    const box = panel.el && body().querySelector('.oqa-cust');
+    const c = panel.customer;
+    if (!box || !c) return;
+    const line = c.error ? '' : addressLine(c);
+    const many = c.count > 1 ? `<button type="button" class="oqa-link" data-act="pick">${c.count} companies, pick another</button>` : '';
+    box.innerHTML =
+      `<div class="oqa-name"><b title="${esc(c.name)}">${esc(c.name || 'Customer')}</b>${c.isPrimary && c.count > 1 ? '<span class="oqa-tag">Primary</span>' : ''}</div>` +
+      `<small>${esc(c.error || line || 'No address in HubSpot')}${c.override ? ' (your edit)' : ''}</small> ` +
+      `<div><button type="button" class="oqa-link" data-act="edit">${line ? 'Edit address' : 'Type the address'}</button>${many ? ' · ' + many : ''}</div>`;
+    box.querySelector('[data-act="edit"]').addEventListener('click', () => editCustomer(box));
+    const pick = box.querySelector('[data-act="pick"]');
+    if (pick) pick.addEventListener('click', () => pickCompany(box));
+  }
+
+  function editCustomer(box) {
+    const c = panel.customer || {};
+    const overrides = store.get('overrides', {}) || {};
+    box.innerHTML = `<div class="oqa-name"><b>${esc(c.name || 'Customer')}</b></div>` +
+      '<div class="oqa-inline"><input type="text" class="oqa-addr" aria-label="Customer address" placeholder="Street, suburb, state, postcode">' +
+      '<button type="button" class="oqa-btn" data-act="save">Save</button></div>' +
+      '<div style="margin-top:4px"><button type="button" class="oqa-link" data-act="cancel">Cancel</button>' +
+      (overrides[c.key] ? ' · <button type="button" class="oqa-link" data-act="reset">Use the HubSpot address</button>' : '') + '</div>' +
+      '<small>Kept in this browser only. To fix it for everyone, update the company in HubSpot.</small>';
+    const input = box.querySelector('.oqa-addr');
+    input.value = c.error ? '' : addressLine(c);
+    input.focus();
+    input.select();
+    const save = (value) => {
+      const o = store.get('overrides', {}) || {};
+      if (value) o[c.key] = value;
+      else delete o[c.key];
+      store.set('overrides', o);
+      panel.customer = null;
+      panel.dest = null;
+      calculate();
+    };
+    box.querySelector('[data-act="save"]').addEventListener('click', () => save(clean(input.value)));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(clean(input.value)); });
+    box.querySelector('[data-act="cancel"]').addEventListener('click', () => {
+      renderCustomer();
+      const edit = box.querySelector('[data-act="edit"]');
+      if (edit) edit.focus();
+    });
+    const reset = box.querySelector('[data-act="reset"]');
+    if (reset) reset.addEventListener('click', () => save(''));
+  }
+
+  // More than one company on the record (often a Head Office plus the venue): let you choose
+  async function pickCompany(box) {
+    const rec = panel.rec;
+    box.innerHTML = '<div class="oqa-name"><b>Linked companies</b></div>' + skeleton(200) + skeleton(160);
+    const run = panel.run;
+    let choices;
+    try { choices = await companyChoices(rec, panel); } catch (e) { choices = { list: [], more: 0 }; }
+    if (!panel.el || run !== panel.run) return;
+    if (!choices.list.length) { renderCustomer(); return; }
+    const current = panel.customer && panel.customer.id;
+    box.innerHTML = '<div class="oqa-name"><b>Linked companies</b></div>' +
+      `<select class="oqa-company" aria-label="Company">${choices.list.map((c) =>
+        `<option value="${esc(c.id)}"${c.id === current ? ' selected' : ''}>${esc(c.name || 'Company ' + c.id)}` +
+        `${c.parts && c.parts.city ? ' (' + esc(c.parts.city) + ')' : ''}${c.id === panel.linked.primary ? ', primary' : ''}</option>`).join('')}</select>` +
+      (choices.more > 0 ? `<small>And ${choices.more} more not shown.</small>` : '') +
+      '<div style="margin-top:4px"><button type="button" class="oqa-link" data-act="cancel">Cancel</button></div>';
+    const sel = box.querySelector('.oqa-company');
+    sel.focus();
+    sel.addEventListener('change', () => {
+      panel.picked = sel.value;
+      panel.customer = null;
+      panel.dest = null;
+      calculate();
+    });
+    box.querySelector('[data-act="cancel"]').addEventListener('click', renderCustomer);
+  }
+
+  /* ----- Drive and public transport views ----- */
+  function showRoute() {
+    const el = panel.el;
+    el.dataset.view = 'route';
+    const s = loadSettings();
+    const you = `<div class="oqa-end"><span class="oqa-dot"></span><div>${fromPicker(s, s.direction === 'to' ? 'Start from' : 'Go to')}</div></div>`;
+    const cust = '<div class="oqa-end"><span class="oqa-dot oqa-cust-dot"></span><div class="oqa-cust">' + skeleton(160) + skeleton(220) + '</div></div>';
+
+    body().innerHTML =
+      '<div class="oqa-ends">' + (s.direction === 'to' ? you + cust : cust + you) +
+      `<button type="button" class="oqa-icon-btn oqa-swap" data-act="swap" title="Swap start and end" aria-label="Swap start and end">${ICON.swap}</button></div>` +
+      '<div class="oqa-map"></div><div class="oqa-result"></div><p class="oqa-note" hidden></p>' +
+      '<div class="oqa-actions"></div><div class="oqa-more"></div>';
+
+    const b = body();
+    wireFromPicker(b, s, calculate);
+    b.querySelector('[data-act="swap"]').addEventListener('click', () => {
+      const st = loadSettings();
+      st.direction = st.direction === 'to' ? 'from' : 'to';
+      saveSettings(st);
+      showRoute();
+    });
+    if (b.querySelector('.oqa-from').value === 'other' && !panel.oneOff) loadCustomer(++panel.run);
+    else calculate();
+  }
+
+  function resultRow(icon, href, title) {
+    return `<a class="oqa-mode" href="${esc(href)}" target="_blank" rel="noopener" title="${title}">` +
       `<span class="oqa-ic">${icon}</span><div><b>${skeleton(70)}</b><span class="oqa-sub">${skeleton(150)}</span></div>` +
       `<span class="oqa-go">${ICON.external}</span></a>`;
   }
-  function fillMode(kind, big, small) {
-    const row = directions.el && body().querySelector(`.oqa-mode[data-mode="${kind}"]`);
+  function fillResult(big, small) {
+    const row = panel.el && body().querySelector('.oqa-result .oqa-mode');
     if (!row) return;
     row.querySelector('b').textContent = big;
     row.querySelector('.oqa-sub').textContent = small;
   }
 
   async function calculate() {
-    if (!directions.el) return;
-    const run = ++directions.run;
-    const live = () => run === directions.run && !!directions.el;
+    if (!panel.el || panel.el.dataset.view !== 'route') return;
+    const run = ++panel.run;
+    const live = () => run === panel.run && !!panel.el;
+    const mode = panel.mode;
     const b = body();
-    const modes = b.querySelector('.oqa-modes');
+    const result = b.querySelector('.oqa-result');
     const map = b.querySelector('.oqa-map');
     const more = b.querySelector('.oqa-more');
-    if (!modes) return;
+    const actions = b.querySelector('.oqa-actions');
     setNote('');
-    modes.innerHTML = '';
+    result.innerHTML = '';
     more.innerHTML = '';
+    actions.innerHTML = '';
     map.innerHTML = '';
     map.hidden = false;
 
@@ -1154,10 +1400,10 @@
     }
 
     const s = loadSettings();
-    let dest, you;
+    let dest, you, lookupDown = false;
     try {
       [dest, you] = await Promise.all([
-        customerPoint(c).catch((e) => { log('address lookup failed:', e.message); return null; }),
+        customerPoint(c).catch((e) => { log('address lookup failed:', e.message); lookupDown = true; return null; }),
         yourPoint(b.querySelector('.oqa-from').value),
       ]);
     } catch (e) {
@@ -1167,70 +1413,305 @@
       return;
     }
     if (!live()) return;
+
+    const travel = mode === 'transit' ? 'transit' : 'driving';
+    const icon = mode === 'transit' ? ICON.train : ICON.car;
     if (!dest) {
+      // No point to route to, but Google can still try the address text
       map.hidden = true;
-      setNote('Couldn\'t find this address on the map. Check it with Edit address, or try Google Maps.', true);
-      const custQ = { query: addressLine(c) };
-      modes.innerHTML = modeRow('drive', ICON.car, s.direction === 'to' ? gmaps(you, custQ, 'driving') : gmaps(custQ, you, 'driving'));
-      fillMode('drive', 'Google Maps', 'Open the route in Google Maps');
+      const custQ = { query: addressQuery(c, {}) };
+      result.innerHTML = resultRow(icon, s.direction === 'to' ? gmaps(you, custQ, travel) : gmaps(custQ, you, travel), 'Open in Google Maps');
+      fillResult('Google Maps', 'Open the route in Google Maps');
+      setNote(lookupDown ? 'The map service didn\'t answer, so there\'s no time yet. Try again in a minute, or open Google Maps.'
+        : 'Couldn\'t find this address on the map. Check it with Edit address, or open Google Maps.', true);
       return;
     }
 
-    // Google gets the address text (it finds the venue better than a pin), with the country added when missing
-    const line = addressLine(c);
-    const hasCountry = /\b(australia|new zealand|united kingdom|united states)\b/i.test(line);
-    const custEnd = { ...dest, label: c.name, query: dest.approx || !line ? pt(dest) : line + (hasCountry ? '' : ', Australia') };
+    const custEnd = { lat: dest.lat, lon: dest.lon, label: c.name, query: addressQuery(c, dest) };
     const [a, z] = s.direction === 'to' ? [you, custEnd] : [custEnd, you];
+    const markers = [{ ...you, kind: 'you' }, { ...custEnd, kind: 'cust' }];
 
-    modes.innerHTML = modeRow('drive', ICON.car, gmaps(a, z, 'driving')) + modeRow('transit', ICON.train, gmaps(a, z, 'transit'));
-    more.innerHTML = moreLinks(a, z, s.transit);
-    drawMap(map, a, z, null);
+    result.innerHTML = resultRow(icon, gmaps(a, z, travel), 'Open in Google Maps');
+    drawMap(map, markers, [{ coords: [[a.lon, a.lat], [z.lon, z.lat]], kind: 'guess' }]);
     if (dest.approx) setNote('Couldn\'t find the exact street, so times go to the suburb. Edit the address for a closer match.', true);
     else if (dest.display && !dest.fromHubSpot) setNote('Map pin: ' + dest.display);
+    tripButton(actions, c, dest);
 
-    driveRoute(a, z).then((r) => {
-      if (!live()) return;
-      fillMode('drive', fmtDuration(r.seconds), `${fmtDistance(r.metres)} by car, without traffic`);
-      drawMap(map, a, z, r.line);
-    }).catch((e) => {
-      log('drive route failed:', e.message);
-      if (live()) fillMode('drive', 'Drive', 'Couldn\'t work out a time here. Open Google Maps instead.');
-    });
+    const links = [link(`https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${pt(a)}%3B${pt(z)}`, 'OpenStreetMap')];
+    if (isApple()) links.push(link(`https://maps.apple.com/directions?source=${encodeURIComponent(a.query)}&destination=${encodeURIComponent(z.query)}&mode=${travel}`, 'Apple Maps'));
+    if (mode === 'transit' && s.transit) links.push(link(`https://api.transitous.org/?fromPlace=${pt(a)}&toPlace=${pt(z)}`, 'Transitous'));
+    more.innerHTML = '<span class="oqa-muted">Also open in</span> ' + links.join('');
 
-    if (!s.transit) {
-      fillMode('transit', 'Public transport', 'Open Google Maps for times');
+    if (mode === 'drive') {
+      driveRoute([a, z]).then((r) => {
+        if (!live()) return;
+        fillResult(fmtDuration(r.seconds), `${fmtDistance(r.metres)} by car, without traffic`);
+        drawMap(map, markers, [{ coords: r.line, kind: 'drive' }]);
+      }).catch((e) => {
+        log('drive route failed:', e.message);
+        if (live()) fillResult('Drive', 'Couldn\'t work out a time here. Open Google Maps instead.');
+      });
       return;
     }
+
+    if (!s.transit) {
+      fillResult('Google Maps', 'Opens with live public transport times');
+      const call = document.createElement('div');
+      call.className = 'oqa-callout';
+      call.innerHTML = '<p>Want the times here instead? <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a> ' +
+        'can show them. It\'s a free volunteer service for personal, non-commercial use, and they ask to hear from you before you use it.</p>' +
+        '<button type="button" class="oqa-btn" data-act="transit-on">Show times here</button>';
+      result.after(call);
+      call.querySelector('[data-act="transit-on"]').addEventListener('click', () => {
+        const st = loadSettings();
+        st.transit = true;
+        saveSettings(st);
+        render();
+      });
+      return;
+    }
+
     transitPlan(a, z).then((t) => {
       if (!live()) return;
-      if (!t) return fillMode('transit', 'Public transport', 'No services found. Open Google Maps instead.');
-      if (t.walkOnly) return fillMode('transit', fmtDuration(t.seconds), 'Walk, it\'s close');
-      const changes = t.changes ? `${t.changes} change${t.changes > 1 ? 's' : ''}` : 'direct';
-      fillMode('transit', fmtDuration(t.seconds),
-        `Leave ${fmtTime(t.leave, t.tz)}, arrive ${fmtTime(t.arrive, t.tz)}. ${t.lines.slice(0, 4).join(' then ')}${t.lines.length ? ', ' : ''}${changes}`);
+      if (!t) return fillResult('No services', 'Nothing found from here. Open Google Maps instead.');
+      if (t.walkOnly) return fillResult(fmtDuration(t.seconds), 'Walk, it\'s close');
+      const best = t.best;
+      const changes = best.changes ? `${best.changes} change${best.changes > 1 ? 's' : ''}` : 'no changes';
+      fillResult(fmtDuration(best.seconds), `Leave ${fmtTime(best.leave, t.tz)}, arrive ${fmtTime(best.arrive, t.tz)}, ${changes}`);
+      const legs = document.createElement('ol');
+      legs.className = 'oqa-legs';
+      legs.setAttribute('aria-label', 'Steps');
+      legs.innerHTML = best.legs.filter((l) => !l.walk || l.seconds >= 60).map((l) => l.walk
+        ? `<li><span class="oqa-line oqa-walkline">Walk</span><span>${fmtDuration(l.seconds)}${l.to && l.to !== 'END' ? ' to ' + esc(l.to) : ''}</span></li>`
+        : `<li><span class="oqa-line">${esc(l.line || l.mode)}</span><span>${esc(l.mode)} from ${esc(l.from)}, ${fmtTime(l.leave, t.tz)}</span></li>`).join('');
+      const later = t.options.filter((o) => o !== best).slice(0, 3)
+        .map((o) => `${fmtTime(o.leave, t.tz)} (${fmtDuration(o.seconds)})`);
+      result.appendChild(legs);
+      if (later.length) {
+        const p = document.createElement('p');
+        p.className = 'oqa-muted';
+        p.style.margin = '6px 0 0';
+        p.textContent = 'Other departures: ' + later.join(', ');
+        result.appendChild(p);
+      }
+      drawMap(map, markers, best.legs.filter((l) => l.shape).map((l) => ({ coords: l.shape, kind: l.walk ? 'walk' : 'transit' })));
     }).catch((e) => {
       log('public transport failed:', e.message);
-      if (live()) fillMode('transit', 'Public transport', 'Couldn\'t get times here. Open Google Maps instead.');
+      if (live()) fillResult('Public transport', 'Couldn\'t get times here. Open Google Maps instead.');
     });
   }
 
-  /* ----- Settings view ----- */
-  function showSettings() {
-    const el = directions.el;
+  /* ----- Trip: several customers in one drive ----- */
+  const tripStops = () => {
+    const t = store.get('trip', null);
+    return t && Array.isArray(t.stops) ? t.stops : [];
+  };
+  function saveTrip(stops, extra) {
+    const t = store.get('trip', null) || {};
+    store.set('trip', { ...t, ...extra, stops: stops.slice(0, MAX_STOPS), at: Date.now() });
+  }
+
+  // Records open in your HubSpot tabs that aren't in the trip yet
+  const tripSuggestions = (stops) => openRecords().filter((t) => !stops.some((x) => x.url === recordUrl(t)));
+  const suggestionKey = () => tripSuggestions(tripStops()).map((t) => t.key + ':' + t.title).sort().join('|');
+
+  // "Add to trip" under a drive or public transport result
+  function tripButton(box, c, dest) {
+    const stops = tripStops();
+    const inTrip = stops.some((x) => x.key === c.key);
+    box.innerHTML = inTrip
+      ? `<button type="button" class="oqa-btn oqa-quiet" data-act="view-trip">${ICON.route}In your trip, view it</button>`
+      : `<button type="button" class="oqa-btn oqa-quiet" data-act="add-trip"${stops.length >= MAX_STOPS ? ' disabled title="A trip can have up to 9 stops"' : ''}>${ICON.plus}Add to trip</button>`;
+    const view = box.querySelector('[data-act="view-trip"]');
+    if (view) view.addEventListener('click', () => openPanel('trip'));
+    const add = box.querySelector('[data-act="add-trip"]');
+    if (add) add.addEventListener('click', () => {
+      saveTrip([...tripStops(), stopFrom(c, dest, panel.rec)]);
+      tripButton(box, c, dest);
+    });
+  }
+
+  function stopFrom(c, dest, rec) {
+    return { key: c.key, name: c.name || 'Customer', line: addressLine(c), lat: dest.lat, lon: dest.lon,
+      approx: !!dest.approx, url: recordUrl(rec), query: addressQuery(c, dest) };
+  }
+
+  // A stop for a record open in another tab: read its company and find it on the map
+  async function stopForRecord(t) {
+    const rec = { portal: t.portal, type: t.type, id: t.id };
+    const ctx = { rec, linked: null, companies: new Map() };
+    const c = await getCustomer(rec, ctx);
+    if (c.error) throw new Error(`${t.title || 'That record'}: ${c.error}`);
+    if (!addressLine(c) && c.lat == null) throw new Error(`${c.name} has no address in HubSpot. Open it and use Edit address.`);
+    let dest;
+    try { dest = await pointFor(c); } catch (e) { throw new Error(LOOKUP_DOWN); }
+    if (!dest) throw new Error(`Couldn't find ${c.name} on the map. Open it and use Edit address.`);
+    return stopFrom(c, dest, rec);
+  }
+
+  function showTrip() {
+    const el = panel.el;
     if (!el) return;
-    directions.run++;
+    el.dataset.view = 'trip';
+    const run = ++panel.run;
+    const live = () => run === panel.run && !!panel.el && panel.el.dataset.view === 'trip';
+    const s = loadSettings();
+    const trip = store.get('trip', null) || {};
+    const stops = tripStops();
+    const back = trip.back === true;
+    const here = getRecord();
+    const suggestions = tripSuggestions(stops);
+    panel.suggestKey = suggestionKey();
+    // This tab's record first
+    suggestions.sort((x, y) => (recordKey(y) === recordKey(here)) - (recordKey(x) === recordKey(here)));
+
+    body().innerHTML =
+      `<div class="oqa-ends oqa-solo"><div class="oqa-end"><span class="oqa-dot"></span><div>${fromPicker(s, 'Start from')}</div></div></div>` +
+      (stops.length
+        ? '<ol class="oqa-stops">' + stops.map((x, i) =>
+          `<li><span class="oqa-num">${i + 1}</span><div><a class="oqa-stop-name" href="${esc(x.url)}" title="Open ${esc(x.name)}">${esc(x.name)}</a>` +
+          `<small><span class="oqa-legtime" data-leg="${i}"></span>${esc(x.line || '')}</small></div>` +
+          `<button type="button" class="oqa-icon-btn" data-up="${i}" title="Move up" aria-label="Move ${esc(x.name)} up"${i === 0 ? ' disabled' : ''}>${ICON.up}</button>` +
+          `<button type="button" class="oqa-icon-btn" data-down="${i}" title="Move down" aria-label="Move ${esc(x.name)} down"${i === stops.length - 1 ? ' disabled' : ''}>${ICON.down}</button>` +
+          `<button type="button" class="oqa-icon-btn" data-remove="${i}" title="Remove" aria-label="Remove ${esc(x.name)}">${ICON.x}</button></li>`).join('') + '</ol>'
+        : '<p class="oqa-muted" style="margin:0 0 8px">No stops yet. Add records you have open in HubSpot, or use <b>Add to trip</b> under a drive time.</p>') +
+      (suggestions.length && stops.length < MAX_STOPS
+        ? '<div class="oqa-suggest"><span class="oqa-muted">Open in your tabs</span>' + suggestions.slice(0, 8).map((t, i) =>
+          `<button type="button" data-suggest="${i}">${ICON.plus}<span>${esc(t.title || TYPE_NAMES[t.type] + ' ' + t.id)}</span>` +
+          `<small>${recordKey(t) === recordKey(here) ? 'This tab' : TYPE_NAMES[t.type] || ''}</small></button>`).join('') + '</div>'
+        : '') +
+      '<p class="oqa-note" hidden></p>' +
+      (stops.length
+        ? `<label class="oqa-check"><input type="checkbox" data-act="back"${back ? ' checked' : ''}><span>Come back to the start at the end</span></label>` +
+          '<div class="oqa-total" aria-live="polite">' + skeleton(180) + '</div><div class="oqa-map"></div>' +
+          '<div class="oqa-actions">' +
+          `<a class="oqa-btn" data-act="gmaps" target="_blank" rel="noopener" href="#" hidden>${ICON.external}Google Maps</a>` +
+          (stops.length > 1 ? `<button type="button" class="oqa-btn oqa-quiet" data-act="order">${ICON.route}Best order</button>` : '') +
+          '<button type="button" class="oqa-btn oqa-quiet" data-act="clear">Clear</button></div>'
+        : '');
+
+    const b = body();
+    wireFromPicker(b, s, showTrip);
+    const move = (from, to) => {
+      const list = tripStops();
+      const [x] = list.splice(from, 1);
+      list.splice(to, 0, x);
+      saveTrip(list);
+      showTrip();
+    };
+    b.querySelectorAll('[data-up]').forEach((x) => x.addEventListener('click', () => move(+x.dataset.up, +x.dataset.up - 1)));
+    b.querySelectorAll('[data-down]').forEach((x) => x.addEventListener('click', () => move(+x.dataset.down, +x.dataset.down + 1)));
+    b.querySelectorAll('[data-remove]').forEach((x) => x.addEventListener('click', () => {
+      const list = tripStops();
+      list.splice(+x.dataset.remove, 1);
+      saveTrip(list);
+      showTrip();
+    }));
+    b.querySelectorAll('[data-suggest]').forEach((x) => x.addEventListener('click', async () => {
+      const t = suggestions[+x.dataset.suggest];
+      x.disabled = true;
+      x.querySelector('small').textContent = 'Adding…';
+      try {
+        const stop = await stopForRecord(t);
+        const list = tripStops();
+        if (list.some((y) => y.key === stop.key)) throw new Error(`${stop.name} is already in your trip.`);
+        saveTrip([...list, stop]);
+        if (panel.el && panel.el.dataset.view === 'trip') showTrip();
+      } catch (e) {
+        if (!panel.el || panel.el.dataset.view !== 'trip') return;
+        x.disabled = false;
+        x.querySelector('small').textContent = recordKey(t) === recordKey(here) ? 'This tab' : TYPE_NAMES[t.type] || '';
+        setNote(e.message, true);
+      }
+    }));
+    if (!stops.length) return;
+
+    b.querySelector('[data-act="back"]').addEventListener('change', (e) => { saveTrip(tripStops(), { back: e.target.checked }); showTrip(); });
+    b.querySelector('[data-act="clear"]').addEventListener('click', () => {
+      if (stops.length > 1 && !confirm('Clear all ' + stops.length + ' stops from your trip?')) return;
+      saveTrip([], { back: false });
+      showTrip();
+    });
+
+    const total = b.querySelector('.oqa-total');
+    const map = b.querySelector('.oqa-map');
+    const gm = b.querySelector('[data-act="gmaps"]');
+    const order = b.querySelector('[data-act="order"]');
+    if (order) order.disabled = true;
+
+    yourPoint(b.querySelector('.oqa-from').value).then(async (you) => {
+      if (!live()) return;
+      const points = [you, ...stops];
+      const route = back ? [...points, you] : points;
+      const last = back ? you : stops[stops.length - 1];
+      const via = back ? stops : stops.slice(0, -1);
+      gm.href = gmaps(you, last, 'driving', via);
+      gm.hidden = false;
+      const markers = [{ ...you, kind: 'you' }, ...stops.map((x, i) => ({ ...x, kind: 'stop', label: String(i + 1) }))];
+      drawMap(map, markers, [{ coords: route.map((p) => [p.lon, p.lat]), kind: 'guess' }]);
+      if (stops.some((x) => x.approx)) setNote('Some stops only matched the suburb, so their times are rough.', true);
+
+      if (order) {
+        order.disabled = false;
+        order.addEventListener('click', async () => {
+          order.disabled = true;
+          order.lastChild.textContent = 'Working it out…';
+          try {
+            const idx = await bestOrder(points, back);
+            if (!live()) return;
+            saveTrip(idx.map((i) => stops[i - 1]));
+            showTrip();
+          } catch (e) {
+            log('best order failed:', e.message);
+            if (!live()) return;
+            order.disabled = false;
+            order.lastChild.textContent = 'Best order';
+            setNote('Couldn\'t work out the best order just now. Try again in a minute.', true);
+          }
+        });
+      }
+
+      try {
+        const r = await driveRoute(route);
+        if (!live()) return;
+        total.innerHTML = `<b>${fmtDuration(r.seconds)}</b> driving, ${fmtDistance(r.metres)}` +
+          '<div class="oqa-muted">Without traffic, and not counting time at each stop.</div>';
+        r.legs.forEach((l, i) => {
+          const span = b.querySelector(`[data-leg="${i}"]`);
+          if (span) span.textContent = `+${fmtDuration(l.seconds)}  `;
+        });
+        const home = back && r.legs[stops.length];
+        if (home) total.insertAdjacentHTML('beforeend', `<div class="oqa-muted">Includes ${fmtDuration(home.seconds)} back to ${esc(you.label)}.</div>`);
+        drawMap(map, markers, [{ coords: r.line, kind: 'drive' }]);
+      } catch (e) {
+        log('trip route failed:', e.message);
+        if (live()) total.innerHTML = '<span class="oqa-muted">Couldn\'t work out the drive here. Google Maps can still plan it.</span>';
+      }
+    }).catch((e) => {
+      if (!live()) return;
+      total.innerHTML = '';
+      map.hidden = true;
+      setNote(e.message, true);
+    });
+  }
+
+  /* ----- Settings ----- */
+  function showSettings() {
+    const el = panel.el;
+    if (!el) return;
+    panel.run++;
     el.dataset.view = 'settings';
     const s = loadSettings();
     const defaultId = s.defaultFrom && (s.defaultFrom === 'here' || s.places.some((p) => p.id === s.defaultFrom))
       ? s.defaultFrom : (s.places[0] ? s.places[0].id : 'here');
     const star = (id, label) =>
       `<button type="button" class="oqa-icon-btn oqa-star" data-star="${esc(id)}" aria-pressed="${defaultId === id}" ` +
-      `title="${defaultId === id ? 'Directions start here' : 'Start directions here'}" aria-label="Start directions from ${esc(label)}">${ICON.star}</button>`;
+      `title="${defaultId === id ? 'You start here' : 'Start here'}" aria-label="Start from ${esc(label)}">${ICON.star}</button>`;
 
     body().innerHTML =
-      `<button type="button" class="oqa-link" data-act="back" style="margin:2px 0 4px">Back to directions</button>` +
+      `<button type="button" class="oqa-link" data-act="back" style="margin:2px 0 4px">Back to ${MODES[panel.mode].heading.toLowerCase()}</button>` +
       '<h3>Your places</h3>' +
-      '<p class="oqa-muted" style="margin:0">Saved in Tampermonkey on this computer only. The star is where directions start.</p>' +
+      '<p class="oqa-muted" style="margin:0">Saved in Tampermonkey on this computer only. The star is where you start.</p>' +
       '<ul class="oqa-places">' +
       s.places.map((p) =>
         `<li><div><b>${esc(p.label)}</b><small title="${esc(p.display || p.address)}">${esc(p.display || p.address)}</small></div>` +
@@ -1238,31 +1719,31 @@
         `<button type="button" class="oqa-icon-btn" data-del="${esc(p.id)}" title="Remove" aria-label="Remove ${esc(p.label)}">${ICON.trash}</button></li>`).join('') +
       `<li><div><b>My current location</b><small>Your browser asks the first time</small></div>${star('here', 'my current location')}</li>` +
       '</ul>' +
-      '<form class="oqa-form" autocomplete="off">' +
+      '<form class="oqa-form" autocomplete="off" novalidate>' +
       '<h3 style="margin-top:4px">Add a place</h3>' +
       '<input type="text" name="label" maxlength="40" placeholder="Name, for example Perth office or Home" aria-label="Place name">' +
-      '<input type="text" name="address" placeholder="Address, or a Google Maps link" aria-label="Place address">' +
+      '<input type="text" name="address" placeholder="Address, or a Google Maps link to the place" aria-label="Place address">' +
       '<div class="oqa-inline" style="margin:0"><button type="submit" class="oqa-btn">Add place</button>' +
       '<button type="button" class="oqa-btn oqa-quiet" data-act="here">Use where I am now</button></div>' +
       '<p class="oqa-error-text" hidden></p>' +
-      '<small class="oqa-muted">For home, a nearby corner or your suburb is enough. Addresses are looked up on OpenStreetMap; ' +
-      '"Use where I am now" saves the spot without sending an address anywhere.</small></form>' +
+      '<small class="oqa-muted">For home, a nearby corner or your suburb is enough. Typed addresses are looked up on OpenStreetMap. ' +
+      '"Use where I am now" sends no address and saves your spot to about 100 m; that point goes to the route services when you get directions.</small></form>' +
       '<h3>Public transport times</h3>' +
       `<label class="oqa-check"><input type="checkbox" data-act="transit"${s.transit ? ' checked' : ''}>` +
-      '<span>Show public transport times here, from <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a>. ' +
+      '<span>Show public transport times in the panel, from <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a>. ' +
       'It\'s a free volunteer service for personal, non-commercial use, and they ask to hear from you before you use it. ' +
-      'When off, the public transport row opens Google Maps.</span></label>' +
+      'When off, the public transport button opens Google Maps.</span></label>' +
       '<details><summary>Advanced</summary>' +
       '<p class="oqa-muted" style="margin:6px 0 0">Service addresses, in case one moves or asks you to switch. Clear a box to go back to the default.</p>' +
       ['geocode:Address lookup', 'drive:Driving routes', 'transit:Public transport'].map((x) => {
         const [k, label] = x.split(':');
         return `<label class="oqa-field">${label}<input type="text" data-service="${k}" placeholder="${esc(SERVICES[k])}" value="${esc(s.services[k] || '')}"></label>`;
       }).join('') +
-      `<p class="oqa-muted" style="margin:8px 0 0">Version ${esc(VERSION)}. Last company lookup: ${esc(directions.lastVia || 'none yet')}.</p>` +
+      `<p class="oqa-muted" style="margin:8px 0 0">Version ${esc(VERSION)}. Last company lookup: ${esc(panel.lastVia || 'none yet')}.</p>` +
       '</details>';
 
     const b = body();
-    b.querySelector('[data-act="back"]').addEventListener('click', showRoute);
+    b.querySelector('[data-act="back"]').addEventListener('click', render);
     b.querySelectorAll('[data-star]').forEach((btn) => btn.addEventListener('click', () => {
       const st = loadSettings();
       st.defaultFrom = btn.dataset.star;
@@ -1281,13 +1762,18 @@
       const st = loadSettings();
       st.transit = e.target.checked;
       saveSettings(st);
-      setFooter();
     });
     b.querySelectorAll('[data-service]').forEach((input) => input.addEventListener('change', () => {
       const st = loadSettings();
       const v = clean(input.value);
-      if (v && !/^https:\/\//.test(v)) { input.value = ''; return; }
-      st.services = { ...st.services, [input.dataset.service]: v };
+      input.setCustomValidity('');
+      if (v && !/^https:\/\/[^\s/]+/.test(v)) {
+        input.value = st.services[input.dataset.service] || '';
+        input.setCustomValidity('Use an address that starts with https://');
+        input.reportValidity();
+        return;
+      }
+      st.services = { ...st.services, [input.dataset.service]: v.replace(/\/+$/, '') };
       if (!v) delete st.services[input.dataset.service];
       saveSettings(st);
     }));
@@ -1308,16 +1794,19 @@
       const label = clean(form.label.value), address = clean(form.address.value);
       if (!label) return showErr('Give the place a name.');
       if (!address) return showErr('Add an address, or use where you are now.');
+      if (/^https?:\/\//i.test(address) && !parseCoords(address)) {
+        return showErr('That link has no map position in it. Open it, wait for the map to load, then copy the address bar again.');
+      }
       const btn = form.querySelector('button[type="submit"]');
       btn.disabled = true;
       btn.textContent = 'Finding it…';
       showErr('');
-      let g = null;
-      try { g = await geocode({ text: address }); } catch (x) { log('place lookup failed:', x.message); }
-      if (!directions.el || directions.el.dataset.view !== 'settings') return;
+      let g = null, down = false;
+      try { g = await geocode({ text: address }); } catch (x) { down = true; log('place lookup failed:', x.message); }
+      if (!panel.el || panel.el.dataset.view !== 'settings') return;
       btn.disabled = false;
       btn.textContent = 'Add place';
-      if (!g) return showErr('Couldn\'t find that address. Try adding the suburb and postcode.');
+      if (!g) return showErr(down ? LOOKUP_DOWN : 'Couldn\'t find that address. Try adding the suburb and postcode.');
       addPlace(label, address, g);
     });
     form.querySelector('[data-act="here"]').addEventListener('click', async () => {
@@ -1325,8 +1814,10 @@
       showErr('');
       try {
         const p = await getPosition();
-        if (!directions.el || directions.el.dataset.view !== 'settings') return;
-        addPlace(label, pt(p), { ...p, display: 'Saved from your location' });
+        if (!panel.el || panel.el.dataset.view !== 'settings') return;
+        // Rounded to about 100 m: plenty for travel times
+        const q = { lat: +p.lat.toFixed(3), lon: +p.lon.toFixed(3) };
+        addPlace(label, pt(q), { ...q, display: 'Saved from your location, to about 100 m' });
       } catch (x) {
         showErr(x.message);
       }
