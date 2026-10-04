@@ -2,6 +2,9 @@
 
 ## HubSpot: Quick actions
 
+### 0.7.0 (04/10/2026, beta)
+- Now includes *Cmd/Ctrl + Enter to send*, on every HubSpot page. Remove the separate script once this is installed; if both are installed, only this one acts.
+
 ### 0.6.1 (04/10/2026, beta)
 - Help Desk task button finds *Create task* however HubSpot draws it, and opens a collapsed Tasks card first. If it still can't, the console says so before the pop-up is used.
 
@@ -45,6 +48,9 @@
 - Hides the old *Prefill meeting* button if that script is still installed.
 
 ## HubSpot: Cmd/Ctrl + Enter to send
+
+### 1.2.0 (04/10/2026)
+- Now part of *Quick actions*. This script steps aside when *Quick actions* is installed, so the button is only ever pressed once.
 
 ### 1.1.0 (04/10/2026)
 - Works in the task window: presses **Create**.

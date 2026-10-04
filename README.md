@@ -9,9 +9,9 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | Script | What it does | Install |
 |---|---|---|
 | **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
-| **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
+| **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting* and includes *Cmd/Ctrl + Enter to send*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
-| **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
+| **HubSpot: Cmd/Ctrl + Enter to send** | Now part of *Quick actions*; only needed if you don't use that. Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
 
@@ -53,7 +53,7 @@ On tickets and deals, the meeting title and a link back to the record are filled
 
 ### Quick actions (beta)
 
-This replaces *Prefill meeting from ticket*. Once it's installed, remove that one: click the Tampermonkey icon, then **Dashboard**, and delete it. While both are installed you only see the new buttons, and the meeting details are only added once.
+This replaces *Prefill meeting from ticket* and includes *Cmd/Ctrl + Enter to send* (see below). Once it's installed, remove both of those: click the Tampermonkey icon, then **Dashboard**, and delete it. While both are installed you only see the new buttons, and the meeting details are only added once.
 
 The purple bar (bottom right) has five buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away, and again to bring it back.
 
