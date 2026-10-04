@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Products in company search
 // @namespace    oolio-userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  In the Add existing Company panel, shows each company's products under its name, lets you hide products you don't work with, links to contacts and tickets, and shows 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -11,7 +11,6 @@
 // @icon         data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTQwLjA5OSAwQzE3My4xODEgMCAyMDAgMjYuNjk3OSAyMDAgNTkuNjMxNEMyMDAgOTIuNTY0OSAxNzMuMTgxIDExOS4yNjMgMTQwLjA5OSAxMTkuMjYzQzEyNC42NzcgMTE5LjI2MyAxMTAuNjE2IDExMy40NjEgOTkuOTk4NiAxMDMuOTNDODkuMzgzNyAxMTMuNDYxIDc1LjMyMjkgMTE5LjI2MyA1OS45MDEgMTE5LjI2M0MyNi44MTg2IDExOS4yNjMgMCA5Mi41NjQ5IDAgNTkuNjMxNEMwIDI2LjY5NzkgMjYuODE4NiAwIDU5LjkwMSAwQzc1LjMyMzIgMCA4OS4zODQxIDUuODAxOTUgMTAwLjAwMSAxNS4zMzI5QzExMC42MTYgNS44MDE3NyAxMjQuNjc3IDAgMTQwLjA5OSAwWk0xNDAuMDk5IDM5LjkxODVDMTI5LjE2MyAzOS45MTg1IDEyMC4yOTcgNDguNzQ0MyAxMjAuMjk3IDU5LjYzMTRDMTIwLjI5NyA3MC41MTg1IDEyOS4xNjMgNzkuMzQ0MiAxNDAuMDk5IDc5LjM0NDJDMTUxLjAzNSA3OS4zNDQyIDE1OS45MDEgNzAuNTE4NSAxNTkuOTAxIDU5LjYzMTRDMTU5LjkwMSA0OC43NDQzIDE1MS4wMzUgMzkuOTE4NSAxNDAuMDk5IDM5LjkxODVaTTU5LjkwMSAzOS45MTg1QzQ4Ljk2NDcgMzkuOTE4NSA0MC4wOTkgNDguNzQ0MyA0MC4wOTkgNTkuNjMxNEM0MC4wOTkgNzAuNTE4NSA0OC45NjQ3IDc5LjM0NDIgNTkuOTAxIDc5LjM0NDJDNzAuODM3MyA3OS4zNDQyIDc5LjcwMyA3MC41MTg1IDc5LjcwMyA1OS42MzE0Qzc5LjcwMyA0OC43NDQzIDcwLjgzNzMgMzkuOTE4NSA1OS45MDEgMzkuOTE4NVoiIGZpbGw9IiM2NzNBQjYiLz4KPC9zdmc+Cg==
 // @grant        none
 // @run-at       document-start
-// @noframes
 // ==/UserScript==
 
 (function () {
@@ -572,10 +571,19 @@
   const ICON_TICKET = svg('<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>');
   const ICON_EXT = svg('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>');
 
+  // HubSpot may require Trusted Types for innerHTML, which would block every change silently
+  let ttPolicy = null;
+  try {
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+      ttPolicy = window.trustedTypes.createPolicy('oolio-company-search', { createHTML: (s) => s });
+    }
+  } catch (e) { note('Trusted Types policy blocked: ' + e.message); }
+  const setHTML = (el, html) => { el.innerHTML = ttPolicy ? ttPolicy.createHTML(html) : html; };
+
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------------- Finding the panel and its rows ---------------- */
-  const CHECKBOX = 'input[type="checkbox"], [role="checkbox"]';
+  const CHECKBOX = 'input[type="checkbox"], [role="checkbox"], [aria-checked]';
   const HEADING = /^add existing compan(y|ies)$/i;
 
   function textOf(el) {
@@ -748,7 +756,7 @@
       placeLine(it, line);
     }
     const html = lineHtml(r);
-    if (line.__ocpHtml !== html) { line.innerHTML = html; line.__ocpHtml = html; }
+    if (line.__ocpHtml !== html) { setHTML(line, html); line.__ocpHtml = html; }
   }
 
   /* ---------------- Filter bar above the list ---------------- */
@@ -759,7 +767,7 @@
   function buildBar() {
     const bar = document.createElement('div');
     bar.className = 'ocp-ui ocp-bar';
-    bar.innerHTML =
+    setHTML(bar,
       '<div class="ocp-bar-row">' +
       `<span class="ocp-bar-label">${ICON_FILTER}Show</span>` +
       CHIPS.map((c) => `<button type="button" class="ocp-chip" data-chip="${esc(c.key)}"${c.title ? ` title="${esc(c.title)}"` : ''}>` +
@@ -777,7 +785,7 @@
       '<label class="ocp-set">Extra fields<input type="text" data-set="fields" spellcheck="false" placeholder="e.g. city, existing_pos_"></label>' +
       '<p class="ocp-hint">Internal names from HubSpot Settings &gt; Properties, separated by commas.</p>' +
       '<div class="ocp-actions"><button type="button" data-act="debug">Copy debug info</button><button type="button" data-act="reset">Reset</button></div>' +
-      '</div>';
+      '</div>');
 
     bar.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -847,7 +855,7 @@
         `<button type="button" class="ocp-link" data-act="showhidden">${settings.showHidden ? 'Hide them' : 'Show'}</button>`;
     }
     const status = bar.querySelector('.ocp-status');
-    if (status.__ocpHtml !== html) { status.innerHTML = html; status.__ocpHtml = html; }
+    if (status.__ocpHtml !== html) { setHTML(status, html); status.__ocpHtml = html; }
   }
 
   /* ---------------- Rows per page ---------------- */
@@ -971,12 +979,13 @@
     for (const p of findPanels()) processPanel(p);
   }
 
+  let lastError = '';
   let runTimer = null;
   function scheduleRun(delay = 250) {
     if (runTimer) { if (delay) return; clearTimeout(runTimer); }
     runTimer = setTimeout(() => {
       runTimer = null;
-      try { run(); } catch (e) { note('Error: ' + e.message); }
+      try { run(); } catch (e) { lastError = (e && e.stack || String(e)).split('\n').slice(0, 3).join(' | '); note('Error: ' + e.message); }
     }, delay);
   }
 
@@ -1023,12 +1032,39 @@
       `How rows were matched: ${JSON.stringify(how)}`,
       `Last pass: ${lastPass ? JSON.stringify(lastPass.stats) : 'none'}`,
       `Companies cached: ${records.size}, bad IDs: ${badIds.size}`,
+      '', pageChecks(),
       `Last API error: ${apiError || 'none'}`,
       '', 'Requests:', ...netLog.map((l) => '  ' + l),
       '', 'Notes:', ...notes.map((l) => '  ' + l),
       '', 'React chain from the first checkbox:', items[0] ? fiberSummary(items[0].box) : '  (no rows)',
       '', 'First row:', items[0] ? skeleton(lastPass && lastPass.items[0] && lastPass.items[0].host.parentElement || items[0].host, 0) : '  (no rows)',
     ].join('\n');
+  }
+
+  // Page-level checks for when the panel is never recognised
+  function pageChecks() {
+    const out = [];
+    const snap = document.evaluate("//text()[contains(translate(., 'ADEISTX', 'adeistx'), 'add existing')]", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    out.push(`"Add existing" text nodes: ${snap.snapshotLength}`);
+    for (let i = 0; i < Math.min(snap.snapshotLength, 6); i++) {
+      const el = snap.snapshotItem(i).parentElement;
+      const chain = [];
+      for (let e = el, k = 0; e && k < 4; e = e.parentElement, k++) {
+        chain.push(`<${e.tagName.toLowerCase()}${e.getAttribute('role') ? ' role=' + e.getAttribute('role') : ''}> "${e.textContent.replace(/\s+/g, ' ').trim().slice(0, 50)}"`);
+      }
+      out.push('  ' + chain.join(' < '));
+    }
+    const dialogs = document.querySelectorAll('[role="dialog"], [aria-modal="true"], aside');
+    out.push(`Dialogs/asides: ${dialogs.length}`);
+    dialogs.forEach((d, i) => {
+      if (i > 4) return;
+      out.push(`  ${i}: <${d.tagName.toLowerCase()}> width=${Math.round(d.getBoundingClientRect().width)} inputs=${d.querySelectorAll('input[type="checkbox"]').length} role-cb=${d.querySelectorAll('[role="checkbox"]').length} aria-checked=${d.querySelectorAll('[aria-checked]').length} text="${d.textContent.replace(/\s+/g, ' ').trim().slice(0, 60)}"`);
+    });
+    out.push(`All checkbox inputs on page: ${document.querySelectorAll('input[type="checkbox"]').length}, role=checkbox: ${document.querySelectorAll('[role="checkbox"]').length}`);
+    out.push(`Iframes: ${[...document.querySelectorAll('iframe')].map((f) => (f.getAttribute('src') || '(none)').split('?')[0].replace(/\d{5,}/g, '#')).slice(0, 8).join(', ') || 'none'}`);
+    out.push(`In iframe: ${window.top !== window}, Trusted Types: ${!!window.trustedTypes}, policy: ${!!ttPolicy}`);
+    out.push(`Last run error: ${lastError || 'none'}`);
+    return out.join('\n');
   }
 
   function copyDebug(btn, bar) {
@@ -1051,6 +1087,9 @@
   }
 
   /* ---------------- Start ---------------- */
+  // Type ocpDebug() in the browser console to see what the script can see
+  window.ocpDebug = () => { const t = debugText(); try { console.log(t); } catch (e) { /* ignore */ } return t; };
+
   function start() {
     injectStyles();
     new MutationObserver(() => scheduleRun()).observe(document.body, { childList: true, subtree: true, characterData: true });

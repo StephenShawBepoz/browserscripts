@@ -2,6 +2,10 @@
 
 ## HubSpot: Products in company search
 
+### 1.0.1 (04/10/2026)
+- Works on pages that block plain HTML changes (Trusted Types), and inside embedded frames.
+- Type `ocpDebug()` in the browser console to see what the script can find, even when nothing shows on the page.
+
 ### 1.0.0 (04/10/2026)
 - New. In **Add existing Company**, each company shows its products under its name, so there's no need to hover.
 - Chips above the list hide companies by product (Bepoz, Oolio One, Oolio Pay, SwiftPOS, Idealpos, Other, No product). Your choice is remembered, and **Show** brings hidden ones back faded.
