@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Status prompt after email
 // @namespace    oolio-userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  After you send an email reply on a Help Desk ticket, asks what the ticket status should be. Enter sets the waiting status. Tab, the arrow keys or a number move the highlight. Esc keeps the current status.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -35,6 +35,7 @@
   const SEND_TIMEOUT_MS = 20000; // how long to wait for HubSpot to send
   const UNDO_MS = 8000; // how long Undo stays on screen
   const DETAILS_WAIT_MS = 120000; // how long to wait while you fill in HubSpot's box for a status that needs more details
+  const LIST_WAIT_MS = 10000; // how long to wait for HubSpot to load the status list when it opens
 
   // HubSpot's own markers for the reply composer
   const SEND_SELECTOR = '[data-test-id="composer-send-button"]';
@@ -87,7 +88,7 @@
   // The ticket's name, read the same way as Quick actions
   function ticketName() {
     const el = document.querySelector('[data-selenium-test="highlightTitle"]');
-    return clean(el ? el.innerText : document.title.replace(/\s*\|\s*HubSpot.*$/i, ''));
+    return clean(el ? el.innerText : document.title.replace(/\s*\|\s*HubSpot.*$/i, '').replace(/^Help Desk\s*\|\s*/i, ''));
   }
 
   // The status a field's text shows: an exact match, or else the longest label it starts with,
@@ -132,25 +133,37 @@
 
   // ---------- Status dropdown access ----------
   const OPTION = '[role="option"][data-option-value]';
+  const optionLabel = (o) => clean((o.querySelector('[data-option-text]') || o).textContent);
+  // HubSpot opens the list with a "Loading" row and fills the statuses in once they've loaded
+  const isPlaceholder = (o) => /^loading\b/i.test(optionLabel(o)) || o.getAttribute('aria-busy') === 'true';
+  const realOptions = (panel) => [...panel.querySelectorAll(OPTION)].filter((o) => !isPlaceholder(o));
   function dropdownPanel(btn) {
     const id = btn.getAttribute('aria-owns');
     return id ? document.getElementById(id) : null;
   }
+  // Opens HubSpot's status list and waits until it has loaded: statuses showing, no "Loading" row or spinner,
+  // and the same number of statuses three checks running. A "Loading" row on its own is never read as a status.
   async function openDropdown(btn) {
     if (btn.getAttribute('aria-expanded') !== 'true') btn.click();
-    const panel = await waitFor(() => {
-      const p = dropdownPanel(btn);
-      return p && p.querySelector(OPTION) ? p : null;
-    });
-    if (!panel) return null;
-    // Let the list finish drawing: the same number of options twice running
     let n = -1;
-    await waitFor(() => {
-      const m = panel.querySelectorAll(OPTION).length;
-      const steady = m === n;
-      n = m;
-      return steady;
-    }, 600, 60);
+    let steady = 0;
+    let wasOpen = false;
+    const panel = await waitFor(() => {
+      // Closed by something else (you, or the first copy of this script) after it opened: stop waiting
+      const open = statusButton()?.getAttribute('aria-expanded') === 'true';
+      if (wasOpen && !open) return 'closed';
+      wasOpen = wasOpen || open;
+      const p = dropdownPanel(btn);
+      const real = p ? realOptions(p) : [];
+      steady = real.length && real.length === n ? steady + 1 : 0;
+      n = real.length || -1;
+      const loading = !p || real.length !== p.querySelectorAll(OPTION).length ||
+        p.querySelector('[aria-busy="true"], [role="progressbar"]');
+      // Done once steady, or after about half a second steady if a "Loading more" row stays at the bottom
+      return steady >= (loading ? 6 : 2) ? p : null;
+    }, LIST_WAIT_MS, 80);
+    if (panel === 'closed') { log("HubSpot's status list was closed before it loaded"); return null; }
+    if (!panel) log("HubSpot's status list didn't finish loading");
     return panel;
   }
   // Finds the button again, as HubSpot may have redrawn it
@@ -171,13 +184,13 @@
     if (!options || !findOption(text, options)) {
       const wasOpen = btn.getAttribute('aria-expanded') === 'true';
       const panel = await openDropdown(btn);
-      options = panel ? [...panel.querySelectorAll(OPTION)].map((o) => ({
-        id: o.getAttribute('data-option-value'),
-        label: clean((o.querySelector('[data-option-text]') || o).textContent),
-      })).filter((o) => o.id && o.label) : [];
+      options = panel ? realOptions(panel).map((o) => ({ id: o.getAttribute('data-option-value'), label: optionLabel(o) }))
+        .filter((o) => o.id && o.label) : [];
       if (!wasOpen) closeDropdown();
-      if (!options.length) { log(panel ? 'The status list was empty' : "The status list didn't open"); return null; }
-      if (pipeline) statusCache.set(pipeline, options);
+      if (!options.length) return null;
+      // Only remember a list that has the current status in it, so a half-loaded one isn't kept
+      if (pipeline && findOption(text, options)) statusCache.set(pipeline, options);
+      else log(`The current status (${text}) isn't in the list read`, options.map((o) => o.label));
     }
     return { text, current: findOption(text, options), pipeline, options };
   }
@@ -188,7 +201,9 @@
     if (!btn) throw new Error("the Ticket status field isn't on screen");
     if (showsStatus(opt, options)) return 'set';
     const panel = await openDropdown(btn);
-    const item = panel?.querySelector(`${OPTION}[data-option-value="${CSS.escape(opt.id)}"]`);
+    // By its id, or else by its name, in case HubSpot numbers the rows differently each time
+    const item = panel && (panel.querySelector(`${OPTION}[data-option-value="${CSS.escape(opt.id)}"]`) ||
+      realOptions(panel).find((o) => optionLabel(o) === opt.label));
     // Checked again just before the click, in case you've moved to another ticket meanwhile
     if (!item || pageKey() !== key) {
       closeDropdown();

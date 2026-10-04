@@ -2,6 +2,10 @@
 
 ## HubSpot: Status prompt after email
 
+### 1.1.1 (05/10/2026)
+- Waits for HubSpot to load the status list before reading it. In 1.1.0 the box could open with only *Loading* in it and stay that way.
+- The box's subtitle shows the ticket's name without *Help Desk |* in front.
+
 ### 1.1.0 (04/10/2026)
 - Added to this repo, and updates itself from GitHub. If you installed the first copy by hand (*HubSpot Help Desk: status prompt after email*), delete it in Tampermonkey. Until you do, this one stays out of the way and reminds you.
 - Can't change the wrong ticket: the box closes if you move to another ticket, the ticket is checked again just before the status is picked, and Undo only works on the ticket it was set on.
