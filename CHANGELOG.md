@@ -1,5 +1,13 @@
 # Changelog
 
+## HubSpot: Products in company search
+
+### 1.0.0 (04/10/2026)
+- New. In **Add existing Company**, each company shows its products under its name, so there's no need to hover.
+- Chips above the list hide companies by product (Bepoz, Oolio One, Oolio Pay, SwiftPOS, Idealpos, Other, No product). Your choice is remembered, and **Show** brings hidden ones back faded.
+- Under each company: number of contacts and its tickets (click to list them with links), an **Open** link, and any extra fields you pick in settings.
+- Sets the list to 100 rows per page when the panel opens. Change or turn this off in settings.
+
 ## HubSpot: Cmd/Ctrl + Enter to send
 
 ### 1.0.1 (03/10/2026)
