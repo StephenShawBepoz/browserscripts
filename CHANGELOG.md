@@ -2,6 +2,16 @@
 
 ## HubSpot: Quick actions
 
+### 0.3.0 (04/10/2026, beta)
+- New task button: opens HubSpot's task window for the record, with the title started as *Follow up: [record name]*. Works in Help Desk too.
+- Click the Oolio logo to tuck the bar away; it also tucks itself while HubSpot's task window is open.
+- Best order is now exact for up to 9 stops (it could pick a slower order before), and says so when your order is already the quickest.
+- Records left open in background tabs no longer drop out of *Open in your tabs*.
+- Editing a customer's address now moves their trip stop too; a stop can't be added twice or past 9; a second ticket for a company already in the trip isn't suggested again.
+- Public transport steps say where to get off; the *Show times here* prompt no longer repeats.
+- Keyboard focus stays put when the trip list changes; a half-typed start address survives a refresh from another tab.
+- Addresses: suburbs and streets such as *Officer*, *Unity Street* and *Bays Road* are no longer trimmed, and a street number in the middle of an address line is found.
+
 ### 0.2.0 (04/10/2026, beta)
 - The bar is now four icon buttons: meeting, drive, public transport and trip. Each one opens straight to its own view; the same button again closes it.
 - Trips: collect up to 9 customers from the records open in your tabs (or **Add to trip** under a drive time), work out the best order, see the total and each leg on the map, optionally come back to the start, and open the whole trip in Google Maps.

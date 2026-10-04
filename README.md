@@ -9,7 +9,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | Script | What it does | Install |
 |---|---|---|
 | **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
-| **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds four buttons to tickets, deals, companies and contacts: book a meeting, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
+| **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 
@@ -55,11 +55,12 @@ On tickets and deals, the meeting title and a link back to the record are filled
 
 This replaces *Prefill meeting from ticket*. Once it's installed, remove that one: click the Tampermonkey icon, then **Dashboard**, and delete it. While both are installed you only see the new buttons, and the meeting details are only added once.
 
-The purple bar (bottom right) has four buttons. Hover over one to see what it does.
+The purple bar (bottom right) has five buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away (and again to bring it back); it also tucks itself while HubSpot's task window is open, as that opens in the same corner.
 
 | Button | What it does |
 |---|---|
 | Calendar | Book a meeting. Works exactly like *Prefill meeting from ticket* above. |
+| Checklist | Create a task, linked to the record. The title starts as *Follow up: [record name]* with the cursor at the end, so type the rest. In Help Desk it opens the ticket in a pop-up, straight into the task window. |
 | Car | Drive time and distance to the customer, with a small map. |
 | Train | Public transport to the customer: the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |

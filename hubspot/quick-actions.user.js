@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.2.0
-// @description  Meeting, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
+// @version      0.3.0
+// @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js
@@ -15,6 +15,8 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
+// @grant        GM_listValues
+// @grant        GM_deleteValue
 // @connect      nominatim.openstreetmap.org
 // @connect      routing.openstreetmap.de
 // @connect      api.transitous.org
@@ -29,6 +31,10 @@
   // Meeting title format. Invites go to every attendee, customers included.
   // Examples: (t) => t.name   or   (t) => `Bepoz: ${t.name}`
   const TITLE_FORMAT = (t) => t.name;
+
+  // Task title format. The cursor is left at the end, so you can type straight after it.
+  // Examples: (t) => `Follow up: ${t.name}`   or   (t) => ''   (to leave it empty)
+  const TASK_TITLE_FORMAT = (t) => `Follow up: ${t.name}`;
 
   // Free, open services, so there are no keys to keep out of this public repo.
   // Each one asks for light use only. Read their rules before changing how often
@@ -76,7 +82,11 @@
       #oqa-bar { position:fixed; right:24px; bottom:90px; z-index:2147483000; display:none; align-items:center; gap:2px;
         height:44px; padding:0 4px 0 14px; border-radius:999px; background:var(--oolio-purple); color:#fff;
         box-shadow:0 6px 20px rgba(103,58,182,.35), 0 1px 3px rgba(34,34,34,.2); }
-      #oqa-bar .oqa-mark svg { width:24px; height:auto; }
+      #oqa-bar .oqa-markbtn { width:auto; padding:0 4px; margin-left:-4px; }
+      #oqa-bar .oqa-markbtn svg { width:24px; height:auto; }
+      #oqa-bar.oqa-collapsed { padding:0 4px; }
+      #oqa-bar.oqa-collapsed > :not(.oqa-markbtn) { display:none; }
+      #oqa-bar.oqa-collapsed .oqa-markbtn { margin:0; padding:0 8px; }
       #oqa-bar .oqa-sep { width:1px; height:18px; margin:0 6px 0 10px; background:rgba(255,255,255,.35); }
       #oqa-bar button { position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:36px;
         padding:0; border:0; border-radius:999px; background:transparent; color:#fff; cursor:pointer; transition:background .15s; }
@@ -250,6 +260,7 @@
     external: lucide('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
     trash: lucide('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>'),
     star: lucide('<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'),
+    task: lucide('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'),
     route: lucide('<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>'),
     plus: lucide('<path d="M5 12h14"/><path d="M12 5v14"/>'),
     up: lucide('<path d="m18 15-6-6-6 6"/>'),
@@ -281,6 +292,18 @@
         if (typeof GM_setValue === 'function') GM_setValue(name, value);
         else localStorage.setItem('oolio-qa:' + name, JSON.stringify(value));
       } catch (e) { /* storage full or blocked */ }
+    },
+    remove(name) {
+      try {
+        if (typeof GM_deleteValue === 'function') GM_deleteValue(name);
+        else localStorage.removeItem('oolio-qa:' + name);
+      } catch (e) { /* ignore */ }
+    },
+    keys() {
+      try {
+        if (typeof GM_listValues === 'function') return GM_listValues();
+        return Object.keys(localStorage).filter((k) => k.startsWith('oolio-qa:')).map((k) => k.slice(9));
+      } catch (e) { return []; }
     },
     watch(name, fn) {
       if (typeof GM_addValueChangeListener === 'function') GM_addValueChangeListener(name, (n, oldV, newV, remote) => fn(newV, remote));
@@ -356,28 +379,34 @@
 
   /* ---------------- Open records in other tabs ---------------- */
   // Each tab notes which record it is showing (nothing is fetched), so a trip can offer them as stops.
+  // Every tab writes only its own entry. Chrome slows tabs left in the background to about once a
+  // minute, so an entry counts as open for 3 minutes; closing a tab removes its entry straight away.
   const TAB_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const TAB_TTL = 60 * 1000;
+  const TAB_KEY = 'tab:' + TAB_ID;
+  const TAB_TTL = 3 * 60 * 1000;
   let tabNote = { key: '', title: '', at: 0 };
+  const tabKeys = () => store.keys().filter((k) => k.startsWith('tab:'));
 
   function noteThisTab(rec) {
     const key = recordKey(rec), title = rec ? recordTitle() : '';
     if (key === tabNote.key && title === tabNote.title && Date.now() - tabNote.at < 20000) return;
     tabNote = { key, title, at: Date.now() };
-    const tabs = store.get('tabs', {}) || {};
-    Object.keys(tabs).forEach((k) => { if (!tabs[k] || Date.now() - tabs[k].at > TAB_TTL) delete tabs[k]; });
-    if (rec) tabs[TAB_ID] = { portal: rec.portal, type: rec.type, id: rec.id, title, at: tabNote.at };
-    else delete tabs[TAB_ID];
-    store.set('tabs', tabs);
+    if (rec) store.set(TAB_KEY, { portal: rec.portal, type: rec.type, id: rec.id, title, at: tabNote.at });
+    else store.remove(TAB_KEY);
+    tabKeys().forEach((k) => {
+      const t = store.get(k, null);
+      if (k !== TAB_KEY && (!t || Date.now() - t.at > TAB_TTL)) store.remove(k);
+    });
+    // Only a nudge for the other tabs' trip view; the entries themselves live under tab:…
+    store.set('tabs', Date.now());
   }
   function forgetThisTab() {
-    const tabs = store.get('tabs', {}) || {};
-    if (tabs[TAB_ID]) { delete tabs[TAB_ID]; store.set('tabs', tabs); }
+    store.remove(TAB_KEY);
+    store.set('tabs', Date.now());
   }
   function openRecords() {
-    const tabs = store.get('tabs', {}) || {};
     const seen = new Set(), out = [];
-    Object.values(tabs).forEach((t) => {
+    tabKeys().map((k) => store.get(k, null)).forEach((t) => {
       if (!t || Date.now() - t.at > TAB_TTL) return;
       const key = `${t.type}/${t.id}`;
       if (seen.has(key)) return;
@@ -403,8 +432,10 @@
     bar.setAttribute('role', 'toolbar');
     bar.setAttribute('aria-label', 'Oolio quick actions');
     bar.innerHTML =
-      '<span class="oqa-mark">' + OOLIO_MARK_WHITE + '</span><span class="oqa-sep"></span>' +
+      `<button type="button" class="oqa-markbtn" data-act="collapse" aria-expanded="true" title="Hide these buttons" aria-label="Hide Oolio quick actions">${OOLIO_MARK_WHITE}</button>` +
+      '<span class="oqa-sep"></span>' +
       `<button type="button" data-act="meeting" title="Book a meeting" aria-label="Book a meeting">${ICON.calendarPlus}</button>` +
+      `<button type="button" data-act="task" title="Create a task" aria-label="Create a task">${ICON.task}</button>` +
       Object.entries(MODES).map(([mode, m]) =>
         `<button type="button" data-mode="${mode}" title="${m.title}" aria-label="${m.title}" aria-pressed="false">${ICON[m.icon]}` +
         (mode === 'trip' ? '<span class="oqa-badge" aria-hidden="true"></span>' : '') + '</button>').join('');
@@ -416,7 +447,33 @@
       if (rec.helpDesk) meetingModal(rec);
       else meetingOnRecord();
     });
+    bar.querySelector('[data-act="task"]').addEventListener('click', () => {
+      const rec = getRecord();
+      if (!rec) return;
+      if (rec.helpDesk) recordModal(rec, 'task');
+      else taskOnRecord(rec);
+    });
     bar.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => openPanel(btn.dataset.mode)));
+
+    // The logo tucks the bar away to just itself (remembered), for when it sits over something.
+    // It also tucks itself while HubSpot's task window is open, as that window opens in the same corner.
+    const markBtn = bar.querySelector('[data-act="collapse"]');
+    let tucked = false;
+    const setCollapsed = () => {
+      const c = store.get('barCollapsed', false) === true || tucked;
+      bar.classList.toggle('oqa-collapsed', c);
+      markBtn.setAttribute('aria-expanded', String(!c));
+      markBtn.title = c ? 'Show Oolio quick actions' : 'Hide these buttons';
+      markBtn.setAttribute('aria-label', c ? 'Show Oolio quick actions' : 'Hide Oolio quick actions');
+    };
+    markBtn.addEventListener('click', () => {
+      const c = !bar.classList.contains('oqa-collapsed');
+      tucked = false;
+      store.set('barCollapsed', c);
+      if (c) closePanel();
+      setCollapsed();
+    });
+    setCollapsed();
 
     // HubSpot is a single-page app, so re-check the URL every second
     let lastKey = recordKey(getRecord());
@@ -428,9 +485,11 @@
       const key = recordKey(rec);
       if (key !== lastKey) {
         lastKey = key;
-        // The trip isn't tied to one record, so it stays open (with a fresh lookup context for the new record)
-        if (!rec || panel.mode !== 'trip') closePanel();
-        else if (panel.el) {
+        // The trip isn't tied to one record, so it stays open (with a fresh lookup context for the new record).
+        // A panel already opened for the new record (a quick click after moving) is left alone.
+        if (!panel.el || recordKey(panel.rec) === key) { /* nothing to do */ }
+        else if (!rec || panel.mode !== 'trip') closePanel();
+        else {
           Object.assign(panel, { rec, linked: null, companies: new Map(), picked: '', customer: null, dest: null });
           if (panel.el.dataset.view === 'trip') showTrip();
         }
@@ -438,14 +497,25 @@
       bar.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(!!panel.el && panel.mode === b.dataset.mode)));
       setBadge();
       noteThisTab(rec);
+      const taskOpen = !!findTaskTitle(document);
+      if (taskOpen !== tucked) { tucked = taskOpen; setCollapsed(); }
     };
     setInterval(sync, 1000);
     sync();
     window.addEventListener('pagehide', forgetThisTab);
     // Another tab changed the trip, or opened or closed a record: refresh the trip view if it's showing
     const tripShowing = () => panel.el && panel.el.dataset.view === 'trip';
-    store.watch('trip', (v, remote) => { setBadge(); if (remote && tripShowing()) showTrip(); });
-    store.watch('tabs', () => { if (tripShowing() && suggestionKey() !== panel.suggestKey) showTrip(); });
+    const busy = () => {
+      const a = document.activeElement;
+      return panel.ordering || (!!a && panel.el.contains(a) && a.matches('input[type="text"], select'));
+    };
+    store.watch('trip', (v, remote) => {
+      setBadge();
+      if (!remote || !panel.el) return;
+      if (tripShowing()) { if (!busy()) showTrip(); }
+      else if (panel.el.dataset.view === 'route' && panel.customer && panel.dest) tripButton(body().querySelector('.oqa-actions'), panel.customer, panel.dest);
+    });
+    store.watch('tabs', () => { if (tripShowing() && !busy() && suggestionKey() !== panel.suggestKey) showTrip(); });
   }
 
 
@@ -477,7 +547,7 @@
   let meetingOpen = false;
   function closeMeeting(force) {
     if (!overlay) return;
-    if (!force && meetingOpen && !confirm('Close without scheduling? Anything you have entered will be lost.')) return;
+    if (!force && meetingOpen && !confirm('Close without saving? Anything you have entered will be lost.')) return;
     overlay.remove();
     overlay = null;
     meetingOpen = false;
@@ -547,6 +617,148 @@
       // Only close once the scheduler is removed (scheduled or cancelled).
       // Minimising only hides it, so that leaves the window open.
       if (seenScheduler && !sched) {
+        clearInterval(timer);
+        meetingOpen = false;
+        setTimeout(() => closeMeeting(true), 800);
+      }
+    }, 500);
+  }
+
+  /* ---------------- Task ---------------- */
+
+  // HubSpot's own Task button, in the row with Note, Email, Call and Meeting
+  function findTaskButton(doc) {
+    const direct = doc.querySelector('[data-selenium-test="create-engagement-task-button"]');
+    if (direct) return direct;
+    const meet = doc.querySelector('[data-selenium-test="create-engagement-schedule-button"]');
+    let row = meet && meet.parentElement;
+    for (let i = 0; row && i < 5; i++, row = row.parentElement) {
+      const hit = [...row.querySelectorAll('button, [role="button"]')].find((b) => b !== meet && !b.closest('.tm-oolio') &&
+        /^(create )?task$/i.test(clean(b.getAttribute('aria-label') || b.innerText || '')));
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  // The task window's title box ("Enter your task")
+  const findTaskTitle = (doc) => doc.querySelector('input[placeholder="Enter your task" i], textarea[placeholder="Enter your task" i]');
+
+  function setReactValue(el, value) {
+    const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Fill an empty task title once, then leave the cursor at the end
+  function prefillTask(doc, name) {
+    let tries = 0;
+    const timer = setInterval(() => {
+      const input = findTaskTitle(doc);
+      if (!input && ++tries < 40) return;
+      clearInterval(timer);
+      if (!input || input.dataset.oqaDone || input.value.trim()) return;
+      input.dataset.oqaDone = '1';
+      const title = name ? TASK_TITLE_FORMAT({ name }) : '';
+      if (!title) return;
+      setReactValue(input, title);
+      input.focus();
+      try { input.setSelectionRange(title.length, title.length); } catch (e) { /* not a text box */ }
+    }, 250);
+  }
+
+  // Record pages: press HubSpot's Task button. If it can't be found, HubSpot opens the task
+  // window from the address too (?interaction=task), so reload with that instead.
+  let taskBusy = false;
+  function taskOnRecord(rec) {
+    if (taskBusy) return;
+    taskBusy = true;
+    closePanel();
+    const name = recordTitle();
+    let tries = 0;
+    const timer = setInterval(() => {
+      const btn = findTaskButton(document);
+      if (btn) {
+        clearInterval(timer);
+        taskBusy = false;
+        btn.click();
+        prefillTask(document, name);
+      } else if (++tries > 12) {
+        clearInterval(timer);
+        taskBusy = false;
+        try { sessionStorage.setItem('oolio-qa:task', recordKey(rec)); } catch (e) { /* ignore */ }
+        const u = new URL(location.href);
+        u.searchParams.set('interaction', 'task');
+        location.assign(u.toString());
+      }
+    }, 250);
+  }
+
+  // After that reload: fill the title, once
+  function prefillAfterReload() {
+    let want = '';
+    try { want = sessionStorage.getItem('oolio-qa:task') || ''; sessionStorage.removeItem('oolio-qa:task'); } catch (e) { /* ignore */ }
+    if (want && want === recordKey(getRecord()) && /[?&]interaction=task\b/.test(location.search)) {
+      setTimeout(() => prefillTask(document, recordTitle()), 1500);
+    }
+  }
+
+  // Help Desk has no task button: open the ticket record in a pop-up, straight into its task window
+  function recordModal(t, kind) {
+    if (overlay) return;
+    closePanel();
+    overlay = document.createElement('div');
+    overlay.id = 'oqa-overlay';
+    overlay.className = 'tm-oolio';
+    overlay.innerHTML =
+      '<div id="oqa-card">' + OOLIO_MARK +
+      '<p class="oqa-title">Opening the task</p>' +
+      '<p class="oqa-msg">Hang tight, this takes a few seconds.</p>' +
+      '<div class="oqa-bar"><i></i></div></div>' +
+      '<button id="oqa-close" type="button" title="Close (Esc)" aria-label="Close">' + ICON.x + '</button>';
+    const frame = document.createElement('iframe');
+    frame.src = `/contacts/${t.portal}/record/0-5/${t.id}?interaction=${kind}`;
+    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .2s';
+    overlay.appendChild(frame);
+    document.body.appendChild(overlay);
+    overlay.querySelector('#oqa-close').addEventListener('click', () => closeMeeting());
+    document.addEventListener('keydown', onMeetingEsc);
+    frame.addEventListener('load', () => {
+      try { frame.contentDocument.addEventListener('keydown', onMeetingEsc); } catch (e) { /* ignore */ }
+    });
+    const card = overlay.querySelector('#oqa-card');
+    const showError = (msg) => {
+      card.classList.add('oqa-error');
+      card.querySelector('.oqa-title').textContent = 'Something went wrong';
+      card.querySelector('.oqa-msg').textContent = msg;
+    };
+
+    // Wait for the task window (pressing Task if the address didn't open it), then close once it's gone
+    let seen = false, pressed = false, tries = 0;
+    const timer = setInterval(() => {
+      if (!overlay) return clearInterval(timer);
+      tries++;
+      let d;
+      try { d = frame.contentDocument; } catch (e) { return; }
+      if (!d || !d.body) return;
+      const input = findTaskTitle(d);
+      if (input && !seen) {
+        seen = true;
+        meetingOpen = true;
+        frame.style.opacity = '1';
+        card.style.display = 'none';
+        const titleEl = d.querySelector('[data-selenium-test="highlightTitle"]');
+        prefillTask(d, clean(titleEl ? titleEl.innerText : ''));
+      }
+      if (!seen && !pressed && tries > 16) {
+        const btn = findTaskButton(d);
+        if (btn) { pressed = true; btn.click(); }
+      }
+      if (!seen && tries > 60) {
+        clearInterval(timer);
+        showError('The task window didn\'t open. Press Esc or × to close.');
+      }
+      if (seen && !input) {
         clearInterval(timer);
         meetingOpen = false;
         setTimeout(() => closeMeeting(true), 800);
@@ -732,7 +944,7 @@
     if (!linked) {
       linked = await linkedCompanies(rec);
       // A slow answer for an earlier panel mustn't land in this one
-      if (ctx.rec === rec) ctx.linked = linked;
+      if (ctx.rec === rec && linked.via !== 'none') ctx.linked = linked;
     }
     const id = pickedId || linked.primary || linked.all[0];
     const base = { count: linked.all.length, isPrimary: !!id && id === linked.primary, via: linked.via };
@@ -786,7 +998,9 @@
   // What Google Maps gets: the address text (it finds the venue better than a pin), with the country if missing
   function addressQuery(c, point) {
     const line = addressLine(c);
-    if (!line) return pt(point);
+    // A Google Maps link or bare coordinates (typed via Edit address) go to Google as the map point
+    const pinOnly = !line || /^https?:\/\//i.test(line) || (parseCoords(line) && line.replace(/[@\d.,\s-]/g, '').length < 3);
+    if (pinOnly) return point && point.lat != null ? pt(point) : line;
     return line + (/\b(australia|new zealand|united kingdom|united states)\b/i.test(line) ? '' : ', Australia');
   }
 
@@ -816,9 +1030,9 @@
     let s = clean(street), prev;
     do {
       prev = s;
-      s = s.replace(/^(?:shops?|units?|suites?|ste|levels?|lvl|tenanc(?:y|ies)|kiosks?|lots?|bays?|building|bldg|floor|office)\.?\s*(?:[a-z]?\d[\w.-]*(?:\s*(?:&|and)\s*[a-z]?\d[\w.-]*)?|[a-z](?![a-z]))\s*[,/]?\s*/i, '');
+      s = s.replace(/^(?:shops?|units?|suites?|ste|levels?|lvl|tenanc(?:y|ies)|kiosks?|lots?|bays?|building|bldg|floor|office)(?:\.?\s*[a-z]{0,2}\d[\w.-]*(?:\s*(?:&|and)\s*[a-z]{0,2}\d[\w.-]*)?|(?:\.\s*|\s+)[a-z](?![a-z]))\s*[,/]?\s*/i, '');
       s = s.replace(/^(?:ground|first|second|third|upper|lower)\s+(?:floor|level)\s*,?\s*/i, '');
-      s = s.replace(/^[a-z]?\d+[a-z]?\s*\/\s*(?=\d)/i, '');
+      s = s.replace(/^[a-z]{0,2}\d+[a-z]?\s*\/\s*(?=\d)/i, '');
     } while (s !== prev);
     return s;
   }
@@ -847,7 +1061,7 @@
     }
 
     if (!raw && !clean(a.street) && !clean(a.street2) && !clean(a.city) && !clean(a.zip)) return null;
-    const cacheKey = 'v3|' + clean([a.street, a.street2, a.city, a.state, a.zip, a.country, raw].join('|')).toLowerCase();
+    const cacheKey = 'v4|' + clean([a.street, a.street2, a.city, a.state, a.zip, a.country, raw].join('|')).toLowerCase();
     const cached = (store.get('geo', {}) || {})[cacheKey];
     if (cached && !cached.miss) return cached;
     if (cached && Date.now() - cached.miss < MISS_DAYS * 864e5) return null;
@@ -860,9 +1074,9 @@
       if (!hit && tidy !== raw) hit = await nominatim({ q: raw, countrycodes: 'au,nz' });
       if (!hit) hit = await nominatim({ q: tidy });
     } else {
-      // One street line: whichever has the street number ("570 Bourke St", not "Level 24")
-      const lines = [a.street, a.street2].map(streetOnly).filter(Boolean);
-      const street = lines.find((l) => /^\d/.test(l)) || lines[0] || '';
+      // One street line: whichever part has the street number ("570 Bourke St", not "Level 24" or "Westfield Centre")
+      const parts = [a.street, a.street2].flatMap((l) => String(l || '').split(',')).map(streetOnly).filter(Boolean);
+      const street = parts.find((l) => /^\d/.test(l)) || [a.street, a.street2].map(streetOnly).filter(Boolean)[0] || '';
       if (street) hit = await nominatim({ street, city: a.city, state: a.state, postalcode: a.zip, countrycodes: cc });
       if (!hit && street) hit = await nominatim({ q: [street, a.city, a.state, a.zip].filter(Boolean).join(', '), countrycodes: cc });
       // Last resort: the suburb, so there is at least a rough time
@@ -918,17 +1132,44 @@
     }));
   }
 
-  // Quickest order for the stops, starting at points[0]: OSRM's trip service.
+  // Quickest order for the stops, starting at points[0]. One request for the drive time between every
+  // pair (OSRM's table), then every order is checked exactly; with up to 9 stops that's instant.
   // Returns the stops' indexes (1..n) in visiting order.
   function bestOrder(points, roundTrip) {
     const coords = points.map(lonlat).join(';');
     return oneAtATime('drive', async () => {
-      const d = await getJson(`${service('drive')}/trip/v1/driving/${coords}?source=first&roundtrip=${roundTrip}` +
-        (roundTrip ? '' : '&destination=any') + '&overview=false');
-      if (!d || d.code !== 'Ok' || !d.waypoints) throw new Error((d && d.message) || 'No trip');
-      return d.waypoints.map((w, i) => ({ i, at: w.waypoint_index })).filter((x) => x.i > 0)
-        .sort((x, y) => x.at - y.at).map((x) => x.i);
+      const d = await getJson(`${service('drive')}/table/v1/driving/${coords}?annotations=duration`);
+      if (!d || d.code !== 'Ok' || !d.durations) throw new Error((d && d.message) || 'No table');
+      return quickestOrder(d.durations, roundTrip);
     });
+  }
+
+  // Held-Karp over the stops: cost[set][last] = quickest way to visit that set ending at last
+  function quickestOrder(T, roundTrip) {
+    const n = T.length - 1, full = (1 << n) - 1;
+    const t = (a, b) => (T[a] && T[a][b] != null ? T[a][b] : Infinity);
+    const cost = Array.from({ length: 1 << n }, () => new Array(n).fill(Infinity));
+    const prev = Array.from({ length: 1 << n }, () => new Array(n).fill(-1));
+    for (let j = 0; j < n; j++) cost[1 << j][j] = t(0, j + 1);
+    for (let set = 1; set <= full; set++) {
+      for (let j = 0; j < n; j++) {
+        if (!(set & (1 << j)) || cost[set][j] === Infinity) continue;
+        for (let k = 0; k < n; k++) {
+          if (set & (1 << k)) continue;
+          const next = set | (1 << k), c = cost[set][j] + t(j + 1, k + 1);
+          if (c < cost[next][k]) { cost[next][k] = c; prev[next][k] = j; }
+        }
+      }
+    }
+    let last = 0, best = Infinity;
+    for (let j = 0; j < n; j++) {
+      const c = cost[full][j] + (roundTrip ? t(j + 1, 0) : 0);
+      if (c < best) { best = c; last = j; }
+    }
+    if (best === Infinity) throw new Error('Some stops can\'t be reached by road');
+    const order = [];
+    for (let set = full, j = last; j >= 0;) { order.unshift(j + 1); const p = prev[set][j]; set &= ~(1 << j); j = p; }
+    return order;
   }
 
   // Google's encoded polyline, used by Transitous for each leg's shape
@@ -1061,14 +1302,14 @@
 
   /* ---------------- Panel: drive, public transport and trip ---------------- */
   // The panel is also the lookup context for the record on screen (linked companies, company cache)
-  const panel = { el: null, mode: 'drive', rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
+  const panel = { el: null, mode: 'drive', draft: '', ordering: false, focusNext: null, rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
 
   // Where you start: your default place, or whatever you picked earlier in this tab
   function currentFrom(s) {
     let v = '';
     try { v = sessionStorage.getItem('oolio-qa:from') || ''; } catch (e) { /* ignore */ }
     const valid = (x) => x === 'here' || x === 'other' || s.places.some((p) => p.id === x);
-    if (valid(v) && (v !== 'other' || panel.oneOff)) return v;
+    if (valid(v) && (v !== 'other' || panel.oneOff || panel.draft)) return v;
     if (valid(s.defaultFrom)) return s.defaultFrom;
     return s.places.length ? s.places[0].id : 'here';
   }
@@ -1080,7 +1321,7 @@
   function openPanel(mode) {
     const rec = getRecord();
     if (!rec) return;
-    if (panel.el && panel.mode === mode) return closePanel();
+    if (panel.el && panel.mode === mode && recordKey(panel.rec) === recordKey(rec)) return closePanel();
     panel.mode = mode;
     if (!panel.el || recordKey(panel.rec) !== recordKey(rec)) {
       closePanel(true);
@@ -1145,6 +1386,22 @@
   }
 
   const body = () => panel.el.querySelector('.oqa-body');
+
+  // Redraws replace the panel's contents, so remember which control had focus and put it back
+  function focusKey() {
+    const f = panel.el && panel.el.contains(document.activeElement) ? document.activeElement : null;
+    if (!f) return null;
+    const a = ['data-act', 'data-up', 'data-down', 'data-remove', 'data-suggest'].find((x) => f.hasAttribute(x));
+    if (a) return `[${a}="${f.getAttribute(a)}"]`;
+    if (f.classList.contains('oqa-from')) return '.oqa-from';
+    if (f.classList.contains('oqa-other-input')) return '.oqa-other-input';
+    return null;
+  }
+  function restoreFocus(keys) {
+    if (!keys || !panel.el) return;
+    const t = [].concat(keys).map((q) => body().querySelector(q)).find((x) => x && !x.disabled && !x.hidden);
+    (t || body().querySelector('select, button:not([disabled]), input')).focus();
+  }
   const skeleton = (w) => `<i class="oqa-skel" style="width:${w}px"></i>`;
 
   function setFooter() {
@@ -1182,7 +1439,8 @@
     const other = b.querySelector('.oqa-other');
     const otherInput = b.querySelector('.oqa-other-input');
     other.hidden = from !== 'other';
-    otherInput.value = panel.oneOff;
+    otherInput.value = panel.draft || panel.oneOff;
+    otherInput.addEventListener('input', () => { panel.draft = otherInput.value; });
     sel.addEventListener('change', () => {
       setCurrentFrom(sel.value);
       other.hidden = sel.value !== 'other';
@@ -1236,7 +1494,7 @@
   /* ----- Customer (drive and public transport views) ----- */
 
   async function loadCustomer(run) {
-    if (!panel.customer) {
+    if (!panel.customer || (panel.customer.error && !panel.customer.override)) {
       let c;
       try {
         c = await getCustomer(panel.rec, panel, panel.picked);
@@ -1437,10 +1695,10 @@
     else if (dest.display && !dest.fromHubSpot) setNote('Map pin: ' + dest.display);
     tripButton(actions, c, dest);
 
-    const links = [link(`https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${pt(a)}%3B${pt(z)}`, 'OpenStreetMap')];
+    const links = mode === 'drive' ? [link(`https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${pt(a)}%3B${pt(z)}`, 'OpenStreetMap')] : [];
     if (isApple()) links.push(link(`https://maps.apple.com/directions?source=${encodeURIComponent(a.query)}&destination=${encodeURIComponent(z.query)}&mode=${travel}`, 'Apple Maps'));
     if (mode === 'transit' && s.transit) links.push(link(`https://api.transitous.org/?fromPlace=${pt(a)}&toPlace=${pt(z)}`, 'Transitous'));
-    more.innerHTML = '<span class="oqa-muted">Also open in</span> ' + links.join('');
+    if (links.length) more.innerHTML = '<span class="oqa-muted">Also open in</span> ' + links.join('');
 
     if (mode === 'drive') {
       driveRoute([a, z]).then((r) => {
@@ -1461,7 +1719,7 @@
       call.innerHTML = '<p>Want the times here instead? <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a> ' +
         'can show them. It\'s a free volunteer service for personal, non-commercial use, and they ask to hear from you before you use it.</p>' +
         '<button type="button" class="oqa-btn" data-act="transit-on">Show times here</button>';
-      result.after(call);
+      result.appendChild(call);
       call.querySelector('[data-act="transit-on"]').addEventListener('click', () => {
         const st = loadSettings();
         st.transit = true;
@@ -1483,7 +1741,7 @@
       legs.setAttribute('aria-label', 'Steps');
       legs.innerHTML = best.legs.filter((l) => !l.walk || l.seconds >= 60).map((l) => l.walk
         ? `<li><span class="oqa-line oqa-walkline">Walk</span><span>${fmtDuration(l.seconds)}${l.to && l.to !== 'END' ? ' to ' + esc(l.to) : ''}</span></li>`
-        : `<li><span class="oqa-line">${esc(l.line || l.mode)}</span><span>${esc(l.mode)} from ${esc(l.from)}, ${fmtTime(l.leave, t.tz)}</span></li>`).join('');
+        : `<li><span class="oqa-line">${esc(l.line || l.mode)}</span><span>${esc(l.mode)} from ${esc(l.from)}, ${fmtTime(l.leave, t.tz)}${l.to && l.to !== 'END' ? ', get off at ' + esc(l.to) : ''}</span></li>`).join('');
       const later = t.options.filter((o) => o !== best).slice(0, 3)
         .map((o) => `${fmtTime(o.leave, t.tz)} (${fmtDuration(o.seconds)})`);
       result.appendChild(legs);
@@ -1511,23 +1769,37 @@
     store.set('trip', { ...t, ...extra, stops: stops.slice(0, MAX_STOPS), at: Date.now() });
   }
 
-  // Records open in your HubSpot tabs that aren't in the trip yet
-  const tripSuggestions = (stops) => openRecords().filter((t) => !stops.some((x) => x.url === recordUrl(t)));
+  // Records open in your HubSpot tabs that aren't in the trip yet (including ones whose company already is)
+  const tripSuggestions = (stops) => openRecords().filter((t) =>
+    !stops.some((x) => x.url === recordUrl(t) || (x.also || []).includes(recordUrl(t))));
   const suggestionKey = () => tripSuggestions(tripStops()).map((t) => t.key + ':' + t.title).sort().join('|');
 
   // "Add to trip" under a drive or public transport result
   function tripButton(box, c, dest) {
     const stops = tripStops();
-    const inTrip = stops.some((x) => x.key === c.key);
+    const i = stops.findIndex((x) => x.key === c.key);
+    const inTrip = i >= 0;
+    // An edited address moves the stop too
+    if (inTrip) {
+      const fresh = { ...stopFrom(c, dest, panel.rec), url: stops[i].url, also: stops[i].also };
+      if (['lat', 'lon', 'line', 'query', 'approx'].some((k) => fresh[k] !== stops[i][k])) {
+        stops[i] = fresh;
+        saveTrip(stops);
+      }
+    }
     box.innerHTML = inTrip
       ? `<button type="button" class="oqa-btn oqa-quiet" data-act="view-trip">${ICON.route}In your trip, view it</button>`
-      : `<button type="button" class="oqa-btn oqa-quiet" data-act="add-trip"${stops.length >= MAX_STOPS ? ' disabled title="A trip can have up to 9 stops"' : ''}>${ICON.plus}Add to trip</button>`;
+      : `<button type="button" class="oqa-btn oqa-quiet" data-act="add-trip"${stops.length >= MAX_STOPS ? ' disabled title="A trip can have up to ${MAX_STOPS} stops"' : ''}>${ICON.plus}Add to trip</button>`;
     const view = box.querySelector('[data-act="view-trip"]');
     if (view) view.addEventListener('click', () => openPanel('trip'));
     const add = box.querySelector('[data-act="add-trip"]');
     if (add) add.addEventListener('click', () => {
-      saveTrip([...tripStops(), stopFrom(c, dest, panel.rec)]);
+      const list = tripStops();
+      if (list.length >= MAX_STOPS) setNote(`Your trip already has ${MAX_STOPS} stops. Remove one to add this.`, true);
+      else if (!list.some((x) => x.key === c.key)) saveTrip([...list, stopFrom(c, dest, panel.rec)]);
       tripButton(box, c, dest);
+      const btn = box.querySelector('button');
+      if (btn) btn.focus();
     });
   }
 
@@ -1562,6 +1834,8 @@
     const here = getRecord();
     const suggestions = tripSuggestions(stops);
     panel.suggestKey = suggestionKey();
+    const keep = panel.focusNext || focusKey();
+    panel.focusNext = null;
     // This tab's record first
     suggestions.sort((x, y) => (recordKey(y) === recordKey(here)) - (recordKey(x) === recordKey(here)));
 
@@ -1592,11 +1866,14 @@
 
     const b = body();
     wireFromPicker(b, s, showTrip);
+    restoreFocus(keep);
     const move = (from, to) => {
       const list = tripStops();
       const [x] = list.splice(from, 1);
       list.splice(to, 0, x);
       saveTrip(list);
+      // Focus follows the stop that moved
+      panel.focusNext = [`[data-${to > from ? 'down' : 'up'}="${to}"]`, `[data-${to > from ? 'up' : 'down'}="${to}"]`];
       showTrip();
     };
     b.querySelectorAll('[data-up]').forEach((x) => x.addEventListener('click', () => move(+x.dataset.up, +x.dataset.up - 1)));
@@ -1605,6 +1882,7 @@
       const list = tripStops();
       list.splice(+x.dataset.remove, 1);
       saveTrip(list);
+      panel.focusNext = [`[data-remove="${Math.min(+x.dataset.remove, list.length - 1)}"]`, '.oqa-from'];
       showTrip();
     }));
     b.querySelectorAll('[data-suggest]').forEach((x) => x.addEventListener('click', async () => {
@@ -1614,9 +1892,13 @@
       try {
         const stop = await stopForRecord(t);
         const list = tripStops();
-        if (list.some((y) => y.key === stop.key)) throw new Error(`${stop.name} is already in your trip.`);
-        saveTrip([...list, stop]);
+        // Another ticket for a company that's already a stop: remember it, so it stops being suggested
+        const dup = list.find((y) => y.key === stop.key);
+        if (dup) dup.also = [...(dup.also || []), stop.url];
+        else if (list.length >= MAX_STOPS) throw new Error(`Your trip already has ${MAX_STOPS} stops. Remove one to add another.`);
+        saveTrip(dup ? list : [...list, stop]);
         if (panel.el && panel.el.dataset.view === 'trip') showTrip();
+        if (dup) setNote(`${stop.name} is already in your trip.`);
       } catch (e) {
         if (!panel.el || panel.el.dataset.view !== 'trip') return;
         x.disabled = false;
@@ -1653,21 +1935,27 @@
 
       if (order) {
         order.disabled = false;
+        if ([].concat(keep).includes('[data-act="order"]')) order.focus();
         order.addEventListener('click', async () => {
           order.disabled = true;
           order.lastChild.textContent = 'Working it out…';
+          panel.ordering = true;
+          let idx;
           try {
-            const idx = await bestOrder(points, back);
-            if (!live()) return;
-            saveTrip(idx.map((i) => stops[i - 1]));
-            showTrip();
+            idx = await bestOrder(points, back);
           } catch (e) {
             log('best order failed:', e.message);
-            if (!live()) return;
-            order.disabled = false;
-            order.lastChild.textContent = 'Best order';
-            setNote('Couldn\'t work out the best order just now. Try again in a minute.', true);
+          } finally {
+            panel.ordering = false;
           }
+          if (!live()) return;
+          const reset = (msg, warn) => { order.disabled = false; order.lastChild.textContent = 'Best order'; setNote(msg, warn); };
+          if (!idx) return reset('Couldn\'t work out the best order just now. Try again in a minute.', true);
+          if (idx.every((v, k) => v === k + 1)) return reset('This is already the quickest order.');
+          saveTrip(idx.map((i) => stops[i - 1]));
+          panel.focusNext = '[data-act="order"]';
+          showTrip();
+          setNote('Reordered for the quickest drive.');
         });
       }
 
@@ -1918,5 +2206,8 @@
   /* ---------------- Start ---------------- */
   if (location.pathname.startsWith('/calendar-select-iframe/')) scheduler();
   // Skip the record page loaded inside the Help Desk meeting modal
-  else if (window.top === window) toolbar();
+  else if (window.top === window) {
+    toolbar();
+    prefillAfterReload();
+  }
 })();
