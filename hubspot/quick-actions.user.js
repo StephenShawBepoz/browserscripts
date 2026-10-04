@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.5.1
+// @version      0.6.0
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -476,7 +476,7 @@
     bar.querySelector('[data-act="task"]').addEventListener('click', () => {
       const rec = getRecord();
       if (!rec) return;
-      if (rec.helpDesk) recordModal(rec, 'task');
+      if (rec.helpDesk) taskInHelpDesk(rec);
       else taskOnRecord(rec);
     });
     bar.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => openPanel(btn.dataset.mode)));
@@ -683,8 +683,9 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  // Fill an empty task title once, then leave the cursor at the end
-  function prefillTask(doc, name) {
+  // Fill an empty task title once, then leave the cursor at the end (name can be a promise)
+  async function prefillTask(doc, name) {
+    try { name = await name; } catch (e) { name = ''; }
     let tries = 0;
     const timer = setInterval(() => {
       const input = findTaskTitle(doc);
@@ -736,7 +737,21 @@
     }
   }
 
-  // Help Desk has no task button: open the ticket record in a pop-up, straight into its task window
+  // Help Desk: press "Create task" in its own Tasks card, so HubSpot's task window opens right there.
+  // The title comes from the ticket's name in HubSpot, as the Help Desk header shortens it.
+  function taskInHelpDesk(rec) {
+    closePanel();
+    const link = [...document.querySelectorAll('button, a, [role="button"]')]
+      .find((b) => /^create task$/i.test(buttonLabel(b)) && visible(b) && !b.closest('.tm-oolio'));
+    if (!link) return recordModal(rec, 'task');
+    link.click();
+    const name = hubspot(`crm/v3/objects/tickets/${rec.id}?properties=subject`, rec.portal)
+      .then((d) => clean(d.properties && d.properties.subject))
+      .catch(() => recordTitle().split(' | ')[0]);
+    prefillTask(document, name);
+  }
+
+  // Fallback when Help Desk has no Tasks card: open the ticket record in a pop-up, straight into its task window
   function recordModal(t, kind) {
     if (overlay) return;
     closePanel();

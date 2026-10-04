@@ -60,7 +60,7 @@ The purple bar (bottom right) has five buttons. Hover over one to see what it do
 | Button | What it does |
 |---|---|
 | Calendar | Book a meeting. Works exactly like *Prefill meeting from ticket* above. |
-| Checklist | Create a task, linked to the record. The title starts as *Follow up: [record name]* with the cursor at the end, so type the rest. In Help Desk it opens the ticket in a pop-up, straight into the task window. |
+| Checklist | Create a task, linked to the record. The title starts as *Follow up: [record name]* with the cursor at the end, so type the rest. In Help Desk it uses the Tasks card's own *Create task*, so the task window opens right there. |
 | Car | Drive time and distance to the customer, with a small map. |
 | Train | Public transport to the customer: the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |

@@ -2,6 +2,9 @@
 
 ## HubSpot: Quick actions
 
+### 0.6.0 (04/10/2026, beta)
+- In Help Desk, the task button now uses Help Desk's own *Create task* (in the Tasks card), so the task window opens right there with no pop-up. The title uses the ticket's full name. The pop-up is only used if that card isn't on the page.
+
 ### 0.5.1 (04/10/2026, beta)
 - The bar no longer shrinks to the logo when the task window opens. It only tucks away when you click the logo.
 - Esc closes the task window more reliably: the key is caught before HubSpot's boxes can swallow it, and the close button is found even without a label. If it still can't find it, the browser console lists the buttons it saw.
