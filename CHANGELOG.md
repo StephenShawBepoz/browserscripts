@@ -2,6 +2,10 @@
 
 ## HubSpot: Quick actions
 
+### 0.5.1 (04/10/2026, beta)
+- The bar no longer shrinks to the logo when the task window opens. It only tucks away when you click the logo.
+- Esc closes the task window more reliably: the key is caught before HubSpot's boxes can swallow it, and the close button is found even without a label. If it still can't find it, the browser console lists the buttons it saw.
+
 ### 0.5.0 (04/10/2026, beta)
 - Under the bar, each record shows the drive time from the nearest Oolio office. Click it for directions. Worked out after a moment on the record and remembered for a week; it can be turned off in settings.
 - Esc closes HubSpot's Schedule and Task windows, using HubSpot's own Cancel or close button. An open drop-down closes first.

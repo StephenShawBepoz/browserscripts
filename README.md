@@ -55,7 +55,7 @@ On tickets and deals, the meeting title and a link back to the record are filled
 
 This replaces *Prefill meeting from ticket*. Once it's installed, remove that one: click the Tampermonkey icon, then **Dashboard**, and delete it. While both are installed you only see the new buttons, and the meeting details are only added once.
 
-The purple bar (bottom right) has five buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away (and again to bring it back); it also tucks itself while HubSpot's task window is open, as that opens in the same corner.
+The purple bar (bottom right) has five buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away, and again to bring it back.
 
 | Button | What it does |
 |---|---|

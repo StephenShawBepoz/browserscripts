@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.5.0
+// @version      0.5.1
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -481,8 +481,7 @@
     });
     bar.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => openPanel(btn.dataset.mode)));
 
-    // The logo tucks the bar away to just itself (remembered), for when it sits over something.
-    // It also tucks itself while HubSpot's task window is open, as that window opens in the same corner.
+    // The logo tucks the bar away to just itself (remembered), for when it sits over something
     const markBtn = bar.querySelector('[data-act="collapse"]');
     let tucked = false;
     const chip = document.createElement('button');
@@ -532,8 +531,6 @@
       bar.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(!!panel.el && panel.mode === b.dataset.mode)));
       setBadge();
       noteThisTab(rec);
-      const taskOpen = !!findTaskTitle(document);
-      if (taskOpen !== tucked) { tucked = taskOpen; setCollapsed(); }
       chipFor(rec, chip);
     };
     setInterval(sync, 1000);
@@ -817,13 +814,31 @@
     }
     return null;
   }
-  function taskClose(doc) {
+  // The task window that holds the "Enter your task" box (the largest box around it that's still just the window)
+  function taskWindow(doc) {
     const input = findTaskTitle(doc);
-    for (let box = input && input.parentElement, i = 0; box && box !== doc.body && i < 12; i++, box = box.parentElement) {
+    let win = null;
+    for (let box = input && input.parentElement, i = 0; box && box !== doc.body && i < 14; i++, box = box.parentElement) {
       if (box.querySelector('[data-selenium-test="highlightTitle"]')) break; // gone past the task window
-      const c = [...box.querySelectorAll('button, [role="button"]')].find((b) => isClose(b) && visible(b) && !b.closest('.tm-oolio'));
-      if (c) return c;
+      win = box;
     }
+    return win;
+  }
+  function taskClose(doc) {
+    const win = taskWindow(doc);
+    if (!win) return null;
+    const buttons = [...win.querySelectorAll('button, [role="button"]')].filter((b) => visible(b) && !b.closest('.tm-oolio'));
+    // 1. A button that says it closes
+    const labelled = buttons.find(isClose);
+    if (labelled) return labelled;
+    // 2. The last button in the row with the "Task" heading (collapse, then close)
+    const heading = [...win.querySelectorAll('*')].find((el) => el.children.length === 0 && clean(el.textContent) === 'Task' && visible(el));
+    for (let row = heading && heading.parentElement, i = 0; row && row !== win && i < 4; i++, row = row.parentElement) {
+      const inRow = buttons.filter((b) => row.contains(b) && !clean(b.innerText));
+      if (inRow.length) return inRow[inRow.length - 1];
+    }
+    log('Esc: found the task window but not its close button. Buttons seen:',
+      buttons.map((b) => ({ label: buttonLabel(b), test: b.getAttribute('data-selenium-test') || b.getAttribute('data-test-id') || '' })));
     return null;
   }
   // The scheduler lives in its own frame: look inside it from the record page, and at its frame's close button from inside
@@ -847,7 +862,10 @@
     const doc = document;
     // Our own panel has its own Esc handling
     if (panel.el && (panel.el.contains(doc.activeElement) || doc.activeElement === doc.body)) return;
+    // An open drop-down closes first
     if ([...doc.querySelectorAll('[role="listbox"], [role="menu"]')].some(visible)) return;
+    const win = taskWindow(doc);
+    if (win && win.querySelector('[aria-expanded="true"]')) return;
     const btn = scheduleCancel(doc) || taskClose(doc) || schedulerFrameCancel(doc) ||
       (window.top !== window && location.pathname.startsWith('/calendar-select-iframe/') ? frameCloseInParent() : null);
     if (!btn) return;
@@ -2399,7 +2417,8 @@
   }
 
   /* ---------------- Start ---------------- */
-  document.addEventListener('keydown', onEscape);
+  // Capture, so the key is seen before HubSpot's own boxes swallow it
+  window.addEventListener('keydown', onEscape, true);
   if (location.pathname.startsWith('/calendar-select-iframe/')) scheduler();
   // Skip the record page loaded inside the Help Desk meeting modal
   else if (window.top === window) {
