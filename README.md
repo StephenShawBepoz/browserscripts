@@ -12,6 +12,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
+| **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
 
@@ -100,6 +101,23 @@ The trip is shared by all your HubSpot tabs and stays until you clear it. Times 
 3. It presses that box's **Send**, **Comment**, **Save**, **Create** or **OK** button, and a small message shows which one. Where there's no such button, it stays out of the way and leaves the key to HubSpot.
 
 It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
+
+### Company contacts
+
+1. On a ticket or deal, click **Add** on the Contacts card and open the **Add existing** tab.
+2. The list only shows contacts at the record's companies and their parent companies (often the group's head office), 100 to a page. The purple bar under the search box names the companies.
+3. **Can't find someone?** Click **Show all** to search every contact before you create a new one. The next ticket or deal starts with company contacts again.
+
+**Email only** hides contacts without an email address. It stays on until you turn it off.
+
+To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays that way for the rest of that panel.
+
+**If the bar turns amber,** it says what's wrong:
+- *Couldn't load the companies*: all contacts are listed. Click **Try again**.
+- *HubSpot didn't refresh the list*: the list may not match the bar. Type in the search box.
+- *The company filter isn't working*: HubSpot has changed, so all contacts are listed. Let Stephen know. The browser console (search for *Oolio company contacts*) shows more.
+
+**Had it before it was on GitHub?** Install it from the link above, then delete the old copy (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
 
 ## Problems or ideas
 
