@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Products in company search
 // @namespace    oolio-userscripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  In the Add existing Company panel, shows each company's products, owner and contacts under its name, hides the products you don't work with, and shows 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -190,6 +190,7 @@
       }
     } catch (e) { body = null; }
     if (!body) return pageFetch.apply(this, arguments);
+    searchSeenVia = 'fetch';
     try {
       const res = await pageFetch.call(window, input, { ...init, body });
       const problem = res.ok ? searchFailed(await res.clone().json()) : `HubSpot returned ${res.status}`;
@@ -206,18 +207,50 @@
     return pageFetch.call(window, input, init);
   };
 
-  // HubSpot may send the same search with XMLHttpRequest. That can't be retried safely, so
-  // it is only filtered once the filter is known to work.
+  // HubSpot sends this search with XMLHttpRequest. A request can't be retried once sent, so
+  // the first time the filter is checked with a one-row test search; until that answers, the
+  // real request waits (a fraction of a second). After that every search goes out filtered.
+  let searchSeenVia = 'none';
+  let probe = null;
+  function checkFilter(url, headers, body) {
+    if (!probe) {
+      const j = JSON.parse(body);
+      j.variables.count = 1;
+      probe = pageFetch.call(window, url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(j) })
+        .then(async (res) => {
+          const problem = res.ok ? searchFailed(await res.json()) : `HubSpot returned ${res.status}`;
+          if (problem) { setServerFilter('broken', problem); note('Product filter rejected, hiding on the page instead: ' + problem); }
+          else { setServerFilter('works'); note('Product filter accepted by HubSpot'); }
+        })
+        .catch((e) => { setServerFilter('broken', e.message); note('Product filter check failed: ' + e.message); })
+        .finally(() => { probe = null; scheduleRun(0); });
+    }
+    return probe;
+  }
+
   const xhrOpen = XMLHttpRequest.prototype.open;
   const xhrSend = XMLHttpRequest.prototype.send;
+  const xhrHeader = XMLHttpRequest.prototype.setRequestHeader;
   XMLHttpRequest.prototype.open = function (method, url) {
     this.__ocpUrl = String(url);
+    this.__ocpHeaders = {};
     return xhrOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.setRequestHeader = function (k, v) {
+    try { if (this.__ocpHeaders) this.__ocpHeaders[k] = v; } catch (e) { /* ignore */ }
+    return xhrHeader.apply(this, arguments);
   };
   XMLHttpRequest.prototype.send = function (b) {
     let body = null;
-    try { if (serverFilter === 'works') body = filteredBody(this.__ocpUrl, b); } catch (e) { body = null; }
-    return body ? xhrSend.call(this, body) : xhrSend.apply(this, arguments);
+    try { if (serverFilter !== 'broken') body = filteredBody(this.__ocpUrl, b); } catch (e) { body = null; }
+    if (!body) return xhrSend.apply(this, arguments);
+    searchSeenVia = 'xhr';
+    if (serverFilter === 'works') return xhrSend.call(this, body);
+    const xhr = this;
+    checkFilter(xhr.__ocpUrl, { ...xhr.__ocpHeaders }, body).then(() => {
+      if (xhr.readyState !== 1) return; // cancelled meanwhile
+      try { xhrSend.call(xhr, serverFilter === 'works' ? body : b); } catch (e) { note('Search send failed: ' + e.message); }
+    });
   };
 
   // After a chip changes, ask HubSpot to search again by nudging the search box
@@ -1062,7 +1095,7 @@
       `Panel: ${p ? (p.fallback ? 'found (fallback checkboxes)' : 'found') : 'not found'}, rows: ${rows.length}, rows-per-page control: ${ctl ? `"${ctl.textContent.trim()}"` : 'not found'}`,
       `Row data from: ${JSON.stringify(how)}, owners: ${ownersState} (${owners.size}), Trusted Types policy: ${!!ttPolicy}`,
       `Last pass: ${lastPass ? JSON.stringify(lastPass.stats) : 'none'}, row depth: ${rowDepth}`,
-      `Product filter in HubSpot's search: ${serverFilter}${lastServer ? ' (' + lastServer + ')' : ''}`,
+      `Product filter in HubSpot's search: ${serverFilter}${lastServer ? ' (' + lastServer + ')' : ''}, search seen via: ${searchSeenVia}`,
       `Last API error: ${apiError || 'none'}`,
       `Last run error: ${lastError || 'none'}`,
       '', 'Notes:', ...notes.map((l) => '  ' + l),

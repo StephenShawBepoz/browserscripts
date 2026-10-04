@@ -2,6 +2,9 @@
 
 ## HubSpot: Products in company search
 
+### 1.2.1 (05/10/2026)
+- Fixed: the product filter wasn't reaching HubSpot's search, because HubSpot sends it a different way than expected. It now does, after a one-off check that HubSpot accepts it.
+
 ### 1.2.0 (04/10/2026)
 - The product chips now filter HubSpot's own search, not just the page. A search returns only companies on your products, so pages are full and the company count is right (for example "burger" goes from 539 companies to only yours).
 - Changing a chip searches again straight away.
