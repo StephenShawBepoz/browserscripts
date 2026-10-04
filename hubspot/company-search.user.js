@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Products in company search
 // @namespace    oolio-userscripts
-// @version      1.1.0
+// @version      1.1.2
 // @description  In the Add existing Company panel, shows each company's products, owner and contacts under its name, hides the products you don't work with, and shows 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -141,14 +141,25 @@
     for (const k in el) if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) return el[k];
     return null;
   }
-  // Walk up from a checkbox to the list component that holds every row's company
-  function itemsFor(box) {
+  const isCompany = (o) => !!o && typeof o === 'object' && !Array.isArray(o) && o.objectId != null && Array.isArray(o.properties);
+
+  // Walk up from a checkbox through React's props. The row's own company comes first if a
+  // component holds it; every list of companies on the way is collected too, because search
+  // results and the normal list can sit in different props.
+  function companiesNear(box) {
+    const out = { own: null, lists: [] };
     let f = fiberOf(box);
     for (let i = 0; f && i < 45; i++, f = f.return) {
       const p = f.memoizedProps;
-      if (p && Array.isArray(p.items) && p.items.length && p.items[0] && typeof p.items[0] === 'object' && 'objectId' in p.items[0]) return p.items;
+      if (!p || typeof p !== 'object') continue;
+      for (const k of Object.keys(p)) {
+        if (k === 'children') continue;
+        const v = p[k];
+        if (!out.own && !out.lists.length && isCompany(v)) out.own = v;
+        else if (Array.isArray(v) && v.length && isCompany(v[0]) && !out.lists.includes(v)) out.lists.push(v);
+      }
     }
-    return null;
+    return out;
   }
 
   // HubSpot shows "Name (domain.com)" when a company has a domain
@@ -457,21 +468,37 @@
   }
 
   // A row is the nearest ancestor of the checkbox whose parent holds more than one checkbox.
-  // HubSpot renders the list in chunks, so this finds the row rather than the chunk.
-  function rowOf(box, panel) {
+  // HubSpot renders the list in chunks, and a chunk can hold a single row, so every row uses the
+  // smallest depth found. A search with one result reuses the depth learned from a full list.
+  let rowDepth = 0;
+  // Row checkboxes only: never the tick boxes in this script's own settings
+  const rowBoxes = (el) => [...el.querySelectorAll('input[type="checkbox"]')].filter((b) => !b.closest('.ocp-ui'));
+  function depthOf(box, panel) {
     let el = box;
     for (let i = 0; i < 14 && el.parentElement && el.parentElement !== panel; i++) {
-      if (el.parentElement.querySelectorAll('input[type="checkbox"]').length > 1) return el;
+      if (rowBoxes(el.parentElement).length > 1) return i;
       el = el.parentElement;
     }
-    return null;
+    return -1;
+  }
+  function climb(box, depth, panel) {
+    let el = box;
+    for (let i = 0; i < depth && el.parentElement && el.parentElement !== panel; i++) el = el.parentElement;
+    return el;
   }
 
   function getRows(panel, fallback) {
     const items = [];
-    for (const box of panel.querySelectorAll(fallback ? CHECKBOX_FALLBACK : CHECKBOX)) {
-      if (box.closest('.ocp-ui')) continue;
-      const row = rowOf(box, panel);
+    const boxes = [...panel.querySelectorAll(fallback ? CHECKBOX_FALLBACK : CHECKBOX)].filter((b) => !b.closest('.ocp-ui'));
+    const depths = boxes.map((b) => depthOf(b, panel)).filter((d) => d >= 0);
+    if (depths.length) rowDepth = Math.min(...depths);
+    for (const box of boxes) {
+      let row;
+      if (rowDepth) row = climb(box, rowDepth, panel);
+      else {
+        const marked = box.closest(ROW_TEST_ID);
+        row = marked && marked.parentElement !== panel ? marked.parentElement : marked;
+      }
       if (!row) continue;
       const label = textOf(row);
       if (!label || label.length > 300) continue;
@@ -488,28 +515,46 @@
 
   // Match each row to HubSpot's own company record: by name, then by position
   function matchRows(rows) {
-    let items = null;
-    for (const r of rows) { items = itemsFor(r.box); if (items) break; }
-    if (!items) return 'none';
     const byName = new Map();
-    items.forEach((it, i) => {
+    const lists = new Set();
+    const add = (it, i) => {
       const rec = recFromItem(it);
       rec.index = i;
       const k = norm(rec.name);
       if (!byName.has(k)) byName.set(k, []);
-      byName.get(k).push(rec);
+      const list = byName.get(k);
+      const at = list.findIndex((r) => r.id === rec.id);
+      if (at < 0) list.push(rec); else if (i >= 0) list[at] = rec;
+      return rec;
+    };
+    rows.forEach((r) => {
+      const near = companiesNear(r.box);
+      r.own = near.own ? add(near.own, -1) : null;
+      r.list = near.lists[0] || null; // the nearest list is the one this row was drawn from
+      for (const list of near.lists) if (!lists.has(list)) { lists.add(list); list.forEach(add); }
     });
+    // Own company first, then the same position in the row's own list, then by name.
+    // Two companies can share a name, so a company already used by another row is skipped.
+    let found = 0;
+    const used = new Set();
     rows.forEach((r, i) => {
+      r.rec = null;
+      if (r.own && matchesName(r.label, r.own)) r.rec = r.own;
+      else if (r.list && isCompany(r.list[i]) && matchesName(r.label, records.get(String(r.list[i].objectId)))) {
+        r.rec = records.get(String(r.list[i].objectId));
+      }
+      if (r.rec) { used.add(r.rec.id); found++; }
+    });
+    rows.forEach((r) => {
+      if (r.rec) return;
       const { name } = splitLabel(r.label);
       const cands = [...(byName.get(norm(r.label)) || []), ...(byName.get(norm(name)) || [])].filter((rec) => matchesName(r.label, rec));
-      let rec = cands.find((c) => c.index === i) || cands[0] || null;
-      if (!rec && items[i]) {
-        const at = records.get(String(items[i].objectId));
-        if (at && norm(r.label).startsWith(norm(at.name))) rec = at;
-      }
-      r.rec = rec;
+      r.rec = cands.find((c) => !used.has(c.id)) || cands[0] || null;
+      if (r.rec) { used.add(r.rec.id); found++; }
     });
-    return 'react';
+    const msg = `Matched ${found} of ${rows.length} rows from ${lists.size} list(s)`;
+    if (!notes.length || !notes[notes.length - 1].endsWith(msg)) note(msg);
+    return found ? 'react' : 'none';
   }
 
   /* ---------------- Line under each company ---------------- */
@@ -736,7 +781,9 @@
     let html = '';
     if (stats.errors && !stats.ready) html = `<span class="ocp-warn" title="${esc(apiError)}">Couldn't load products. Settings &gt; Copy debug info.</span>`;
     else if (stats.loading) html = `<span>Loading ${stats.loading}…</span>`;
-    if (stats.filtered) {
+    if (stats.filtered && stats.searching && !settings.showHidden) {
+      html += `<span title="Companies outside your chips show faded while you search">${stats.filtered} of ${stats.total} faded</span>`;
+    } else if (stats.filtered) {
       html += `<span>${stats.filtered} of ${stats.total} ${settings.showHidden ? 'faded' : 'hidden'}</span>` +
         `<button type="button" class="ocp-link" data-act="showhidden">${settings.showHidden ? 'Hide' : 'Show'}</button>`;
     }
@@ -807,8 +854,13 @@
       anchor.parentElement.insertBefore(bar, anchor);
     }
 
+    // While you're searching by name, filtered companies show faded rather than vanishing
+    const search = panel.querySelector('input[type="search"], input[placeholder*="Search" i]');
+    const searching = !!(search && search.value.trim());
+    const fade = settings.showHidden || searching;
+
     const counts = new Map();
-    const stats = { ready: 0, loading: 0, errors: 0, filtered: 0, total: rows.length };
+    const stats = { ready: 0, loading: 0, errors: 0, filtered: 0, total: rows.length, searching };
     for (const it of rows) {
       const r = it.rec ? { state: 'ready', recs: [it.rec] } : resolveByName(it.label);
       it.how = it.rec ? 'react' : 'name';
@@ -821,8 +873,8 @@
         hide = !wanted(r.recs);
       }
       if (hide) stats.filtered++;
-      const hidden = hide && !settings.showHidden;
-      const dim = hide && settings.showHidden;
+      const hidden = hide && !fade;
+      const dim = hide && fade;
       if (it.row.hasAttribute('data-ocp-hidden') !== hidden) it.row.toggleAttribute('data-ocp-hidden', hidden);
       if (it.row.hasAttribute('data-ocp-dim') !== dim) it.row.toggleAttribute('data-ocp-dim', dim);
     }
@@ -874,7 +926,7 @@
       `Frame: ${location.pathname.replace(/\d{5,}/g, '#')} (${window.top === window ? 'top page' : 'embedded frame'})`,
       `Panel: ${p ? (p.fallback ? 'found (fallback checkboxes)' : 'found') : 'not found'}, rows: ${rows.length}, rows-per-page control: ${ctl ? `"${ctl.textContent.trim()}"` : 'not found'}`,
       `Row data from: ${JSON.stringify(how)}, owners: ${ownersState} (${owners.size}), Trusted Types policy: ${!!ttPolicy}`,
-      `Last pass: ${lastPass ? JSON.stringify(lastPass.stats) : 'none'}`,
+      `Last pass: ${lastPass ? JSON.stringify(lastPass.stats) : 'none'}, row depth: ${rowDepth}`,
       `Last API error: ${apiError || 'none'}`,
       `Last run error: ${lastError || 'none'}`,
       '', 'Notes:', ...notes.map((l) => '  ' + l),

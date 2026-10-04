@@ -2,6 +2,12 @@
 
 ## HubSpot: Products in company search
 
+### 1.1.2 (04/10/2026)
+- Search results now get their products and details too, not just the first page of the normal list.
+- While you search by name, companies outside your chips show faded instead of hidden, so a search never looks empty.
+- Fixed: a search that finds a single company now shows its details.
+- Fixed: opening the settings could make the next search hide the wrong part of the list.
+
 ### 1.1.0 (04/10/2026)
 - Rebuilt around what HubSpot's panel actually holds, confirmed on the live page. Products, owner and contact counts now appear instantly with no extra lookups.
 - Shows the company owner's name.
