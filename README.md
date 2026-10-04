@@ -10,7 +10,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 |---|---|---|
 | **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
-| **HubSpot: Products in company search** | In **Add existing Company**, shows each company's products under its name, hides the products you don't work with, links to its contacts and tickets, and shows 100 per page. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-search.user.js) |
+| **HubSpot: Products in company search** | In **Add existing Company**, shows each company's products, owner and contacts under its name, hides the products you don't work with, and shows 100 per page. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-search.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
@@ -53,12 +53,12 @@ On tickets and deals, the meeting title and a link back to the record are filled
 
 ### Products in company search
 
-1. On a contact, deal or ticket, add a company and pick **Add existing**.
-2. Each company shows its products underneath, plus its contacts, tickets and an **Open** link (opens the company in a new tab). Click **contacts** or **Tickets** to list them right there.
-3. Click a product chip above the list to hide companies that only have that product. Click it again to bring them back. Your choice is remembered.
-4. Click the sliders icon (right of the chips) to change rows per page, what shows under each company, or add extra fields by their internal name, such as `city`.
+1. On a contact or ticket, go to the Companies card, click **Add** and pick **Add existing**.
+2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there.
+3. The chips above the list choose which products you see. Idealpos, SwiftPOS and Other start switched off. Click a chip to switch it on or off, and the script remembers your choice. **Show** brings hidden companies back, faded.
+4. Click the sliders icon to change rows per page, what shows under each company, or to add extra fields such as address or phone.
 
-If a company says **Couldn't load details**, open the settings, click **Copy debug info** and send it to Stephen.
+If something looks wrong, open the settings, click **Copy debug info** and send it to Stephen.
 
 ### Cmd/Ctrl + Enter to send
 

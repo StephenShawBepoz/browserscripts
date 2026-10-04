@@ -2,6 +2,15 @@
 
 ## HubSpot: Products in company search
 
+### 1.1.0 (04/10/2026)
+- Rebuilt around what HubSpot's panel actually holds, confirmed on the live page. Products, owner and contact counts now appear instantly with no extra lookups.
+- Shows the company owner's name.
+- Products have their own colours: Bepoz blue, Oolio One purple, OolioPay teal.
+- Idealpos, SwiftPOS and Other start hidden. One click on a chip brings them back.
+- Rows per page options match HubSpot's: 10, 30 or 100.
+- Extra fields are now tick boxes: LS, O, T, address, phone, website, last contacted and created date.
+- Fixed duplicate company names picking up the wrong company.
+
 ### 1.0.2 (04/10/2026)
 - Fixed: nothing showed in **Add existing Company**. HubSpot shows that panel inside its own frame, which the script now finds.
 
