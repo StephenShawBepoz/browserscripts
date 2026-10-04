@@ -30,7 +30,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 
 Tampermonkey checks for new versions once a day and installs them for you. To get one straight away, click the Tampermonkey icon, then **Utilities** > **Check for userscript updates**.
 
-**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two.
+**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exception is *Status prompt after email*: the copy installed by hand stays, so delete it (see *Had the first copy?* below).
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 

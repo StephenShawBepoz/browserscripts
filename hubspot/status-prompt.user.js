@@ -2,7 +2,7 @@
 // @name         HubSpot: Status prompt after email
 // @namespace    oolio-userscripts
 // @version      1.1.0
-// @description  After you send an email reply on a Help Desk ticket, asks what the ticket status should be. Enter sets the waiting status, Tab, the arrows or a number move the highlight, Esc keeps the current status.
+// @description  After you send an email reply on a Help Desk ticket, asks what the ticket status should be. Enter sets the waiting status. Tab, the arrow keys or a number move the highlight. Esc keeps the current status.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js
@@ -14,6 +14,7 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_addValueChangeListener
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
@@ -381,8 +382,12 @@
         if (pageKey() !== key) return 'moved';
         return showsStatus(opt, options) ? 'set' : box.isConnected ? null : 'closed';
       }, DETAILS_WAIT_MS, 250);
-      if (res === 'closed') res = (await waitFor(() => showsStatus(opt, options), 1500)) ? 'set' : 'unchanged';
+      if (res === 'closed' && !(await waitFor(() => showsStatus(opt, options), 1500))) {
+        log(`HubSpot's box closed without setting ${opt.label}`);
+        return toast(`HubSpot's box closed before ${opt.label} was set. Check the status in the sidebar.`);
+      }
       if (!res || res === 'moved') return hideToast(); // still filling it in, or gone elsewhere: leave it to HubSpot
+      res = 'set';
     }
     if (res === 'unchanged') {
       log(`${opt.label} didn't take`);
@@ -445,23 +450,42 @@
     if (!was || !was.pipeline) return;
     gmSet('skippedPipelines', [...new Set([...skipped(), was.pipeline])]);
     refreshMenu();
-    toast(`Won't ask on ${was.pipeline} tickets. Turn it back on from the Tampermonkey menu.`, true);
+    toast(`Won't ask on ${was.pipeline} tickets. To ask again, click the Tampermonkey icon, then Ask on every pipeline again.`, true, null, 6000);
     restoreFocus(was.returnFocus);
   });
 
-  let opening = false;
+  // The first copy, installed by hand before this one was in the repo, would fight this one for the keyboard.
+  // It only shows up on the page once it has shown something, so this is checked again after reading.
   let warnedOldCopy = false;
-  async function showPrompt(ctx = {}) {
-    if (state || opening) return;
-    // The first copy, installed by hand before this one was in the repo, would fight this one for the keyboard
-    if (document.getElementById('hs-status-prompt-host')) {
-      log('The first copy of the status prompt is still installed, so this one is standing aside');
-      if (!warnedOldCopy) toast('The first copy of the status prompt is still installed. Delete it in Tampermonkey to use this one.', false, null, 10000);
+  function oldCopy() {
+    const old = document.getElementById('hs-status-prompt-host');
+    if (!old) return false;
+    if (!warnedOldCopy) {
       warnedOldCopy = true;
-      return;
+      log('The first copy of the status prompt is still installed, so this one is standing aside');
+      // Wait until the old box is closed, so the reminder doesn't cover it
+      const oldOpen = () => old.shadowRoot?.querySelector('.wrap')?.hidden === false;
+      waitFor(() => !oldOpen(), 60000, 500).then(() => toast(
+        'The first copy of the status prompt is still installed. Delete it in Tampermonkey to use this one.', false, null, 10000));
     }
+    return true;
+  }
+
+  // You're already doing something else, so offer the prompt instead of taking the keyboard
+  function offer(key, statusBefore) {
+    log('You clicked or typed after sending, so the prompt is offered instead of opened');
+    toast('Email sent. Update the ticket status?', true, {
+      label: 'Choose',
+      run: () => (pageKey() === key ? showPrompt({ statusBefore }) : toast("That ticket isn't open any more")),
+    });
+  }
+
+  let opening = false;
+  // ctx: { statusBefore, armedAt } after a send, { test: true } from the menu
+  async function showPrompt(ctx = {}) {
+    if (state || opening || oldCopy()) return;
     const key = pageKey();
-    if (!ctx.test && skipped().includes(pipelineName())) return;
+    if (!ctx.test && skipped().includes(pipelineName())) return log(`Not asking on ${pipelineName()} tickets (skipped in the prompt)`);
     opening = true;
     const returnFocus = document.activeElement;
     let data;
@@ -470,7 +494,9 @@
     } finally {
       opening = false;
     }
-    if (pageKey() !== key) return; // moved to another ticket while reading
+    if (pageKey() !== key || oldCopy()) return; // moved to another ticket while reading, or the first copy showed up
+    // Clicked or typed somewhere while the statuses were read: don't take the keyboard now
+    if (ctx.armedAt && lastInput > ctx.armedAt) return offer(key, ctx.statusBefore);
     if (!data) return toast("Couldn't read this ticket's statuses. Set it in the sidebar instead.");
     // If the status changed while sending (a send-and-close, or a HubSpot workflow), start on what it is now
     const changed = ctx.statusBefore && ctx.statusBefore !== data.text;
@@ -496,14 +522,17 @@
     window.addEventListener('keydown', onKey, true);
     document.addEventListener('pointerdown', onPointer, true);
     // Close if you move to another ticket, so the choice can't land on the wrong one
-    navTimer = setInterval(() => { if (state && pageKey() !== state.key) close(); }, 300);
+    navTimer = setInterval(() => { if (state && (pageKey() !== state.key || oldCopy())) close(); }, 300);
   }
 
   // ---------- Detect a sent email ----------
   // When you last clicked or typed. If that's after Send, you've moved on, so the prompt mustn't take the keyboard.
   // Cmd/Ctrl + Enter doesn't count: that's the send itself.
   let lastInput = 0;
-  document.addEventListener('pointerdown', (e) => { if (e.isTrusted) lastInput = performance.now(); }, true);
+  // A second press on Send (a double-click, say) isn't moving on either
+  document.addEventListener('pointerdown', (e) => {
+    if (e.isTrusted && !e.target.closest?.(SEND_SELECTOR)) lastInput = performance.now();
+  }, true);
   document.addEventListener('keydown', (e) => {
     if (!e.isTrusted || e.repeat || /^(Shift|Control|Meta|Alt|AltGraph|CapsLock|Fn)$/.test(e.key)) return;
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) return;
@@ -511,18 +540,25 @@
   }, true);
 
   let watchToken = 0;
+  let watching = null; // { root, sentText } of the send being watched
   async function watchSend(send) {
-    if (!isEnabled() || state || opening) return;
+    if (!isEnabled()) return log('Turned off in the Tampermonkey menu');
+    if (state || opening) return;
     const before = readComposer(send);
-    if (!before || before.disabled || !CHANNELS.test(before.channel)) return;
+    if (!before) return log("Couldn't find the reply box around Send");
+    if (before.disabled) return;
+    if (!CHANNELS.test(before.channel)) return log(`Not an email reply (channel: ${before.channel || 'unknown'})`);
     const statusBtn = statusButton();
     // Not a ticket (an email from a contact, company or deal), so there's no status to set
-    if (!statusBtn || !ticketId()) return;
+    if (!statusBtn || !ticketId()) return log('Not a ticket, so there is no status to set');
+    // Already clearing after this send (a shortcut and a click for the same send): let the running wait finish
+    if (watching && watching.root === before.root && before.text.length < watching.sentText.length) return;
     const token = ++watchToken; // a second Send click starts the wait again
     const armedAt = performance.now();
     const key = pageKey();
     const statusBefore = clean(statusBtn.textContent);
     const sentText = before.text;
+    watching = { root: before.root, sentText };
     // You editing the message, or using the composer's controls (to change the channel, say), means it didn't go.
     // HubSpot clearing it after sending is neither. Key presses count as well as input, because HubSpot's editor
     // handles Backspace itself and the browser reports no input for it.
@@ -548,19 +584,22 @@
       if (!s) return ++gone >= 2 ? 'sent' : null; // composer closed (twice running, not just redrawing)
       gone = 0;
       if (s.text !== sentText && s.text.length < sentText.length) return 'sent'; // cleared (the signature may stay)
-      if (!CHANNELS.test(s.channel)) return 'stop'; // switched to a comment, say
+      if (!CHANNELS.test(s.channel)) return 'switched'; // to a comment, say
       return null;
     }, SEND_TIMEOUT_MS, 250);
     EDIT_EVENTS.forEach((t) => document.removeEventListener(t, onEdit, true));
-    if (sent !== 'sent' || token !== watchToken) return;
+    if (token !== watchToken) return; // a newer Send took over
+    watching = null;
+    if (sent !== 'sent') {
+      return log(edited ? 'You edited the message after Send, so it looks unsent'
+        : sent === 'switched' ? 'Switched away from email before it sent'
+        : sent === 'stop' ? 'Moved to another ticket before it sent'
+        : "The email didn't seem to send within 20 seconds");
+    }
     await sleep(400);
     if (pageKey() !== key) return;
-    if (lastInput <= armedAt) return showPrompt({ statusBefore });
-    // You're already doing something else, so offer the prompt instead of taking the keyboard
-    toast('Email sent. Update the ticket status?', true, {
-      label: 'Choose',
-      run: () => (pageKey() === key ? showPrompt({ statusBefore }) : toast("That ticket isn't open any more")),
-    });
+    if (lastInput > armedAt) return oldCopy() || offer(key, statusBefore);
+    showPrompt({ statusBefore, armedAt });
   }
 
   document.addEventListener('click', (e) => {
@@ -588,13 +627,16 @@
     // Without unregister the labels can't change, so register once
     if (menuIds.length && typeof GM_unregisterMenuCommand !== 'function') return;
     menuIds.forEach((id) => GM_unregisterMenuCommand(id));
+    const turnOn = !isEnabled();
     menuIds = [
-      GM_registerMenuCommand('Show the status prompt on this ticket', () => showPrompt({ test: true })),
-      GM_registerMenuCommand(isEnabled() ? 'Turn the status prompt off' : 'Turn the status prompt on', () => {
-        gmSet('enabled', !isEnabled());
-        if (!isEnabled()) close();
+      GM_registerMenuCommand('Show the status prompt on this ticket', () =>
+        (ticketId() ? showPrompt({ test: true }) : toast('Open a ticket first, then try again'))),
+      // Does what its label says, even if another tab has changed the setting since
+      GM_registerMenuCommand(turnOn ? 'Turn the status prompt on' : 'Turn the status prompt off', () => {
+        gmSet('enabled', turnOn);
+        if (!turnOn) close();
         refreshMenu();
-        toast(`Status prompt ${isEnabled() ? 'on' : 'off'}`, true);
+        toast(`Status prompt ${turnOn ? 'on' : 'off'}`, true);
       }),
     ];
     const n = skipped().length;
@@ -607,4 +649,8 @@
     }
   }
   refreshMenu();
+  // Keep the menu right when another tab changes a setting
+  if (typeof GM_addValueChangeListener === 'function') {
+    ['enabled', 'skippedPipelines'].forEach((k) => GM_addValueChangeListener(k, (n, o, v, remote) => { if (remote) refreshMenu(); }));
+  }
 })();
