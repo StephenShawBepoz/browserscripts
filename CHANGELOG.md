@@ -2,6 +2,11 @@
 
 ## HubSpot: Quick actions
 
+### 0.4.0 (04/10/2026, beta)
+- Directions now start from the nearest Oolio office to the customer: Melbourne, Sydney, Brisbane, Adelaide, Perth, Auckland, Warrington or South Carolina (addresses from bepoz.com.au/contact). The panel says which office it picked.
+- Every office can also be picked from the start list, or starred in settings as your default. Trips start from the office nearest the middle of your stops.
+- If you'd starred a saved place before, that stays your default; star *Nearest Oolio office* in settings to switch.
+
 ### 0.3.0 (04/10/2026, beta)
 - New task button: opens HubSpot's task window for the record, with the title started as *Follow up: [record name]*. Works in Help Desk too.
 - Click the Oolio logo to tuck the bar away; it also tucks itself while HubSpot's task window is open.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.3.0
+// @version      0.4.0
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -47,6 +47,20 @@
     drive: 'https://routing.openstreetmap.de/routed-car',
     transit: 'https://api.transitous.org/api/v6/plan',
   };
+  // Bepoz / Oolio offices, from https://www.bepoz.com.au/contact (checked October 2026).
+  // Directions start from whichever is nearest the customer, unless you star another start.
+  // Map points: the building, except Brisbane and Adelaide, which are the street (within a few hundred metres).
+  const OFFICES = [
+    { id: 'off-mel', area: 'North Melbourne', label: 'Melbourne office', address: 'Unit 5, 63-71 Boundary Road, North Melbourne VIC 3051, Australia', lat: -37.79317, lon: 144.93836 },
+    { id: 'off-syd', area: 'Mascot', label: 'Sydney office', address: 'Unit 7, 689-691 Gardeners Road, Mascot NSW 2020, Australia', lat: -33.92007, lon: 151.18267 },
+    { id: 'off-bne', area: 'Pinkenba', label: 'Brisbane office', address: '601 Curtin Avenue East, Pinkenba QLD 4008, Australia', lat: -27.4352, lon: 153.10418 },
+    { id: 'off-adl', area: 'Kingswood', label: 'Adelaide office', address: 'Unit 4, 55 Belair Road, Kingswood SA 5062, Australia', lat: -34.96593, lon: 138.60865 },
+    { id: 'off-per', area: 'Subiaco', label: 'Perth office', address: 'Suite 41, 5/531 Hay Street, Subiaco WA 6008, Australia', lat: -31.94759, lon: 115.82212 },
+    { id: 'off-akl', area: 'Grey Lynn', label: 'Auckland office', address: '60M Surrey Crescent, Grey Lynn, Auckland 1021, New Zealand', lat: -36.86317, lon: 174.73379 },
+    { id: 'off-war', area: 'Warrington', label: 'Warrington office', address: 'St James Business Centre, Wilderspool Causeway, Warrington WA4 6PS, United Kingdom', lat: 53.38277, lon: -2.59009 },
+    { id: 'off-rkh', area: 'Rock Hill', label: 'South Carolina office', address: '452 Lakeshore Parkway, Suite 210, Rock Hill SC 29730, United States', lat: 34.93248, lon: -80.99886 },
+  ];
+
   const TILES = 'https://tile.openstreetmap.org';
   const REPO = 'https://github.com/StephenShawBepoz/browserscripts';
   const VERSION = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.version : '0';
@@ -149,6 +163,7 @@
         border-radius:8px; background:#fff; }
       #oqa-panel select:focus, #oqa-panel input[type="text"]:focus { border-color:var(--oolio-purple); outline:none; }
       #oqa-panel .oqa-cust { padding-top:6px; }
+      #oqa-panel .oqa-from-note { display:block; margin-top:4px; }
       #oqa-panel .oqa-name { display:flex; align-items:baseline; gap:6px; min-width:0; }
       #oqa-panel .oqa-name b { min-width:0; font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       #oqa-panel .oqa-cust small, #oqa-panel .oqa-muted { color:var(--oolio-grey); font-size:12px; }
@@ -1241,8 +1256,9 @@
   }
 
   // Free links, no keys: each opens the trip in a full map app for live traffic, turn by turn and timetables
-  const gmaps = (a, z, mode, via) => 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(a.query) +
-    '&destination=' + encodeURIComponent(z.query) + '&travelmode=' + mode +
+  const gmaps = (a, z, mode, via) => 'https://www.google.com/maps/dir/?api=1' +
+    (a.query ? '&origin=' + encodeURIComponent(a.query) : '') +
+    (z.query ? '&destination=' + encodeURIComponent(z.query) : '') + '&travelmode=' + mode +
     (via && via.length ? '&waypoints=' + encodeURIComponent(via.map((v) => v.query).join('|')) : '');
   const isApple = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   const link = (href, text) => `<a class="oqa-link" href="${esc(href)}" target="_blank" rel="noopener">${text}</a>`;
@@ -1308,11 +1324,23 @@
   function currentFrom(s) {
     let v = '';
     try { v = sessionStorage.getItem('oolio-qa:from') || ''; } catch (e) { /* ignore */ }
-    const valid = (x) => x === 'here' || x === 'other' || s.places.some((p) => p.id === x);
+    const valid = (x) => isStart(s, x);
     if (valid(v) && (v !== 'other' || panel.oneOff || panel.draft)) return v;
-    if (valid(s.defaultFrom)) return s.defaultFrom;
-    return s.places.length ? s.places[0].id : 'here';
+    return defaultStart(s);
   }
+  // Any start you can pick: nearest office, an office, a saved place, your location or a typed address
+  const isStart = (s, x) => x === 'nearest' || x === 'here' || x === 'other' ||
+    OFFICES.some((o) => o.id === x) || s.places.some((p) => p.id === x);
+  const defaultStart = (s) => (s.defaultFrom && s.defaultFrom !== 'other' && isStart(s, s.defaultFrom) ? s.defaultFrom : 'nearest');
+
+  // Straight-line distance in km, enough to pick the nearest office
+  function kmBetween(a, b) {
+    const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+    return 12742 * Math.asin(Math.sqrt(h));
+  }
+  const nearestOffice = (p) => OFFICES.reduce((best, o) => (kmBetween(o, p) < kmBetween(best, p) ? o : best));
+
   function setCurrentFrom(v) {
     try { sessionStorage.setItem('oolio-qa:from', v); } catch (e) { /* ignore */ }
   }
@@ -1425,12 +1453,15 @@
 
   // The "where you are" picker, shared by every view
   function fromPicker(s, label) {
-    const options = s.places.map((p) => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('') +
-      '<option value="here">My current location</option><option value="other">Another address…</option>';
+    const options = '<option value="nearest">Nearest Oolio office</option>' +
+      (s.places.length ? '<optgroup label="Your places">' + s.places.map((p) => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('') + '</optgroup>' : '') +
+      '<optgroup label="Oolio offices">' + OFFICES.map((o) => `<option value="${o.id}">${esc(o.label)}</option>`).join('') + '</optgroup>' +
+      '<optgroup label="Somewhere else"><option value="here">My current location</option><option value="other">Another address…</option></optgroup>';
     return `<select class="oqa-from" aria-label="${label}">${options}</select>` +
+      '<small class="oqa-muted oqa-from-note" hidden></small>' +
       '<div class="oqa-inline oqa-other" hidden><input type="text" class="oqa-other-input" placeholder="Type an address" aria-label="Address">' +
       '<button type="button" class="oqa-btn" data-act="other-go">Go</button></div>' +
-      (s.places.length ? '' : '<div class="oqa-muted" style="margin-top:4px">Save your office or home: <button type="button" class="oqa-link" data-act="add-place">add a place</button></div>');
+      (s.places.length ? '' : '<div class="oqa-muted" style="margin-top:4px">Often start from home? <button type="button" class="oqa-link" data-act="add-place">Add it as a place</button></div>');
   }
   function wireFromPicker(b, s, onChange) {
     const sel = b.querySelector('.oqa-from');
@@ -1475,7 +1506,14 @@
   const LOOKUP_DOWN = 'The map service didn\'t answer. Try again in a minute.';
 
   // Where you are: a saved place, your current location, or a one-off address
-  async function yourPoint(from) {
+  async function yourPoint(from, target) {
+    if (from === 'nearest') {
+      if (!target) throw new Error('Can\'t tell which office is nearest without the customer\'s address. Pick an office instead.');
+      const o = nearestOffice(target);
+      return { lat: o.lat, lon: o.lon, label: o.label, query: o.address, office: o };
+    }
+    const office = OFFICES.find((o) => o.id === from);
+    if (office) return { lat: office.lat, lon: office.lon, label: office.label, query: office.address, office };
     if (from === 'here') {
       const p = await getPosition();
       return { ...p, label: 'My location', query: pt(p) };
@@ -1489,6 +1527,16 @@
     const p = loadSettings().places.find((x) => x.id === from);
     if (!p) throw new Error('That saved place has gone. Pick another.');
     return { lat: p.lat, lon: p.lon, label: p.label, query: parseCoords(p.address) ? pt(p) : p.address };
+  }
+
+  // Under the picker: which office "nearest" chose
+  function setFromNote(you, from) {
+    const n = panel.el && body().querySelector('.oqa-from-note');
+    if (!n) return;
+    const show = from === 'nearest' && you && you.office;
+    n.hidden = !show;
+    const o = show ? you.office : null;
+    n.textContent = o ? `Nearest is the ${o.label}${o.label.includes(o.area) ? '' : ' in ' + o.area}` : '';
   }
 
   /* ----- Customer (drive and public transport views) ----- */
@@ -1658,12 +1706,13 @@
     }
 
     const s = loadSettings();
-    let dest, you, lookupDown = false;
+    const from = b.querySelector('.oqa-from').value;
+    let lookupDown = false, you;
+    const dest = await customerPoint(c).catch((e) => { log('address lookup failed:', e.message); lookupDown = true; return null; });
+    if (!live()) return;
     try {
-      [dest, you] = await Promise.all([
-        customerPoint(c).catch((e) => { log('address lookup failed:', e.message); lookupDown = true; return null; }),
-        yourPoint(b.querySelector('.oqa-from').value),
-      ]);
+      // Without the customer's map point there's no nearest office; Google can still start from where you are
+      you = !dest && from === 'nearest' ? { label: '', query: '' } : await yourPoint(from, dest);
     } catch (e) {
       if (!live()) return;
       map.hidden = true;
@@ -1671,6 +1720,7 @@
       return;
     }
     if (!live()) return;
+    setFromNote(you, from);
 
     const travel = mode === 'transit' ? 'transit' : 'driving';
     const icon = mode === 'transit' ? ICON.train : ICON.car;
@@ -1921,8 +1971,11 @@
     const order = b.querySelector('[data-act="order"]');
     if (order) order.disabled = true;
 
-    yourPoint(b.querySelector('.oqa-from').value).then(async (you) => {
+    const middle = { lat: stops.reduce((t, x) => t + x.lat, 0) / stops.length, lon: stops.reduce((t, x) => t + x.lon, 0) / stops.length };
+    const tripFrom = b.querySelector('.oqa-from').value;
+    yourPoint(tripFrom, middle).then(async (you) => {
       if (!live()) return;
+      setFromNote(you, tripFrom);
       const points = [you, ...stops];
       const route = back ? [...points, you] : points;
       const last = back ? you : stops[stops.length - 1];
@@ -1990,8 +2043,7 @@
     panel.run++;
     el.dataset.view = 'settings';
     const s = loadSettings();
-    const defaultId = s.defaultFrom && (s.defaultFrom === 'here' || s.places.some((p) => p.id === s.defaultFrom))
-      ? s.defaultFrom : (s.places[0] ? s.places[0].id : 'here');
+    const defaultId = defaultStart(s);
     const star = (id, label) =>
       `<button type="button" class="oqa-icon-btn oqa-star" data-star="${esc(id)}" aria-pressed="${defaultId === id}" ` +
       `title="${defaultId === id ? 'You start here' : 'Start here'}" aria-label="Start from ${esc(label)}">${ICON.star}</button>`;
@@ -1999,7 +2051,7 @@
     body().innerHTML =
       `<button type="button" class="oqa-link" data-act="back" style="margin:2px 0 4px">Back to ${MODES[panel.mode].heading.toLowerCase()}</button>` +
       '<h3>Your places</h3>' +
-      '<p class="oqa-muted" style="margin:0">Saved in Tampermonkey on this computer only. The star is where you start.</p>' +
+      '<p class="oqa-muted" style="margin:0">Saved in Tampermonkey on this computer only. The star is where you start; out of the box, that\'s the nearest Oolio office.</p>' +
       '<ul class="oqa-places">' +
       s.places.map((p) =>
         `<li><div><b>${esc(p.label)}</b><small title="${esc(p.display || p.address)}">${esc(p.display || p.address)}</small></div>` +
@@ -2007,6 +2059,13 @@
         `<button type="button" class="oqa-icon-btn" data-del="${esc(p.id)}" title="Remove" aria-label="Remove ${esc(p.label)}">${ICON.trash}</button></li>`).join('') +
       `<li><div><b>My current location</b><small>Your browser asks the first time</small></div>${star('here', 'my current location')}</li>` +
       '</ul>' +
+      '<h3>Oolio offices</h3>' +
+      '<ul class="oqa-places">' +
+      `<li><div><b>Nearest Oolio office</b><small>Whichever of the ${OFFICES.length} offices is closest to each customer</small></div>${star('nearest', 'the nearest Oolio office')}</li>` +
+      '</ul>' +
+      `<details><summary>All ${OFFICES.length} offices</summary><ul class="oqa-places">` +
+      OFFICES.map((o) => `<li><div><b>${esc(o.label)}</b><small title="${esc(o.address)}">${esc(o.address)}</small></div>${star(o.id, o.label)}</li>`).join('') +
+      '</ul></details>' +
       '<form class="oqa-form" autocomplete="off" novalidate>' +
       '<h3 style="margin-top:4px">Add a place</h3>' +
       '<input type="text" name="label" maxlength="40" placeholder="Name, for example Perth office or Home" aria-label="Place name">' +
@@ -2073,7 +2132,6 @@
       const st = loadSettings();
       const id = 'p' + Date.now().toString(36);
       st.places.push({ id, label, address, lat: g.lat, lon: g.lon, display: g.display });
-      if (st.places.length === 1 && !st.defaultFrom) st.defaultFrom = id;
       saveSettings(st);
       showSettings();
     };

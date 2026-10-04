@@ -65,7 +65,7 @@ The purple bar (bottom right) has five buttons. Hover over one to see what it do
 | Train | Public transport to the customer: the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |
 
-**First time:** click the car, then the cog, and add your places, for example *Perth office* and *Home*. The star marks where you start.
+**Where trips start.** Out of the box, from the nearest Oolio office to the customer: Melbourne (North Melbourne), Sydney (Mascot), Brisbane (Pinkenba), Adelaide (Kingswood), Perth (Subiaco), Auckland (Grey Lynn), Warrington or South Carolina. Pick a different start from the list for one trip, or click the cog and star another start (an office, a place you've saved such as *Home*, or your current location) to make it the default.
 
 **Car and train.** Pick a different start from the list, including *My current location* or a one-off address. The arrows swap the trip so it goes from the customer to you. If the record has more than one company (often a Head Office and the venue), click **pick another**. If the address is wrong or missing, click **Edit address**; your fix is kept in your browser only, so update the company in HubSpot as well. Click the result to open the trip in Google Maps for live traffic and turn-by-turn.
 
