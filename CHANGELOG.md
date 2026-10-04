@@ -1,5 +1,22 @@
 # Changelog
 
+## HubSpot: Status prompt after email
+
+### 1.1.0 (04/10/2026)
+- Added to this repo, and updates itself from GitHub. If you installed the first copy by hand (*HubSpot Help Desk: status prompt after email*), delete it in Tampermonkey. Until you do, this one stays out of the way and reminds you.
+- Can't change the wrong ticket: the box closes if you move to another ticket, the ticket is checked again just before the status is picked, and Undo only works on the ticket it was set on.
+- Clicking elsewhere or typing in another box closes it, so Enter and Tab go back to HubSpot. Holding Enter after Cmd + Enter, or a right-click, no longer picks a status.
+- If you've already clicked or typed elsewhere when the email goes, a small message offers the box instead of taking over the keyboard.
+- Highlights the waiting status in every support pipeline, including *Pending (Contact)* in OPAY | Support. If the status changed while sending, or the pipeline has no waiting status, the current status is highlighted so Enter changes nothing.
+- Status lists are no longer mixed up between pipelines when the Pipeline field isn't showing.
+- Only asks after emails on Help Desk tickets, and watches the composer you sent from. No more "Couldn't read ticket statuses" after emailing a contact, and no box if you edit the message, or switch it to a comment, after a send fails.
+- When a status needs more details, waits while you fill in HubSpot's box and then says whether it was set.
+- New: press 1 to 9 to jump to a status, Undo after setting one, a close button, *Don't ask on this pipeline*, and an on/off switch in the Tampermonkey menu that updates straight away. The browser console (search for *Oolio status prompt*) says why it didn't appear.
+- Oolio styling to match the other scripts, screen reader labels, and the cursor goes back to the reply box when the box closes.
+
+### 1.0.0
+- First version, installed by hand.
+
 ## HubSpot: Quick actions
 
 ### 0.6.1 (04/10/2026, beta)

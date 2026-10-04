@@ -12,6 +12,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
+| **HubSpot: Status prompt after email** | After you send an email reply on a Help Desk ticket, asks what the status should be. **Enter** sets the waiting status, **Esc** leaves it as it is. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
 
@@ -100,6 +101,23 @@ The trip is shared by all your HubSpot tabs and stays until you clear it. Times 
 3. It presses that box's **Send**, **Comment**, **Save**, **Create** or **OK** button, and a small message shows which one. Where there's no such button, it stays out of the way and leaves the key to HubSpot.
 
 It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
+
+### Status prompt after email
+
+1. Send an email reply on a ticket in Help Desk.
+2. A purple box asks what the status should be, with the waiting status highlighted (for example *Pending (Waiting on contact)*).
+3. Press **Enter** to set it. **Tab**, the arrow keys or a number move the highlight, and **Esc** (or the **×**) leaves the status as it is. You can also click a status.
+
+- **Undo** shows for a few seconds after a status is set and puts the old one back.
+- Clicking elsewhere or moving to another ticket closes the box and leaves the status alone. If you've already clicked or typed somewhere else by the time the email goes, you get a small message with a **Choose** button instead, so your typing isn't interrupted.
+- It only asks after emails on tickets. Comments, and emails from contacts, companies or deals, are left alone.
+- In pipelines without a waiting status (most project pipelines), the current status is highlighted, so **Enter** changes nothing. To stop the box on a pipeline's tickets, click **Don't ask on this pipeline**. To bring it back, click the Tampermonkey icon, then **Ask on every pipeline again**.
+- Some statuses need more details, such as a close reason. HubSpot's own box opens for those; fill it in there and the message tells you when it's done.
+- It uses the *Ticket status* field in the ticket's sidebar, so keep that field showing.
+- To try it without sending anything, click the Tampermonkey icon, then **Show the status prompt on this ticket**. **Turn the status prompt off** is there too.
+- If it doesn't appear when you expect, the browser console (search for *Oolio status prompt*) says why.
+
+**Had the first copy?** If you installed *HubSpot Help Desk: status prompt after email* by hand, delete it in Tampermonkey (click the icon, then **Dashboard**). Until you do, this one stays out of the way and reminds you.
 
 ## Problems or ideas
 
