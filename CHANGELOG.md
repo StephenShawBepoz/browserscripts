@@ -2,6 +2,10 @@
 
 ## HubSpot: Quick actions
 
+### 0.5.0 (04/10/2026, beta)
+- Under the bar, each record shows the drive time from the nearest Oolio office. Click it for directions. Worked out after a moment on the record and remembered for a week; it can be turned off in settings.
+- Esc closes HubSpot's Schedule and Task windows, using HubSpot's own Cancel or close button. An open drop-down closes first.
+
 ### 0.4.0 (04/10/2026, beta)
 - Directions now start from the nearest Oolio office to the customer: Melbourne, Sydney, Brisbane, Adelaide, Perth, Auckland, Warrington or South Carolina (addresses from bepoz.com.au/contact). The panel says which office it picked.
 - Every office can also be picked from the start list, or starred in settings as your default. Trips start from the office nearest the middle of your stops.
@@ -31,6 +35,10 @@
 - Hides the old *Prefill meeting* button if that script is still installed.
 
 ## HubSpot: Cmd/Ctrl + Enter to send
+
+### 1.1.0 (04/10/2026)
+- Works in the task window: presses **Create**.
+- No more "No Send or Save button found here" message. Where there's nothing to press, the key is left to HubSpot, which handles it itself in some boxes.
 
 ### 1.0.1 (03/10/2026)
 - Updates itself from GitHub. Install once more from the README link and later versions arrive automatically.

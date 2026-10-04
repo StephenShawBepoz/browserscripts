@@ -11,7 +11,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
 | **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
-| **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
+| **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
 
@@ -65,6 +65,10 @@ The purple bar (bottom right) has five buttons. Hover over one to see what it do
 | Train | Public transport to the customer: the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |
 
+**Drive time at a glance.** Under the bar, each record shows how long the drive is from the nearest Oolio office, for example *25 min from the Sydney office*. Click it for full directions. It's worked out once you've been on a record for a moment and then remembered for a week, so flicking through records costs nothing. Turn it off in the cog's settings.
+
+**Esc** closes HubSpot's Schedule and Task windows (an open drop-down closes first). It presses HubSpot's own Cancel or close button, so you lose what you'd typed, as you would with those buttons.
+
 **Where trips start.** Out of the box, from the nearest Oolio office to the customer: Melbourne (North Melbourne), Sydney (Mascot), Brisbane (Pinkenba), Adelaide (Kingswood), Perth (Subiaco), Auckland (Grey Lynn), Warrington or South Carolina. Pick a different start from the list for one trip, or click the cog and star another start (an office, a place you've saved such as *Home*, or your current location) to make it the default.
 
 **Car and train.** Pick a different start from the list, including *My current location* or a one-off address. The arrows swap the trip so it goes from the customer to you. If the record has more than one company (often a Head Office and the venue), click **pick another**. If the address is wrong or missing, click **Edit address**; your fix is kept in your browser only, so update the company in HubSpot as well. Click the result to open the trip in Google Maps for live traffic and turn-by-turn.
@@ -93,7 +97,7 @@ The trip is shared by all your HubSpot tabs and stays until you clear it. Times 
 
 1. Type a comment, note or email reply in HubSpot.
 2. Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows).
-3. It presses that box's **Send**, **Comment**, **Save** or **OK** button, and a small message shows which one.
+3. It presses that box's **Send**, **Comment**, **Save**, **Create** or **OK** button, and a small message shows which one. Where there's no such button, it stays out of the way and leaves the key to HubSpot.
 
 It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
 

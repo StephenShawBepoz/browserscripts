@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.4.0
+// @version      0.5.0
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -110,6 +110,16 @@
       #oqa-bar .oqa-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
         background:#fff; color:var(--oolio-purple); font:700 10px/16px Inter, system-ui, sans-serif; text-align:center; }
       #oqa-bar .oqa-badge:empty { display:none; }
+
+      /* ---------- Drive time from the nearest office, under the bar ---------- */
+      #oqa-chip { position:fixed; right:24px; bottom:60px; z-index:2147483000; display:none; align-items:center; gap:6px;
+        height:24px; padding:0 10px; border:1px solid var(--oolio-line); border-radius:999px; background:#fff; color:var(--oolio-charcoal);
+        box-shadow:0 2px 8px rgba(34,34,34,.12); font-size:12px; cursor:pointer; white-space:nowrap; max-width:calc(100vw - 48px); }
+      #oqa-chip:hover { border-color:var(--oolio-purple); }
+      #oqa-chip:focus-visible { outline:2px solid var(--oolio-purple); outline-offset:1px; }
+      #oqa-chip svg { width:14px; height:14px; color:var(--oolio-purple); }
+      #oqa-chip b { font-weight:700; }
+      #oqa-chip span { overflow:hidden; text-overflow:ellipsis; }
 
       /* ---------- Meeting loading overlay (Help Desk) ---------- */
       #oqa-overlay { position:fixed; inset:0; z-index:2147483002; background:rgba(34,34,34,.55); }
@@ -332,6 +342,7 @@
       defaultFrom: s.defaultFrom || '',
       direction: s.direction === 'from' ? 'from' : 'to',
       transit: s.transit === true,
+      chip: s.chip !== false,
       services: s.services && typeof s.services === 'object' ? s.services : {},
     };
   }
@@ -474,9 +485,18 @@
     // It also tucks itself while HubSpot's task window is open, as that window opens in the same corner.
     const markBtn = bar.querySelector('[data-act="collapse"]');
     let tucked = false;
+    const chip = document.createElement('button');
+    chip.id = 'oqa-chip';
+    chip.type = 'button';
+    chip.className = 'tm-oolio';
+    chip.title = 'Drive time from the nearest Oolio office. Click for directions.';
+    chip.addEventListener('click', () => openPanel('drive'));
+    document.body.appendChild(chip);
     const setCollapsed = () => {
       const c = store.get('barCollapsed', false) === true || tucked;
       bar.classList.toggle('oqa-collapsed', c);
+      chipState.hidden = c;
+      paintChip(chip);
       markBtn.setAttribute('aria-expanded', String(!c));
       markBtn.title = c ? 'Show Oolio quick actions' : 'Hide these buttons';
       markBtn.setAttribute('aria-label', c ? 'Show Oolio quick actions' : 'Hide Oolio quick actions');
@@ -514,6 +534,7 @@
       noteThisTab(rec);
       const taskOpen = !!findTaskTitle(document);
       if (taskOpen !== tucked) { tucked = taskOpen; setCollapsed(); }
+      chipFor(rec, chip);
     };
     setInterval(sync, 1000);
     sync();
@@ -568,7 +589,7 @@
     meetingOpen = false;
     document.removeEventListener('keydown', onMeetingEsc);
   }
-  function onMeetingEsc(e) { if (e.key === 'Escape') closeMeeting(); }
+  function onMeetingEsc(e) { if (e.key === 'Escape' && !e.defaultPrevented) closeMeeting(); }
 
   function meetingModal(t) {
     if (overlay) return;
@@ -779,6 +800,110 @@
         setTimeout(() => closeMeeting(true), 800);
       }
     }, 500);
+  }
+
+  /* ---------------- Esc closes HubSpot's Schedule and Task windows ---------------- */
+  // It presses HubSpot's own Cancel or close button, so anything HubSpot asks before discarding still
+  // applies. An open drop-down (task type, priority and so on) closes first, as usual.
+  const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const buttonLabel = (b) => clean(b.getAttribute('aria-label') || b.innerText || b.getAttribute('title') || '');
+  const isClose = (b) => /^close\b/i.test(buttonLabel(b)) || b.matches('[data-selenium-test*="close" i], [data-test-id*="close" i]');
+
+  function scheduleCancel(doc) {
+    const go = [...doc.querySelectorAll('button')].find((b) => /^schedule meeting$/i.test(buttonLabel(b)) && visible(b));
+    for (let box = go && go.parentElement, i = 0; box && i < 5; i++, box = box.parentElement) {
+      const c = [...box.querySelectorAll('button')].find((b) => /^cancel$/i.test(buttonLabel(b)) && visible(b));
+      if (c) return c;
+    }
+    return null;
+  }
+  function taskClose(doc) {
+    const input = findTaskTitle(doc);
+    for (let box = input && input.parentElement, i = 0; box && box !== doc.body && i < 12; i++, box = box.parentElement) {
+      if (box.querySelector('[data-selenium-test="highlightTitle"]')) break; // gone past the task window
+      const c = [...box.querySelectorAll('button, [role="button"]')].find((b) => isClose(b) && visible(b) && !b.closest('.tm-oolio'));
+      if (c) return c;
+    }
+    return null;
+  }
+  // The scheduler lives in its own frame: look inside it from the record page, and at its frame's close button from inside
+  function schedulerFrameCancel(doc) {
+    const f = [...doc.querySelectorAll('iframe')].find((x) => /expanded-scheduler|calendar-select-iframe/.test(x.src) && visible(x));
+    try { return f && f.contentDocument ? scheduleCancel(f.contentDocument) : null; } catch (e) { return null; }
+  }
+  function frameCloseInParent() {
+    try {
+      const host = [...window.parent.document.querySelectorAll('iframe')].find((x) => x.contentWindow === window);
+      for (let box = host && host.parentElement, i = 0; box && i < 8; i++, box = box.parentElement) {
+        const c = [...box.querySelectorAll('button')].find((b) => isClose(b) && visible(b));
+        if (c) return c;
+      }
+    } catch (e) { /* not reachable */ }
+    return null;
+  }
+
+  function onEscape(e) {
+    if (e.key !== 'Escape' || e.defaultPrevented || e.repeat || e.isComposing) return;
+    const doc = document;
+    // Our own panel has its own Esc handling
+    if (panel.el && (panel.el.contains(doc.activeElement) || doc.activeElement === doc.body)) return;
+    if ([...doc.querySelectorAll('[role="listbox"], [role="menu"]')].some(visible)) return;
+    const btn = scheduleCancel(doc) || taskClose(doc) || schedulerFrameCancel(doc) ||
+      (window.top !== window && location.pathname.startsWith('/calendar-select-iframe/') ? frameCloseInParent() : null);
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    btn.click();
+  }
+
+  /* ---------------- Drive time from the nearest office, under the bar ---------------- */
+  // Shown on each record you stay on for a moment. Results are kept for a week per record, so a record
+  // you've seen costs nothing, and nothing is asked for while you flick between records.
+  const CHIP_WAIT = 1500, CHIP_DAYS = 7;
+  const chipState = { key: '', text: '', hidden: false, timer: 0 };
+
+  function paintChip(chip) {
+    const show = !!chipState.text && !chipState.hidden && loadSettings().chip;
+    chip.style.display = show ? 'inline-flex' : 'none';
+  }
+  function setChip(chip, key, text) {
+    if (key !== chipState.key) return;
+    chipState.text = text;
+    chip.innerHTML = text ? ICON.car + text : '';
+    chip.setAttribute('aria-label', text ? clean(text.replace(/<[^>]+>/g, ' ')) + '. Open directions.' : '');
+    paintChip(chip);
+  }
+
+  function chipFor(rec, chip) {
+    const key = recordKey(rec);
+    if (key === chipState.key) return;
+    chipState.key = key;
+    clearTimeout(chipState.timer);
+    setChip(chip, key, '');
+    if (!rec || !loadSettings().chip) return;
+    const cached = (store.get('chips', {}) || {})[key];
+    if (cached && Date.now() - cached.at < CHIP_DAYS * 864e5) return setChip(chip, key, cached.text);
+    chipState.timer = setTimeout(async () => {
+      if (chipState.key !== key) return;
+      let text = '';
+      try {
+        const c = await getCustomer(rec, { rec, linked: null, companies: new Map() });
+        if (c.error || (!addressLine(c) && c.lat == null)) return;
+        const dest = await pointFor(c);
+        if (!dest || chipState.key !== key) return;
+        const o = nearestOffice(dest);
+        const r = await driveRoute([o, dest]);
+        text = `<b>${dest.approx ? 'About ' : ''}${fmtDuration(r.seconds)}</b><span>from the ${esc(o.label)}</span>`;
+        const all = store.get('chips', {}) || {};
+        const keys = Object.keys(all);
+        if (keys.length >= 300) keys.slice(0, keys.length - 299).forEach((k) => delete all[k]);
+        all[key] = { text, at: Date.now() };
+        store.set('chips', all);
+      } catch (e) {
+        log('drive time under the bar failed:', e.message);
+      }
+      setChip(chip, key, text);
+    }, CHIP_WAIT);
   }
 
   /* ---------------- The customer's company and address, from HubSpot ---------------- */
@@ -1599,6 +1724,8 @@
       if (value) o[c.key] = value;
       else delete o[c.key];
       store.set('overrides', o);
+      store.set('chips', {});
+      chipState.key = '';
       panel.customer = null;
       panel.dest = null;
       calculate();
@@ -2075,6 +2202,10 @@
       '<p class="oqa-error-text" hidden></p>' +
       '<small class="oqa-muted">For home, a nearby corner or your suburb is enough. Typed addresses are looked up on OpenStreetMap. ' +
       '"Use where I am now" sends no address and saves your spot to about 100 m; that point goes to the route services when you get directions.</small></form>' +
+      '<h3>Drive time under the buttons</h3>' +
+      `<label class="oqa-check"><input type="checkbox" data-act="chip"${s.chip ? ' checked' : ''}>` +
+      '<span>Show how long the drive is from the nearest Oolio office, on every record you open. ' +
+      'Each record is looked up once a week at most.</span></label>' +
       '<h3>Public transport times</h3>' +
       `<label class="oqa-check"><input type="checkbox" data-act="transit"${s.transit ? ' checked' : ''}>` +
       '<span>Show public transport times in the panel, from <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a>. ' +
@@ -2105,6 +2236,12 @@
       saveSettings(st);
       showSettings();
     }));
+    b.querySelector('[data-act="chip"]').addEventListener('change', (e) => {
+      const st = loadSettings();
+      st.chip = e.target.checked;
+      saveSettings(st);
+      chipState.key = '';
+    });
     b.querySelector('[data-act="transit"]').addEventListener('change', (e) => {
       const st = loadSettings();
       st.transit = e.target.checked;
@@ -2262,6 +2399,7 @@
   }
 
   /* ---------------- Start ---------------- */
+  document.addEventListener('keydown', onEscape);
   if (location.pathname.startsWith('/calendar-select-iframe/')) scheduler();
   // Skip the record page loaded inside the Help Desk meeting modal
   else if (window.top === window) {

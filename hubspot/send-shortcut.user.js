@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Cmd/Ctrl + Enter to send
 // @namespace    oolio-userscripts
-// @version      1.0.1
-// @description  Press Cmd + Enter (Mac) or Ctrl + Enter (Windows) in a HubSpot comment, note or email to click its Send, Save or OK button.
+// @version      1.1.0
+// @description  Press Cmd + Enter (Mac) or Ctrl + Enter (Windows) in a HubSpot comment, note, email or task to click its Send, Save, Create or OK button.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js
@@ -22,7 +22,7 @@
     /^send( now)?$/i,
     /^reply$/i,
     /^(add |post )?comment$/i,
-    /^(save|save note|create note|log activity|log (call|email|meeting|note))$/i,
+    /^(save|save note|save task|create|create note|create task|log activity|log (call|email|meeting|note))$/i,
     /^(ok|done|confirm|apply)$/i,
   ];
   // Never press these, even if they sit next to the editor
@@ -107,10 +107,8 @@
     if (!isEditable(target)) return;
 
     const btn = findAction(target);
-    if (!btn) {
-      if (target.tagName !== 'INPUT') toast('No Send or Save button found here', false);
-      return; // leave the key alone so HubSpot's own handling still works
-    }
+    // Nothing to press here: stay quiet and leave the key to HubSpot, which handles it in some boxes itself
+    if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
     btn.click();
