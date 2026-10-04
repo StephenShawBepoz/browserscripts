@@ -2,6 +2,9 @@
 
 ## HubSpot: Quick actions
 
+### 0.6.1 (04/10/2026, beta)
+- Help Desk task button finds *Create task* however HubSpot draws it, and opens a collapsed Tasks card first. If it still can't, the console says so before the pop-up is used.
+
 ### 0.6.0 (04/10/2026, beta)
 - In Help Desk, the task button now uses Help Desk's own *Create task* (in the Tasks card), so the task window opens right there with no pop-up. The title uses the ticket's full name. The pop-up is only used if that card isn't on the page.
 

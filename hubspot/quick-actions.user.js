@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.6.0
+// @version      0.6.1
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -739,11 +739,28 @@
 
   // Help Desk: press "Create task" in its own Tasks card, so HubSpot's task window opens right there.
   // The title comes from the ticket's name in HubSpot, as the Help Desk header shortens it.
-  function taskInHelpDesk(rec) {
+  // Whatever you click for an element whose own text is exactly this (a link, a button, or the text itself)
+  function clickableByText(rx) {
+    const leaf = [...document.querySelectorAll('body *')].find((el) => !el.closest('.tm-oolio') &&
+      ![...el.children].some((c) => rx.test(clean(c.textContent))) && rx.test(clean(el.textContent)));
+    return leaf ? leaf.closest('button, a, [role="button"]') || leaf : null;
+  }
+  async function taskInHelpDesk(rec) {
     closePanel();
-    const link = [...document.querySelectorAll('button, a, [role="button"]')]
-      .find((b) => /^create task$/i.test(buttonLabel(b)) && visible(b) && !b.closest('.tm-oolio'));
-    if (!link) return recordModal(rec, 'task');
+    let link = clickableByText(/^create task$/i);
+    if (!link) {
+      // The Tasks card may be collapsed: open it and look again
+      const card = clickableByText(/^tasks \(\d+\)$/i);
+      if (card) {
+        card.click();
+        for (let i = 0; i < 8 && !link; i++) { await sleep(250); link = clickableByText(/^create task$/i); }
+      }
+    }
+    if (!link) {
+      log('Help Desk: no "Create task" in the Tasks card, so opening the ticket in a pop-up instead');
+      return recordModal(rec, 'task');
+    }
+    link.scrollIntoView({ block: 'nearest' });
     link.click();
     const name = hubspot(`crm/v3/objects/tickets/${rec.id}?properties=subject`, rec.portal)
       .then((d) => clean(d.properties && d.properties.subject))
