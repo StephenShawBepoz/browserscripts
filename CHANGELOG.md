@@ -37,11 +37,18 @@
 
 ## HubSpot: Company contacts
 
+### 1.3.1 (07/10/2026)
+- **Try again** no longer leaves the bar stuck on *Finding this ticket's companies* when HubSpot doesn't search again.
+- If the old copy (1.2.0 or earlier) is still installed, this one stands aside, so the old bar's **Show all** and **Email only** really work until you delete it.
+- No more false *HubSpot didn't refresh the list* warning after clicking **Email only** while the companies are still loading.
+- The switch to 100 per page finds HubSpot's menu option more reliably.
+- Short one-line bar messages again; hover over one that's cut off to read it in full.
+
 ### 1.3.0 (04/10/2026)
 - Added to this repo as *HubSpot: Company contacts*, so it now updates itself. Install it from the README link, then delete your old copy (1.2.0 or earlier) in Tampermonkey. The bar reminds you while both are installed.
-- **Show all** now lasts for that ticket or deal only, so the next one starts with company contacts again. **Email only** is still remembered.
+- **Show all** is no longer remembered, so the next ticket or deal starts with company contacts again. **Email only** is still remembered.
 - The bar now reads *Only contacts at ...*, so an empty list doesn't look like the person isn't in HubSpot.
-- If the companies can't be loaded, or take more than 8 seconds, the search goes ahead with all contacts and the bar says so, with **Try again**. Before, a slow lookup could leave the panel searching for ever, and a failed one said the ticket had no company.
+- If the ticket's or deal's own companies can't be loaded, or take too long, the search goes ahead with all contacts and the bar says so, with **Try again**. If only the parent companies can't be loaded, the list shows the record's own companies. Before, a slow lookup could leave the panel searching for ever, and a failed one said the ticket had no company.
 - Typing quickly while the panel opened could show results for what you'd typed earlier. Fixed.
 - The switch to 100 per page waits until you stop typing and puts you back in the search box.
 - Typing straight after clicking the bar is no longer wiped.

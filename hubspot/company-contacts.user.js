@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Company contacts
 // @namespace    oolio-userscripts
-// @version      1.3.0
+// @version      1.3.1
 // @description  On tickets and deals, the Add existing Contact panel lists only contacts at the record's companies and their parent companies, 100 to a page. Optional email-only filter.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -40,6 +40,8 @@
   const state = { record: null, fromType: null, status: null, companies: [], on: true, emailOnly: readPref(EMAIL_KEY, false), stale: false };
   const lookups = {};
   let lastSearch = 0; // when the panel last sent a ticket or deal contact search
+  let changedAt = 0; // when the bar was last clicked
+  let caughtUp = 0; // when a search held from before that click went out with the new choice
   let sawSearch = false; // whether the panel has sent any contact search (for any record type)
   const log = (...a) => console.info('[Oolio company contacts]', ...a);
 
@@ -156,10 +158,10 @@
     XMLHttpRequest.prototype.send = function (body) {
       let search = null;
       try { search = contactSearch(this.__occUrl, body); } catch (e) {}
-      if (!search) return xSend.apply(this, arguments);
+      if (!search || document.getElementById('occ-bar')) return xSend.apply(this, arguments); // an older copy is filtering
 
       const xhr = this;
-      const held = { body };
+      const held = { body, at: Date.now() };
       xhr.__occHeld = held;
       lastSearch = Date.now();
       const record = search.fromType + ':' + search.fromId;
@@ -171,6 +173,7 @@
       const release = result => {
         if (xhr.__occHeld !== held) return; // already sent, cancelled or reopened
         xhr.__occHeld = null;
+        if (held.at < changedAt) caughtUp = Date.now(); // it goes out with the latest choice
         const companies = (result && result.companies) || [];
         let out = body;
         try {
@@ -184,9 +187,10 @@
         try { xSend.call(xhr, out); } catch (e) { log('Could not send the search.', e); }
         safeRender();
       };
-      getCompanies(search.fromType, search.fromId).then(release, () => release(null));
       // Belt and braces: never hold HubSpot's search longer than both lookups could take
       setTimeout(() => release(null), LOOKUP_TIMEOUT * 2 + 1000);
+      try { getCompanies(search.fromType, search.fromId).then(release, () => release(null)); }
+      catch (e) { log('Company lookup failed, showing all contacts.', e); Promise.resolve(null).then(release); }
     };
   }
 
@@ -211,7 +215,7 @@
       setValue.call(input, original + now.slice(nudged.length));
       input.dispatchEvent(new Event('input', { bubbles: true }));
       setTimeout(() => {
-        if (lastSearch >= restoredAt || !input.isConnected) return;
+        if (lastSearch >= restoredAt || caughtUp >= changedAt || !input.isConnected) return;
         state.stale = true;
         log('HubSpot did not search again after the change, so the list may be out of date.');
         safeRender();
@@ -251,7 +255,8 @@
     let tries = 0;
     const pick = setInterval(() => {
       const list = document.getElementById(combo.getAttribute('aria-controls') || '') || document;
-      const option = list.querySelector('[role="option"][data-value="' + PAGE_SIZE + '"]');
+      const sel = '[role="option"][data-value="' + PAGE_SIZE + '"]';
+      const option = list.querySelector(sel) || document.querySelector(sel);
       if (option) {
         clearInterval(pick);
         option.click();
@@ -295,10 +300,20 @@
     if (action === 'company') state.on = !state.on;
     else if (action === 'email') { state.emailOnly = !state.emailOnly; savePref(EMAIL_KEY, state.emailOnly); }
     else if (action === 'retry') {
-      if (state.record) delete lookups[state.record];
+      const rec = state.record;
+      if (!rec) return;
+      delete lookups[rec];
       state.status = 'loading';
+      // Look the companies up now, so the bar settles even if HubSpot doesn't search again
+      getCompanies(state.fromType, rec.slice(rec.indexOf(':') + 1)).then(result => {
+        if (state.record !== rec || state.status !== 'loading') return;
+        state.status = result.failed ? 'failed' : 'ready';
+        state.companies = result.companies || [];
+        safeRender();
+      });
     } else return;
     state.stale = false;
+    changedAt = Date.now();
     const hadFocus = document.activeElement === btn;
     render();
     const again = hadFocus && document.querySelector('#oolio-cc-bar [data-occ="' + action + '"]');
@@ -360,7 +375,7 @@
     const companyBtn = !state.companies.length ? ''
       : state.on ? '<button type="button" data-occ="company" title="Not here? Search every contact before you create a new one">Show all</button>'
       : `<button type="button" data-occ="company" title="${esc('Only contacts at ' + names)}">Company only</button>`;
-    const label = (text, title) => `<span class="occ-label"${title ? ` title="${esc(title)}"` : ''}>${MARK}<span class="occ-text">${text}</span></span>`;
+    const label = (text, title) => `<span class="occ-label" title="${esc(title || text.replace(/<[^>]*>/g, ''))}">${MARK}<span class="occ-text">${text}</span></span>`;
     let cls, html;
     if (oldCopy) {
       cls = 'warn';
@@ -380,13 +395,13 @@
         `<span class="occ-actions">${emailBtn}<button type="button" data-occ="retry">Try again</button></span>`;
     } else if (!state.companies.length) {
       cls = 'off';
-      html = label(`No company on this ${record}, so showing ${all}.`) + `<span class="occ-actions">${emailBtn}</span>`;
+      html = label(`No company on this ${record}, so showing all contacts.`) + `<span class="occ-actions">${emailBtn}</span>`;
     } else if (state.on) {
       cls = '';
       html = label(`Only contacts at ${nameHtml}`, names) + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
     } else {
       cls = 'off';
-      html = label(`Showing ${all}`, names) + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
+      html = label('Showing all contacts') + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
     }
     // Only touch the DOM when something changed, so the observer doesn't loop
     if (bar.className !== cls) bar.className = cls;

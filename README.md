@@ -114,7 +114,7 @@ It never presses Cancel, Delete or Schedule, and does nothing if it can't tell w
 ### Company contacts
 
 1. On a ticket or deal, click **Add** on the Contacts card and open the **Add existing** tab.
-2. The list only shows contacts at the record's companies and their parent companies (often the group's head office), 100 to a page. The purple bar under the search box names the companies.
+2. The list only shows contacts at the record's companies and their parent companies (often the group's head office), 100 to a page. The purple bar under the search box names the companies it used.
 3. **Can't find someone?** Click **Show all** to search every contact before you create a new one. The next ticket or deal starts with company contacts again.
 
 **Email only** hides contacts without an email address. It stays on until you turn it off.
@@ -126,7 +126,7 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 - *HubSpot didn't refresh the list*: the list may not match the bar. Type in the search box.
 - *The company filter isn't working*: HubSpot has changed, so all contacts are listed. Let Stephen know. The browser console (search for *Oolio company contacts*) shows more.
 
-**Had it before it was on GitHub?** Install it from the link above, then delete the old copy (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
+**Had it before it was on GitHub?** Install it from the link above, then delete the old copy, called *HubSpot: company contacts in "Add existing Contact"* (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
 
 ### Status prompt after email
 
