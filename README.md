@@ -55,7 +55,7 @@ On tickets and deals, the meeting title and a link back to the record are filled
 
 1. On a contact or ticket, go to the Companies card, click **Add** and pick **Add existing**.
 2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there.
-3. The chips above the list choose which products you see. Idealpos, SwiftPOS and Other start switched off. Click a chip to switch it on or off, and the script remembers your choice. **Show** brings hidden companies back, faded. While you search by name, they show faded automatically.
+3. The chips above the list choose which products you see. Idealpos, SwiftPOS and Other start switched off. Click a chip to switch it on or off, and the script remembers your choice. **Show** brings hidden companies back, faded. If a whole page is hidden, click **Next page** in the bar.
 4. Click the sliders icon to change rows per page, what shows under each company, or to add extra fields such as address or phone.
 
 If something looks wrong, open the settings, click **Copy debug info** and send it to Stephen.

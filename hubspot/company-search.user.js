@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Products in company search
 // @namespace    oolio-userscripts
-// @version      1.1.2
+// @version      1.1.3
 // @description  In the Add existing Company panel, shows each company's products, owner and contacts under its name, hides the products you don't work with, and shows 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -558,30 +558,39 @@
   }
 
   /* ---------------- Line under each company ---------------- */
-  function nameText(row) {
+  // The name's text, which HubSpot splits into pieces when it bolds your search term
+  function nameTexts(row) {
+    const out = [];
     const w = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
-      if (n.nodeValue.trim() && !n.parentElement.closest('.ocp-ui')) return n;
+      if (n.nodeValue.trim() && !n.parentElement.closest('.ocp-ui')) out.push(n);
     }
-    return null;
+    return out;
   }
   const rectOf = (node) => { const r = document.createRange(); r.selectNodeContents(node); return r.getBoundingClientRect(); };
+
+  // The element holding the whole name, so the line goes after all of it
+  function nameHost(row) {
+    const texts = nameTexts(row);
+    if (!texts.length) return { host: row, first: null };
+    let host = lca(texts.map((t) => t.parentElement));
+    if (!host || !row.contains(host)) host = row;
+    const trigger = host.closest('a, button, [role="button"]');
+    if (trigger && row.contains(trigger) && trigger !== row) host = trigger.parentElement;
+    return { host, first: texts[0] };
+  }
 
   // Put the line under the name. HubSpot's rows are flex rows, so the line is made
   // full width (forcing a wrap) and indented to start where the name starts.
   function placeLine(row, line) {
-    const text = nameText(row);
-    const tries = [];
-    if (text) {
-      let host = text.parentElement;
-      const trigger = host.closest('a, button, [role="button"]');
-      if (trigger && row.contains(trigger) && trigger !== row) host = trigger.parentElement;
-      if (host !== row) tries.push(host);
-    }
-    tries.push(row);
+    const { host: nameEl, first } = nameHost(row);
+    const tries = nameEl !== row ? [nameEl, row] : [row];
     for (const host of tries) {
-      host.appendChild(line);
+      if (line.parentElement !== host || line.nextSibling) host.appendChild(line);
+      line.__ocpHost = host;
       const cs = getComputedStyle(host);
+      line.style.flex = '';
+      line.style.width = '';
       if (/flex/.test(cs.display) && !/column/.test(cs.flexDirection)) {
         host.style.flexWrap = 'wrap';
         line.style.flex = '1 0 100%';
@@ -590,8 +599,8 @@
         line.style.gridColumn = '1 / -1';
       }
       line.style.marginLeft = '';
-      if (!text) return;
-      const t = rectOf(text);
+      if (!first) return;
+      const t = rectOf(first);
       const l = line.getBoundingClientRect();
       const off = Math.round(t.left - l.left);
       if (off > 2) line.style.marginLeft = off + 'px';
@@ -682,6 +691,8 @@
       line.addEventListener('click', onLineClick);
       for (const t of ['mousedown', 'pointerdown', 'keydown']) line.addEventListener(t, (e) => e.stopPropagation());
       placeLine(it.row, line);
+    } else if (nameHost(it.row).host !== line.__ocpHost && line.__ocpHost !== it.row) {
+      placeLine(it.row, line); // HubSpot re-drew the name, for example to bold a search term
     }
     const html = lineHtml(r);
     if (line.__ocpHtml !== html) { setHTML(line, html); line.__ocpHtml = html; }
@@ -733,6 +744,10 @@
       } else if (act && act.dataset.act === 'showhidden') {
         settings.showHidden = !settings.showHidden;
         save();
+      } else if (act && act.dataset.act === 'nextpage') {
+        const next = findNextPage(bar.closest('body'));
+        if (next) next.click();
+        return;
       } else if (act && act.dataset.act === 'debug') {
         copyDebug(act, bar);
       } else if (act && act.dataset.act === 'reset') {
@@ -781,11 +796,13 @@
     let html = '';
     if (stats.errors && !stats.ready) html = `<span class="ocp-warn" title="${esc(apiError)}">Couldn't load products. Settings &gt; Copy debug info.</span>`;
     else if (stats.loading) html = `<span>Loading ${stats.loading}…</span>`;
-    if (stats.filtered && stats.searching && !settings.showHidden) {
-      html += `<span title="Companies outside your chips show faded while you search">${stats.filtered} of ${stats.total} faded</span>`;
-    } else if (stats.filtered) {
+    if (stats.filtered) {
       html += `<span>${stats.filtered} of ${stats.total} ${settings.showHidden ? 'faded' : 'hidden'}</span>` +
         `<button type="button" class="ocp-link" data-act="showhidden">${settings.showHidden ? 'Hide' : 'Show'}</button>`;
+      // A whole page filtered out: say so, and offer the next page
+      if (stats.filtered === stats.total && !settings.showHidden && stats.hasNext) {
+        html += '<button type="button" class="ocp-link" data-act="nextpage">Next page ›</button>';
+      }
     }
     const status = bar.querySelector('.ocp-status');
     if (status.__ocpHtml !== html) { setHTML(status, html); status.__ocpHtml = html; }
@@ -798,6 +815,23 @@
   function findSizeControl(panel) {
     for (const b of panel.querySelectorAll('button, [role="button"], [role="combobox"]')) {
       if (!b.closest('.ocp-ui') && /^\d+ items\W*$/i.test(b.textContent.replace(/\s+/g, ' ').trim())) return b;
+    }
+    return null;
+  }
+
+  // HubSpot's own next-page arrow, beside the page numbers (not the Next step button)
+  function findNextPage(scope) {
+    const ctl = findSizeControl(scope);
+    if (!ctl) return null;
+    for (let pager = ctl.parentElement, k = 0; pager && k < 4; pager = pager.parentElement, k++) {
+      const buttons = [...pager.querySelectorAll('button, [role="button"], a')].filter((b) => !b.closest('.ocp-ui'));
+      const numbers = buttons.filter((b) => /^\d+$/.test(b.textContent.trim()));
+      if (numbers.length < 2) continue;
+      const labelled = buttons.find((b) => /next/i.test(b.getAttribute('aria-label') || b.getAttribute('title') || ''));
+      const after = buttons[buttons.indexOf(numbers[numbers.length - 1]) + 1];
+      const next = labelled || (after && after !== ctl && !after.textContent.trim() ? after : null);
+      if (!next || next.disabled || next.getAttribute('aria-disabled') === 'true') return null;
+      return next;
     }
     return null;
   }
@@ -854,13 +888,8 @@
       anchor.parentElement.insertBefore(bar, anchor);
     }
 
-    // While you're searching by name, filtered companies show faded rather than vanishing
-    const search = panel.querySelector('input[type="search"], input[placeholder*="Search" i]');
-    const searching = !!(search && search.value.trim());
-    const fade = settings.showHidden || searching;
-
     const counts = new Map();
-    const stats = { ready: 0, loading: 0, errors: 0, filtered: 0, total: rows.length, searching };
+    const stats = { ready: 0, loading: 0, errors: 0, filtered: 0, total: rows.length };
     for (const it of rows) {
       const r = it.rec ? { state: 'ready', recs: [it.rec] } : resolveByName(it.label);
       it.how = it.rec ? 'react' : 'name';
@@ -873,12 +902,15 @@
         hide = !wanted(r.recs);
       }
       if (hide) stats.filtered++;
-      const hidden = hide && !fade;
-      const dim = hide && fade;
+      const hidden = hide && !settings.showHidden;
+      const dim = hide && settings.showHidden;
       if (it.row.hasAttribute('data-ocp-hidden') !== hidden) it.row.toggleAttribute('data-ocp-hidden', hidden);
       if (it.row.hasAttribute('data-ocp-dim') !== dim) it.row.toggleAttribute('data-ocp-dim', dim);
     }
-    if (bar) updateBar(bar, counts, stats);
+    if (bar) {
+      stats.hasNext = stats.filtered === stats.total && !!findNextPage(panel);
+      updateBar(bar, counts, stats);
+    }
     lastPass = { rows, stats, source };
   }
 
