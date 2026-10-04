@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Products in company search
 // @namespace    oolio-userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  In the Add existing Company panel, shows each company's products under its name, lets you hide products you don't work with, links to contacts and tickets, and shows 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -610,7 +610,9 @@
       if (!panel || !panel.querySelector(CHECKBOX)) {
         panel = null;
         for (let e = head.parentElement, k = 0; e && e !== document.body && k < 15; e = e.parentElement, k++) {
-          if (e.getBoundingClientRect().width > window.innerWidth * 0.8) break;
+          // In the top page, never treat a page-wide element as the panel. Inside HubSpot's
+          // object-builder frame the panel fills the whole frame, so skip that check there.
+          if (window.top === window && e.getBoundingClientRect().width > window.innerWidth * 0.8) break;
           if (e.querySelector(CHECKBOX)) { panel = e; break; }
         }
       }

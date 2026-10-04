@@ -2,6 +2,9 @@
 
 ## HubSpot: Products in company search
 
+### 1.0.2 (04/10/2026)
+- Fixed: nothing showed in **Add existing Company**. HubSpot shows that panel inside its own frame, which the script now finds.
+
 ### 1.0.1 (04/10/2026)
 - Works on pages that block plain HTML changes (Trusted Types), and inside embedded frames.
 - Type `ocpDebug()` in the browser console to see what the script can find, even when nothing shows on the page.
