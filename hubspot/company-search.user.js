@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Products in company search
 // @namespace    oolio-userscripts
-// @version      1.1.3
+// @version      1.2.0
 // @description  In the Add existing Company panel, shows each company's products, owner and contacts under its name, hides the products you don't work with, and shows 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -10,7 +10,7 @@
 // @match        https://app.hubspot.com/*
 // @icon         data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTQwLjA5OSAwQzE3My4xODEgMCAyMDAgMjYuNjk3OSAyMDAgNTkuNjMxNEMyMDAgOTIuNTY0OSAxNzMuMTgxIDExOS4yNjMgMTQwLjA5OSAxMTkuMjYzQzEyNC42NzcgMTE5LjI2MyAxMTAuNjE2IDExMy40NjEgOTkuOTk4NiAxMDMuOTNDODkuMzgzNyAxMTMuNDYxIDc1LjMyMjkgMTE5LjI2MyA1OS45MDEgMTE5LjI2M0MyNi44MTg2IDExOS4yNjMgMCA5Mi41NjQ5IDAgNTkuNjMxNEMwIDI2LjY5NzkgMjYuODE4NiAwIDU5LjkwMSAwQzc1LjMyMzIgMCA4OS4zODQxIDUuODAxOTUgMTAwLjAwMSAxNS4zMzI5QzExMC42MTYgNS44MDE3NyAxMjQuNjc3IDAgMTQwLjA5OSAwWk0xNDAuMDk5IDM5LjkxODVDMTI5LjE2MyAzOS45MTg1IDEyMC4yOTcgNDguNzQ0MyAxMjAuMjk3IDU5LjYzMTRDMTIwLjI5NyA3MC41MTg1IDEyOS4xNjMgNzkuMzQ0MiAxNDAuMDk5IDc5LjM0NDJDMTUxLjAzNSA3OS4zNDQyIDE1OS45MDEgNzAuNTE4NSAxNTkuOTAxIDU5LjYzMTRDMTU5LjkwMSA0OC43NDQzIDE1MS4wMzUgMzkuOTE4NSAxNDAuMDk5IDM5LjkxODVaTTU5LjkwMSAzOS45MTg1QzQ4Ljk2NDcgMzkuOTE4NSA0MC4wOTkgNDguNzQ0MyA0MC4wOTkgNTkuNjMxNEM0MC4wOTkgNzAuNTE4NSA0OC45NjQ3IDc5LjM0NDIgNTkuOTAxIDc5LjM0NDJDNzAuODM3MyA3OS4zNDQyIDc5LjcwMyA3MC41MTg1IDc5LjcwMyA1OS42MzE0Qzc5LjcwMyA0OC43NDQzIDcwLjgzNzMgMzkuOTE4NSA1OS45MDEgMzkuOTE4NVoiIGZpbGw9IiM2NzNBQjYiLz4KPC9zdmc+Cg==
 // @grant        none
-// @run-at       document-idle
+// @run-at       document-start
 // ==/UserScript==
 
 /*
@@ -38,6 +38,8 @@
     { value: 'SwiftPOS', label: 'SwiftPOS', bg: '#F0F0F0', fg: '#555555' },
     { value: 'Idealpos', label: 'Idealpos', bg: '#F0F0F0', fg: '#555555' },
   ];
+  // Other values of the product property in this portal, so "Other" can be asked for by name
+  const OTHER_VALUES = ['Deliverit', 'OrderMate', 'Fortis', 'Captial', 'eBev'];
   const OTHER = '__other';
   const NONE = '__none';
 
@@ -122,6 +124,114 @@
     if (/^\d{13}$/.test(v)) return new Date(+v).toLocaleDateString('en-AU');
     if (/^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v).toLocaleDateString('en-AU');
     return v.replace(/;/g, ', ');
+  }
+
+  /* ---------------- Filtering at the source ---------------- */
+  // The panel asks HubSpot for companies with one GraphQL call (SearchObjectsQuery). Adding
+  // "product is one of your chips" to that call means HubSpot only sends your companies, so
+  // pages are full and the total is right. If HubSpot ever rejects the filter, the original
+  // request is sent instead and the script falls back to hiding rows on the page.
+  const SERVER_KEY = 'oolio-company-search-server-filter';
+  let serverFilter = (() => { try { return localStorage.getItem(SERVER_KEY) || 'unknown'; } catch (e) { return 'unknown'; } })();
+  let lastServer = '';
+  function setServerFilter(state, msg) {
+    serverFilter = state;
+    lastServer = msg || '';
+    // Only success is remembered, so a one-off failure is retried on the next page load
+    try { if (state === 'works') localStorage.setItem(SERVER_KEY, state); else localStorage.removeItem(SERVER_KEY); } catch (e) { /* ignore */ }
+  }
+
+  // The filter groups for your chips, or null when everything is switched on (or off)
+  function productFilters() {
+    const values = [
+      ...PRODUCTS.filter((p) => !isOff(p.value)).map((p) => p.value),
+      ...(isOff(OTHER) ? [] : OTHER_VALUES),
+    ];
+    const none = !isOff(NONE);
+    const everything = values.length === PRODUCTS.length + OTHER_VALUES.length && none;
+    if (everything || (!values.length && !none)) return null;
+    const out = [];
+    if (values.length) out.push({ property: PRODUCT_PROPERTY, operator: 'IN', values });
+    if (none) out.push({ property: PRODUCT_PROPERTY, operator: 'NOT_HAS_PROPERTY' });
+    return out;
+  }
+
+  // Returns the changed request body, or null to leave the request alone
+  function filteredBody(url, body) {
+    if (typeof body !== 'string' || body.length > 300000 || !/\/api\/graphql\/crm/.test(String(url))) return null;
+    let j;
+    try { j = JSON.parse(body); } catch (e) { return null; }
+    const v = j && j.variables;
+    if (!j || j.operationName !== 'SearchObjectsQuery' || !v || String(v.objectTypeId) !== '0-2' || !Array.isArray(v.filterGroups)) return null;
+    const extra = productFilters();
+    if (!extra) return null;
+    const groups = v.filterGroups.length ? v.filterGroups : [{ filters: [] }];
+    // Filter groups are OR'd and filters inside a group are AND'd, so each of HubSpot's own
+    // groups is repeated once per product condition.
+    v.filterGroups = groups.flatMap((g) => extra.map((f) => ({ ...g, filters: [...(g.filters || []), f] })));
+    return JSON.stringify(j);
+  }
+
+  function searchFailed(j) {
+    if (!j) return 'no response';
+    if (Array.isArray(j.errors) && j.errors.length) return j.errors[0].message || 'GraphQL error';
+    const r = j.data && j.data.crmObjectsSearch;
+    if (!r) return 'no results in response';
+    if (Array.isArray(r.validationErrors) && r.validationErrors.length) return r.validationErrors[0].message || 'validation error';
+    return '';
+  }
+
+  const pageFetch = window.fetch;
+  window.fetch = async function (input, init) {
+    let body = null;
+    try {
+      if (serverFilter !== 'broken' && init && typeof init.body === 'string') {
+        body = filteredBody(typeof input === 'string' ? input : input && input.url, init.body);
+      }
+    } catch (e) { body = null; }
+    if (!body) return pageFetch.apply(this, arguments);
+    try {
+      const res = await pageFetch.call(window, input, { ...init, body });
+      const problem = res.ok ? searchFailed(await res.clone().json()) : `HubSpot returned ${res.status}`;
+      if (!problem) {
+        if (serverFilter !== 'works') { setServerFilter('works'); note('Product filter accepted by HubSpot'); }
+        return res;
+      }
+      setServerFilter('broken', problem);
+      note('Product filter rejected, hiding on the page instead: ' + problem);
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e; // HubSpot cancelled it for a newer search
+      note('Filtered search failed: ' + (e && e.message));
+    }
+    return pageFetch.call(window, input, init);
+  };
+
+  // HubSpot may send the same search with XMLHttpRequest. That can't be retried safely, so
+  // it is only filtered once the filter is known to work.
+  const xhrOpen = XMLHttpRequest.prototype.open;
+  const xhrSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function (method, url) {
+    this.__ocpUrl = String(url);
+    return xhrOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function (b) {
+    let body = null;
+    try { if (serverFilter === 'works') body = filteredBody(this.__ocpUrl, b); } catch (e) { body = null; }
+    return body ? xhrSend.call(this, body) : xhrSend.apply(this, arguments);
+  };
+
+  // After a chip changes, ask HubSpot to search again by nudging the search box
+  function refreshSearch() {
+    const input = document.querySelector('input[type="search"], input[placeholder*="Search" i]');
+    if (!input || serverFilter === 'broken') return;
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    const value = input.value;
+    set.call(input, value + ' ');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    setTimeout(() => {
+      set.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }, 60);
   }
 
   /* ---------------- Company data ---------------- */
@@ -736,6 +846,7 @@
         const k = chip.dataset.chip;
         settings.off = isOff(k) ? settings.off.filter((x) => x !== k) : [...settings.off, k];
         save();
+        refreshSearch();
       } else if (act && act.dataset.act === 'settings') {
         const box = bar.querySelector('.ocp-settings');
         box.hidden = !box.hidden;
@@ -753,6 +864,7 @@
       } else if (act && act.dataset.act === 'reset') {
         settings = { ...DEFAULTS };
         save();
+        refreshSearch();
         fillSettings(bar);
       } else {
         return;
@@ -804,6 +916,7 @@
         html += '<button type="button" class="ocp-link" data-act="nextpage">Next page ›</button>';
       }
     }
+    if (serverFilter === 'broken') html += `<span class="ocp-warn" title="${esc(lastServer)}">Filtering this page only</span>`;
     const status = bar.querySelector('.ocp-status');
     if (status.__ocpHtml !== html) { setHTML(status, html); status.__ocpHtml = html; }
   }
@@ -821,19 +934,9 @@
 
   // HubSpot's own next-page arrow, beside the page numbers (not the Next step button)
   function findNextPage(scope) {
-    const ctl = findSizeControl(scope);
-    if (!ctl) return null;
-    for (let pager = ctl.parentElement, k = 0; pager && k < 4; pager = pager.parentElement, k++) {
-      const buttons = [...pager.querySelectorAll('button, [role="button"], a')].filter((b) => !b.closest('.ocp-ui'));
-      const numbers = buttons.filter((b) => /^\d+$/.test(b.textContent.trim()));
-      if (numbers.length < 2) continue;
-      const labelled = buttons.find((b) => /next/i.test(b.getAttribute('aria-label') || b.getAttribute('title') || ''));
-      const after = buttons[buttons.indexOf(numbers[numbers.length - 1]) + 1];
-      const next = labelled || (after && after !== ctl && !after.textContent.trim() ? after : null);
-      if (!next || next.disabled || next.getAttribute('aria-disabled') === 'true') return null;
-      return next;
-    }
-    return null;
+    const next = scope.querySelector('nav[aria-label="Pagination"] [data-next-page="true"], button[aria-label="Next page"]');
+    if (!next || next.disabled || next.getAttribute('aria-disabled') === 'true') return null;
+    return next;
   }
 
   function findOption(size, ctl) {
@@ -959,6 +1062,7 @@
       `Panel: ${p ? (p.fallback ? 'found (fallback checkboxes)' : 'found') : 'not found'}, rows: ${rows.length}, rows-per-page control: ${ctl ? `"${ctl.textContent.trim()}"` : 'not found'}`,
       `Row data from: ${JSON.stringify(how)}, owners: ${ownersState} (${owners.size}), Trusted Types policy: ${!!ttPolicy}`,
       `Last pass: ${lastPass ? JSON.stringify(lastPass.stats) : 'none'}, row depth: ${rowDepth}`,
+      `Product filter in HubSpot's search: ${serverFilter}${lastServer ? ' (' + lastServer + ')' : ''}`,
       `Last API error: ${apiError || 'none'}`,
       `Last run error: ${lastError || 'none'}`,
       '', 'Notes:', ...notes.map((l) => '  ' + l),

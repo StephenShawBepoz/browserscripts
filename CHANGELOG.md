@@ -2,6 +2,12 @@
 
 ## HubSpot: Products in company search
 
+### 1.2.0 (04/10/2026)
+- The product chips now filter HubSpot's own search, not just the page. A search returns only companies on your products, so pages are full and the company count is right (for example "burger" goes from 539 companies to only yours).
+- Changing a chip searches again straight away.
+- If HubSpot ever rejects the filter, the panel works as before and the bar says "Filtering this page only".
+- **Next page** in the bar now uses HubSpot's own next-page button.
+
 ### 1.1.3 (04/10/2026)
 - Fixed: while searching, company names split across several lines around the bolded search term. The details now sit under the whole name.
 - Hidden means hidden, including while you search. When every company on a page is filtered out, the bar says so and offers **Next page**.
