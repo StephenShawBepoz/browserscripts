@@ -2,6 +2,9 @@
 
 ## HubSpot: Status prompt after email
 
+### 1.2.0 (05/10/2026)
+- When HubSpot's *Dependent properties* box opens for a status, **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) presses its **Save** and **Esc** presses **Cancel**. An open drop-down in the box closes first on Esc.
+
 ### 1.1.3 (05/10/2026)
 - Each status shows once. HubSpot draws every status as a row inside a row, and 1.1.2 listed both.
 - Statuses that pipeline rules block (greyed out in HubSpot's list) are left out.

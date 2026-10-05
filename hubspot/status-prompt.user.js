@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Status prompt after email
 // @namespace    oolio-userscripts
-// @version      1.1.3
+// @version      1.2.0
 // @description  After you send an email reply on a Help Desk ticket, asks what the ticket status should be. Enter sets the waiting status. Tab, the arrow keys or a number move the highlight. Esc keeps the current status.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -442,6 +442,40 @@
     if (focusBack) restoreFocus(was.returnFocus);
   }
 
+  // Keys for HubSpot's "more details" box while it's open: Cmd/Ctrl + Enter presses its Save, Esc its Cancel.
+  // An open drop-down inside the box gets Esc first, so it closes as usual.
+  const SAVE_KEYS = /Mac|iPhone|iPad/i.test(navigator.platform) ? 'Cmd + Enter' : 'Ctrl + Enter';
+  function boxButton(box, rx) {
+    // The box HubSpot reports may be just part of the panel, so look a few levels out for its buttons
+    for (let el = box, i = 0; el && el !== document.body && i < 4; el = el.parentElement, i++) {
+      const b = [...el.querySelectorAll('button')].find((x) => rx.test(clean(x.innerText || x.textContent)) && isShown(x));
+      if (b) return b;
+    }
+    return null;
+  }
+  function onBoxKey(e, box, onCancel) {
+    if (!box.isConnected || e.repeat || e.isComposing) return;
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+      const save = boxButton(box, /^save$/i);
+      if (!save) return;
+      e.preventDefault();
+      e.stopImmediatePropagation(); // so the send shortcut doesn't press it as well
+      if (save.disabled || save.getAttribute('aria-disabled') === 'true') {
+        return toast(`Fill in the fields marked * first. ${SAVE_KEYS} saves, Esc cancels.`, false, null, DETAILS_WAIT_MS);
+      }
+      save.click();
+    } else if (e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      if (box.querySelector('[aria-expanded="true"]')) return; // a drop-down in the box is open: HubSpot closes that
+      const cancel = boxButton(box, /^cancel$/i) ||
+        [...box.querySelectorAll('button[aria-label]')].find((b) => /close/i.test(b.getAttribute('aria-label')));
+      if (!cancel) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onCancel();
+      cancel.click();
+    }
+  }
+
   // undoTo: the status Undo goes back to, if there's one to offer
   async function setStatus(opt, key, options, undoTo, isUndo) {
     if (pageKey() !== key) return toast("That ticket isn't open any more, so its status was left alone");
@@ -455,11 +489,19 @@
     if (res !== 'set' && res !== 'unchanged') {
       // HubSpot opened a box for more details (a close reason, say). Wait while it's filled in, then say how it went.
       const box = res;
-      toast(`Fill in HubSpot's box to finish setting ${opt.label}`, true, null, DETAILS_WAIT_MS);
-      res = await waitFor(() => {
-        if (pageKey() !== key) return 'moved';
-        return showsStatus(opt, options) ? 'set' : box.isConnected ? null : 'closed';
-      }, DETAILS_WAIT_MS, 250);
+      toast(`Fill in HubSpot's box to finish setting ${opt.label}. ${SAVE_KEYS} saves, Esc cancels.`, true, null, DETAILS_WAIT_MS);
+      let cancelled = false;
+      const boxKeys = (e) => onBoxKey(e, box, () => { cancelled = true; });
+      window.addEventListener('keydown', boxKeys, true);
+      try {
+        res = await waitFor(() => {
+          if (pageKey() !== key) return 'moved';
+          return showsStatus(opt, options) ? 'set' : box.isConnected ? null : 'closed';
+        }, DETAILS_WAIT_MS, 250);
+      } finally {
+        window.removeEventListener('keydown', boxKeys, true);
+      }
+      if (res === 'closed' && cancelled) return toast(`Cancelled. ${opt.label} wasn't set.`, true);
       if (res === 'closed' && !(await waitFor(() => showsStatus(opt, options), 1500))) {
         log(`HubSpot's box closed without setting ${opt.label}`);
         return toast(`HubSpot's box closed before ${opt.label} was set. Check the status in the sidebar.`);
