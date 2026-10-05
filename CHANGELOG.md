@@ -2,6 +2,12 @@
 
 ## HubSpot: Status prompt after email
 
+### 1.1.3 (05/10/2026)
+- Each status shows once. HubSpot draws every status as a row inside a row, and 1.1.2 listed both.
+- Statuses that pipeline rules block (greyed out in HubSpot's list) are left out.
+- Fixes "Couldn't change the status: Failed to construct 'PointerEvent'" after picking a status. HubSpot's list picks on a mouse press, and the press now works inside Tampermonkey.
+- The console lists the statuses read, so it's easy to check against HubSpot's own list.
+
 ### 1.1.2 (05/10/2026)
 - Finds HubSpot's status list however it's linked to the field, and reads statuses that don't carry an id. In 1.1.1 the list could open and load, then nothing happened.
 - If a click on a status doesn't take, presses it properly once more.

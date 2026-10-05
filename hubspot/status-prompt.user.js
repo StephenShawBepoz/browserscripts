@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Status prompt after email
 // @namespace    oolio-userscripts
-// @version      1.1.2
+// @version      1.1.3
 // @description  After you send an email reply on a Help Desk ticket, asks what the ticket status should be. Enter sets the waiting status. Tab, the arrow keys or a number move the highlight. Esc keeps the current status.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -134,12 +134,32 @@
   // ---------- Status dropdown access ----------
   const OPTION = '[role="option"]';
   const optionLabel = (o) => clean((o.querySelector('[data-option-text]') || o).textContent);
-  // HubSpot's own id for a status, or its name if the row doesn't carry one
-  const optionId = (o) => o.getAttribute('data-option-value') || o.getAttribute('data-value') || optionLabel(o);
+  // HubSpot's own id for a status (on the row or the row around it), or its name if there isn't one
+  const optionId = (o) => o.getAttribute('data-option-value') || o.closest('[data-option-value]')?.getAttribute('data-option-value') ||
+    o.getAttribute('data-value') || optionLabel(o);
   // HubSpot opens the list with a "Loading" row and fills the statuses in once they've loaded
   const isPlaceholder = (o) => /^loading\b/i.test(optionLabel(o)) || o.getAttribute('aria-busy') === 'true';
-  const realOptions = (panel) => [...panel.querySelectorAll(OPTION)].filter((o) => optionLabel(o) && !isPlaceholder(o));
   const isShown = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  // Greyed out, as pipeline rules do to statuses a ticket can't move to
+  const DISABLED = '[aria-disabled="true"], [data-disabled="true"], [disabled]';
+  function isDisabled(o, panel) {
+    for (let el = o; el && el !== panel; el = el.parentElement) {
+      if (el.matches(DISABLED) || /(^|[\s_-])disabled\b/i.test(el.getAttribute('class') || '')) return true;
+    }
+    return !!o.querySelector(DISABLED);
+  }
+  // Each status once. HubSpot nests one row inside another, so take the innermost (its text is just the name).
+  // Rows that aren't on screen are left out when any are, and a name is only kept once.
+  function realOptions(panel) {
+    let rows = [...panel.querySelectorAll(OPTION)].filter((o) => !o.querySelector(OPTION) && !isPlaceholder(o) && optionLabel(o));
+    if (rows.some(isShown)) rows = rows.filter(isShown);
+    const byLabel = new Map();
+    for (const o of rows) {
+      const label = optionLabel(o);
+      if (!byLabel.has(label) && !isDisabled(o, panel)) byLabel.set(label, o);
+    }
+    return [...byLabel.values()];
+  }
   const listboxes = () => [...document.querySelectorAll('[role="listbox"]')];
   // The open status list: the one the button points to, or else a list that appeared on the page when it was
   // opened (never one that was already there, such as a list of tickets)
@@ -183,7 +203,7 @@
       const real = p ? realOptions(p) : [];
       steady = real.length && real.length === n ? steady + 1 : 0;
       n = real.length || -1;
-      const loading = !p || real.length !== p.querySelectorAll(OPTION).length ||
+      const loading = !p || [...p.querySelectorAll(OPTION)].some(isPlaceholder) ||
         p.querySelector('[aria-busy="true"], [role="progressbar"]');
       // Done once steady, or after about half a second steady if a "Loading more" row stays at the bottom
       return steady >= (loading ? 6 : 2) ? p : null;
@@ -218,6 +238,7 @@
       options = panel ? realOptions(panel).map((o) => ({ id: optionId(o), label: optionLabel(o) })) : [];
       if (!wasOpen) closeDropdown();
       if (!options.length) return null;
+      log(`Read ${options.length} statuses${pipeline ? ` for ${pipeline}` : ''}:`, options.map((o) => o.label).join(', '));
       // Only remember a list that has the current status in it, so a half-loaded one isn't kept
       if (pipeline && findOption(text, options)) statusCache.set(pipeline, options);
       else log(`The current status (${text}) isn't in the list read`, options.map((o) => o.label));
@@ -241,21 +262,22 @@
     }
     const dialogsBefore = new Set(document.querySelectorAll('[role="dialog"]'));
     const target = item.querySelector('button') || item;
-    const outcome = () => {
+    // A full mouse press, not just a click: HubSpot's list picks on the press. No "view" in the events,
+    // as Tampermonkey's window isn't one the browser accepts there.
+    try {
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+        if (!target.isConnected) break; // picked already, and the list has closed
+        const Ev = type.startsWith('pointer') && typeof PointerEvent === 'function' ? PointerEvent : MouseEvent;
+        target.dispatchEvent(new Ev(type, { bubbles: true, cancelable: true, composed: true, button: 0, buttons: type.endsWith('down') ? 1 : 0 }));
+      }
+    } catch (err) {
+      log('Pressing the status failed, so clicking it instead:', err.message);
+      if (target.isConnected) target.click();
+    }
+    const res = await waitFor(() => {
       if (showsStatus(opt, options)) return 'set';
       return [...document.querySelectorAll('[role="dialog"]')].find((d) => !dialogsBefore.has(d)) || null;
-    };
-    target.click();
-    let res = await waitFor(outcome, 1500);
-    // Some HubSpot lists pick on the mouse press rather than the click, so press it properly once more
-    if (!res && target.isConnected) {
-      log(`A click on ${opt.label} didn't take, so pressing it`);
-      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
-        const Ev = type.startsWith('pointer') && typeof PointerEvent === 'function' ? PointerEvent : MouseEvent;
-        target.dispatchEvent(new Ev(type, { bubbles: true, cancelable: true, view: window, button: 0, buttons: type.endsWith('down') ? 1 : 0 }));
-      }
-      res = await waitFor(outcome, 3500);
-    }
+    }, 5000);
     if (res) return res;
     closeDropdown();
     return 'unchanged';
