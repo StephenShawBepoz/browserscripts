@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.6.1
+// @version      0.6.2
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -351,25 +351,75 @@
 
   // Calls to the map services. Sent by Tampermonkey with no cookies, naming this script
   // (as the services ask), and never with the HubSpot page address.
+  // A failed call says why in e.kind (and e.status, e.body for an HTTP error), for whyFailed below.
   function getJson(url, timeout = 15000) {
+    const fail = (kind, message, more) => Object.assign(new Error(message), { kind }, more);
+    const read = (status, text) => {
+      let data;
+      try { data = JSON.parse(text); } catch (e) { /* not JSON */ }
+      if (!status) throw fail('network', 'No reply');
+      if (status < 200 || status >= 300) throw fail('http', 'HTTP ' + status, { status, body: data });
+      if (data === undefined) throw fail('garbled', 'Unreadable reply');
+      return data;
+    };
     if (typeof GM_xmlhttpRequest !== 'function') {
-      return fetch(url, { credentials: 'omit', referrerPolicy: 'origin' }).then((r) => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      });
+      return fetch(url, { credentials: 'omit', referrerPolicy: 'origin' })
+        .catch((e) => { throw fail('network', 'Network error: ' + e.message); })
+        .then((r) => r.text().then((text) => read(r.status, text)));
     }
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method: 'GET', url, timeout, anonymous: true,
         headers: { Accept: 'application/json', 'User-Agent': USER_AGENT, Referer: REPO },
         onload: (r) => {
-          if (r.status < 200 || r.status >= 300) return reject(new Error('HTTP ' + r.status));
-          try { resolve(JSON.parse(r.responseText)); } catch (e) { reject(new Error('Unreadable reply')); }
+          try { resolve(read(r.status, r.responseText)); } catch (e) { reject(e); }
         },
-        onerror: () => reject(new Error('Network error')),
-        ontimeout: () => reject(new Error('Timed out')),
+        onerror: (r) => {
+          const detail = clean(r && (r.error || r.statusText));
+          // Tampermonkey's own refusals read "Refused to connect to …" (a blocked domain, or one not in @connect)
+          const kind = /refused to connect|@connect|blacklist|blocklist/i.test(detail) ? 'refused' : 'network';
+          reject(fail(kind, 'Network error' + (detail ? ': ' + detail : '')));
+        },
+        ontimeout: () => reject(fail('timeout', 'Timed out')),
       });
     });
+  }
+
+  // What went wrong with a map service, in words people can act on. The HTTP code is kept
+  // so it can be passed on; the browser console has the rest.
+  const SERVICE_NAMES = { geocode: 'the address lookup', drive: 'the driving route service', transit: 'the public transport service' };
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  function whyFailed(e, k) {
+    const name = SERVICE_NAMES[k];
+    let host = '';
+    try { host = new URL(service(k)).host; } catch (x) { /* a mistyped address in settings > Advanced */ }
+    const who = host ? `${name} (${host})` : name;
+    const { kind, status, body } = e || {};
+    let why;
+    if (kind === 'noroute' || /^No(Route|Segment)$/.test(body && body.code)) {
+      why = 'There\'s no road route between these places on the map.';
+    } else if (kind === 'refused') {
+      why = `Tampermonkey is blocking ${host || name} for this script. In the Tampermonkey dashboard, open HubSpot: Quick actions, ` +
+        'then its Settings tab, and allow that domain.';
+    } else if (kind === 'network') {
+      why = navigator.onLine === false ? 'You look to be offline. Check your connection, then try again.'
+        : `Couldn't reach ${who} from this computer. A VPN, network filter or venue Wi-Fi may be blocking it. Try another network.`;
+    } else if (kind === 'timeout') {
+      why = `${cap(name)} took too long to answer. Try again in a minute.`;
+    } else if (kind === 'garbled') {
+      why = `${cap(name)} sent back a web page instead of an answer, so a Wi-Fi sign-in page or network filter is probably in the way. ` +
+        'Open any website to check.';
+    } else if (status === 403 || status === 429) {
+      why = `${cap(who)} is refusing your network for now (HTTP ${status}), usually because a shared office or VPN connection is busy. ` +
+        'It normally clears within the hour, or try with the VPN off or on another network.';
+    } else if (status >= 500) {
+      why = `${cap(name)} is having problems at its end (HTTP ${status}). Try again in a few minutes.`;
+    } else if (status) {
+      why = `${cap(name)} turned the request down (HTTP ${status}). If it keeps happening, pass this message on.`;
+    } else {
+      why = `${cap(name)} didn't answer. Try again in a minute.`;
+    }
+    return why + (clean(loadSettings().services[k]) ? ' You\'ve set your own address for it in settings > Advanced.' : '');
   }
 
   // One request at a time per service, at most one a second (Nominatim and FOSSGIS rules)
@@ -1316,7 +1366,7 @@
     return remember('drive:' + coords, 6 * 3600 * 1000, () => oneAtATime('drive', async () => {
       const d = await getJson(`${service('drive')}/route/v1/driving/${coords}?overview=simplified&geometries=geojson&alternatives=false&steps=false`);
       const r = d && d.code === 'Ok' && d.routes && d.routes[0];
-      if (!r) throw new Error((d && d.message) || 'No route');
+      if (!r) throw Object.assign(new Error((d && d.message) || 'No route'), { body: d });
       return { seconds: r.duration, metres: r.distance, line: r.geometry && r.geometry.coordinates,
         legs: (r.legs || []).map((l) => ({ seconds: l.duration, metres: l.distance })) };
     }));
@@ -1329,7 +1379,7 @@
     const coords = points.map(lonlat).join(';');
     return oneAtATime('drive', async () => {
       const d = await getJson(`${service('drive')}/table/v1/driving/${coords}?annotations=duration`);
-      if (!d || d.code !== 'Ok' || !d.durations) throw new Error((d && d.message) || 'No table');
+      if (!d || d.code !== 'Ok' || !d.durations) throw Object.assign(new Error((d && d.message) || 'No table'), { body: d });
       return quickestOrder(d.durations, roundTrip);
     });
   }
@@ -1356,7 +1406,7 @@
       const c = cost[full][j] + (roundTrip ? t(j + 1, 0) : 0);
       if (c < best) { best = c; last = j; }
     }
-    if (best === Infinity) throw new Error('Some stops can\'t be reached by road');
+    if (best === Infinity) throw Object.assign(new Error('Some stops can\'t be reached by road'), { kind: 'noroute' });
     const order = [];
     for (let set = full, j = last; j >= 0;) { order.unshift(j + 1); const p = prev[set][j]; set &= ~(1 << j); j = p; }
     return order;
@@ -1678,8 +1728,6 @@
     });
   }
 
-  const LOOKUP_DOWN = 'The map service didn\'t answer. Try again in a minute.';
-
   // Where you are: a saved place, your current location, or a one-off address
   async function yourPoint(from, target) {
     if (from === 'nearest') {
@@ -1695,7 +1743,10 @@
     }
     if (from === 'other') {
       if (!panel.oneOff) throw new Error('Type an address above, then press Go.');
-      const g = await geocode({ text: panel.oneOff }).catch(() => { throw new Error(LOOKUP_DOWN); });
+      const g = await geocode({ text: panel.oneOff }).catch((e) => {
+        log('address lookup failed:', e.message);
+        throw new Error(whyFailed(e, 'geocode'));
+      });
       if (!g) throw new Error(`Couldn't find "${panel.oneOff}" on the map. Try adding the suburb and postcode.`);
       return { ...g, label: panel.oneOff, query: parseCoords(panel.oneOff) ? pt(g) : panel.oneOff };
     }
@@ -1884,8 +1935,8 @@
 
     const s = loadSettings();
     const from = b.querySelector('.oqa-from').value;
-    let lookupDown = false, you;
-    const dest = await customerPoint(c).catch((e) => { log('address lookup failed:', e.message); lookupDown = true; return null; });
+    let lookupErr = null, you;
+    const dest = await customerPoint(c).catch((e) => { log('address lookup failed:', e.message); lookupErr = e; return null; });
     if (!live()) return;
     try {
       // Without the customer's map point there's no nearest office; Google can still start from where you are
@@ -1907,7 +1958,7 @@
       const custQ = { query: addressQuery(c, {}) };
       result.innerHTML = resultRow(icon, s.direction === 'to' ? gmaps(you, custQ, travel) : gmaps(custQ, you, travel), 'Open in Google Maps');
       fillResult('Google Maps', 'Open the route in Google Maps');
-      setNote(lookupDown ? 'The map service didn\'t answer, so there\'s no time yet. Try again in a minute, or open Google Maps.'
+      setNote(lookupErr ? 'No time yet. ' + whyFailed(lookupErr, 'geocode')
         : 'Couldn\'t find this address on the map. Check it with Edit address, or open Google Maps.', true);
       return;
     }
@@ -1934,7 +1985,9 @@
         drawMap(map, markers, [{ coords: r.line, kind: 'drive' }]);
       }).catch((e) => {
         log('drive route failed:', e.message);
-        if (live()) fillResult('Drive', 'Couldn\'t work out a time here. Open Google Maps instead.');
+        if (!live()) return;
+        fillResult('Drive', 'Couldn\'t work out a time here. Open Google Maps instead.');
+        setNote(whyFailed(e, 'drive'), true);
       });
       return;
     }
@@ -1982,7 +2035,9 @@
       drawMap(map, markers, best.legs.filter((l) => l.shape).map((l) => ({ coords: l.shape, kind: l.walk ? 'walk' : 'transit' })));
     }).catch((e) => {
       log('public transport failed:', e.message);
-      if (live()) fillResult('Public transport', 'Couldn\'t get times here. Open Google Maps instead.');
+      if (!live()) return;
+      fillResult('Public transport', 'Couldn\'t get times here. Open Google Maps instead.');
+      setNote(whyFailed(e, 'transit'), true);
     });
   }
 
@@ -2043,7 +2098,12 @@
     if (c.error) throw new Error(`${t.title || 'That record'}: ${c.error}`);
     if (!addressLine(c) && c.lat == null) throw new Error(`${c.name} has no address in HubSpot. Open it and use Edit address.`);
     let dest;
-    try { dest = await pointFor(c); } catch (e) { throw new Error(LOOKUP_DOWN); }
+    try {
+      dest = await pointFor(c);
+    } catch (e) {
+      log('address lookup failed:', e.message);
+      throw new Error(`Couldn't add ${c.name}. ${whyFailed(e, 'geocode')}`);
+    }
     if (!dest) throw new Error(`Couldn't find ${c.name} on the map. Open it and use Edit address.`);
     return stopFrom(c, dest, rec);
   }
@@ -2170,17 +2230,18 @@
           order.disabled = true;
           order.lastChild.textContent = 'Working it out…';
           panel.ordering = true;
-          let idx;
+          let idx, err;
           try {
             idx = await bestOrder(points, back);
           } catch (e) {
+            err = e;
             log('best order failed:', e.message);
           } finally {
             panel.ordering = false;
           }
           if (!live()) return;
           const reset = (msg, warn) => { order.disabled = false; order.lastChild.textContent = 'Best order'; setNote(msg, warn); };
-          if (!idx) return reset('Couldn\'t work out the best order just now. Try again in a minute.', true);
+          if (!idx) return reset('Couldn\'t work out the best order. ' + whyFailed(err, 'drive'), true);
           if (idx.every((v, k) => v === k + 1)) return reset('This is already the quickest order.');
           saveTrip(idx.map((i) => stops[i - 1]));
           panel.focusNext = '[data-act="order"]';
@@ -2203,7 +2264,9 @@
         drawMap(map, markers, [{ coords: r.line, kind: 'drive' }]);
       } catch (e) {
         log('trip route failed:', e.message);
-        if (live()) total.innerHTML = '<span class="oqa-muted">Couldn\'t work out the drive here. Google Maps can still plan it.</span>';
+        if (!live()) return;
+        total.innerHTML = '<span class="oqa-muted">Couldn\'t work out the drive here. Google Maps can still plan it.</span>';
+        setNote(whyFailed(e, 'drive'), true);
       }
     }).catch((e) => {
       if (!live()) return;
@@ -2334,12 +2397,12 @@
       btn.disabled = true;
       btn.textContent = 'Finding it…';
       showErr('');
-      let g = null, down = false;
-      try { g = await geocode({ text: address }); } catch (x) { down = true; log('place lookup failed:', x.message); }
+      let g = null, err = null;
+      try { g = await geocode({ text: address }); } catch (x) { err = x; log('place lookup failed:', x.message); }
       if (!panel.el || panel.el.dataset.view !== 'settings') return;
       btn.disabled = false;
       btn.textContent = 'Add place';
-      if (!g) return showErr(down ? LOOKUP_DOWN : 'Couldn\'t find that address. Try adding the suburb and postcode.');
+      if (!g) return showErr(err ? whyFailed(err, 'geocode') : 'Couldn\'t find that address. Try adding the suburb and postcode.');
       addPlace(label, address, g);
     });
     form.querySelector('[data-act="here"]').addEventListener('click', async () => {

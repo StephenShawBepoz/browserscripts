@@ -92,6 +92,14 @@ The trip is shared by all your HubSpot tabs and stays until you clear it. Times 
 
 **Privacy.** Your places are saved in Tampermonkey on your computer only. For home, a nearby corner or your suburb is enough. **Use where I am now** saves your spot to about 100 m without sending an address anywhere, though that point does go to the route services when you get directions. The map services never see the HubSpot page or ticket, only the addresses and map points for the trip. To offer open records as trip stops, each tab notes which record it's showing, in Tampermonkey's storage on your computer.
 
+**If there's no time.** The panel says which map service failed and why. The usual ones:
+- *Couldn't reach ... from this computer*: a VPN, network filter or venue Wi-Fi is blocking it. Try another network.
+- *Refusing your network for now (HTTP 429 or 403)*: too many requests from one office or VPN connection. It normally clears within the hour.
+- *Sent back a web page instead of an answer*: a Wi-Fi sign-in page or network filter is in the way.
+- *Tampermonkey is blocking ...*: allow that domain in the script's Settings tab in the Tampermonkey dashboard.
+
+Meanwhile, Google Maps still works. Or click **Edit address** and paste a Google Maps link to the venue, which skips the address lookup.
+
 **If the company doesn't load.** The script reads the company the same way HubSpot's own pages do, with your login, and tries a few ways in turn. If HubSpot changes and none work, type the address in the panel and let Stephen know. The browser console (search for *Oolio quick actions*) shows which way worked.
 
 ### Cmd/Ctrl + Enter to send

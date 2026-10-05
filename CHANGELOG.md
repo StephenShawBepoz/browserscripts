@@ -19,6 +19,10 @@
 
 ## HubSpot: Quick actions
 
+### 0.6.2 (05/10/2026, beta)
+- When a map service fails, the panel now says which one and why, with what to do: blocked by your network or Tampermonkey, turned away because a shared office or VPN connection is busy (HTTP 429), down at its end, too slow, or a Wi-Fi sign-in page in the way. Before, it only said *The map service didn't answer*.
+- The same goes for drive times, public transport, trips, **Best order** and **Add a place**, which used to fail without a reason. A trip with no road between two stops now says so.
+
 ### 0.6.1 (04/10/2026, beta)
 - Help Desk task button finds *Create task* however HubSpot draws it, and opens a collapsed Tasks card first. If it still can't, the console says so before the pop-up is used.
 
