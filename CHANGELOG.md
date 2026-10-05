@@ -2,6 +2,11 @@
 
 ## HubSpot: Status prompt after email
 
+### 1.1.2 (05/10/2026)
+- Finds HubSpot's status list however it's linked to the field, and reads statuses that don't carry an id. In 1.1.1 the list could open and load, then nothing happened.
+- If a click on a status doesn't take, presses it properly once more.
+- If the list still can't be read, the drop-down is closed, the message says to check the browser console, and the console shows what was found.
+
 ### 1.1.1 (05/10/2026)
 - Waits for HubSpot to load the status list before reading it. In 1.1.0 the box could open with only *Loading* in it and stay that way.
 - The box's subtitle shows the ticket's name without *Help Desk |* in front.

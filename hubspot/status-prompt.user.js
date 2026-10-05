@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Status prompt after email
 // @namespace    oolio-userscripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  After you send an email reply on a Help Desk ticket, asks what the ticket status should be. Enter sets the waiting status. Tab, the arrow keys or a number move the highlight. Esc keeps the current status.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -132,18 +132,44 @@
   const composerFor = (el) => [...document.querySelectorAll(SEND_SELECTOR)].map(readComposer).find((c) => c && c.root.contains(el));
 
   // ---------- Status dropdown access ----------
-  const OPTION = '[role="option"][data-option-value]';
+  const OPTION = '[role="option"]';
   const optionLabel = (o) => clean((o.querySelector('[data-option-text]') || o).textContent);
+  // HubSpot's own id for a status, or its name if the row doesn't carry one
+  const optionId = (o) => o.getAttribute('data-option-value') || o.getAttribute('data-value') || optionLabel(o);
   // HubSpot opens the list with a "Loading" row and fills the statuses in once they've loaded
   const isPlaceholder = (o) => /^loading\b/i.test(optionLabel(o)) || o.getAttribute('aria-busy') === 'true';
-  const realOptions = (panel) => [...panel.querySelectorAll(OPTION)].filter((o) => !isPlaceholder(o));
-  function dropdownPanel(btn) {
-    const id = btn.getAttribute('aria-owns');
-    return id ? document.getElementById(id) : null;
+  const realOptions = (panel) => [...panel.querySelectorAll(OPTION)].filter((o) => optionLabel(o) && !isPlaceholder(o));
+  const isShown = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const listboxes = () => [...document.querySelectorAll('[role="listbox"]')];
+  // The open status list: the one the button points to, or else a list that appeared on the page when it was
+  // opened (never one that was already there, such as a list of tickets)
+  function dropdownPanel(btn, already) {
+    const b = statusButton() || btn;
+    for (const attr of ['aria-owns', 'aria-controls']) {
+      const el = document.getElementById(b.getAttribute(attr) || '');
+      if (el && el.querySelector(OPTION)) return el;
+    }
+    return listboxes().find((l) => !already?.has(l) && isShown(l) && l.querySelector(OPTION)) || null;
+  }
+  // What the console shows when the list can't be read, so the cause can be found without guessing.
+  // Only the status field and its list, so no ticket or customer details.
+  function describeList(btn, already) {
+    const b = statusButton() || btn;
+    const p = dropdownPanel(b, already);
+    const first = p && p.querySelector(OPTION);
+    return {
+      button: b ? ['aria-owns', 'aria-controls', 'aria-expanded', 'aria-haspopup'].map((a) => `${a}=${b.getAttribute(a)}`).join(' ') : 'not found',
+      listFound: !!p,
+      rowsInList: p ? p.querySelectorAll(OPTION).length : 0,
+      statusesInList: p ? realOptions(p).map(optionLabel) : [],
+      newLists: listboxes().filter((l) => !already?.has(l)).map((l) => `${l.id || 'no id'}, ${l.querySelectorAll(OPTION).length} rows${isShown(l) ? '' : ', hidden'}`),
+      firstRow: first ? first.outerHTML.slice(0, 600) : null,
+    };
   }
   // Opens HubSpot's status list and waits until it has loaded: statuses showing, no "Loading" row or spinner,
   // and the same number of statuses three checks running. A "Loading" row on its own is never read as a status.
   async function openDropdown(btn) {
+    const already = new Set(listboxes());
     if (btn.getAttribute('aria-expanded') !== 'true') btn.click();
     let n = -1;
     let steady = 0;
@@ -153,7 +179,7 @@
       const open = statusButton()?.getAttribute('aria-expanded') === 'true';
       if (wasOpen && !open) return 'closed';
       wasOpen = wasOpen || open;
-      const p = dropdownPanel(btn);
+      const p = dropdownPanel(btn, already);
       const real = p ? realOptions(p) : [];
       steady = real.length && real.length === n ? steady + 1 : 0;
       n = real.length || -1;
@@ -162,14 +188,19 @@
       // Done once steady, or after about half a second steady if a "Loading more" row stays at the bottom
       return steady >= (loading ? 6 : 2) ? p : null;
     }, LIST_WAIT_MS, 80);
-    if (panel === 'closed') { log("HubSpot's status list was closed before it loaded"); return null; }
-    if (!panel) log("HubSpot's status list didn't finish loading");
+    if (panel === 'closed') { log("HubSpot's status list was closed before it loaded", describeList(btn, already)); return null; }
+    if (!panel) log("Couldn't read HubSpot's status list. Please send this to Stephen:", JSON.stringify(describeList(btn, already), null, 1));
     return panel;
   }
-  // Finds the button again, as HubSpot may have redrawn it
+  // Finds the button again, as HubSpot may have redrawn it. If the list is still showing after that,
+  // presses Esc in it, which closes HubSpot's drop-downs.
   function closeDropdown() {
     const btn = statusButton();
     if (btn && btn.getAttribute('aria-expanded') === 'true') btn.click();
+    const a = document.activeElement;
+    if (a && a !== document.body && a !== host && a.closest?.('[role="listbox"], [role="dialog"], [aria-modal]') ) {
+      a.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+    }
   }
 
   const statusCache = new Map(); // pipeline name -> [{id, label}]
@@ -184,8 +215,7 @@
     if (!options || !findOption(text, options)) {
       const wasOpen = btn.getAttribute('aria-expanded') === 'true';
       const panel = await openDropdown(btn);
-      options = panel ? realOptions(panel).map((o) => ({ id: o.getAttribute('data-option-value'), label: optionLabel(o) }))
-        .filter((o) => o.id && o.label) : [];
+      options = panel ? realOptions(panel).map((o) => ({ id: optionId(o), label: optionLabel(o) })) : [];
       if (!wasOpen) closeDropdown();
       if (!options.length) return null;
       // Only remember a list that has the current status in it, so a half-loaded one isn't kept
@@ -202,19 +232,30 @@
     if (showsStatus(opt, options)) return 'set';
     const panel = await openDropdown(btn);
     // By its id, or else by its name, in case HubSpot numbers the rows differently each time
-    const item = panel && (panel.querySelector(`${OPTION}[data-option-value="${CSS.escape(opt.id)}"]`) ||
-      realOptions(panel).find((o) => optionLabel(o) === opt.label));
+    const rows = panel ? realOptions(panel) : [];
+    const item = rows.find((o) => optionId(o) === opt.id) || rows.find((o) => optionLabel(o) === opt.label);
     // Checked again just before the click, in case you've moved to another ticket meanwhile
     if (!item || pageKey() !== key) {
       closeDropdown();
       throw new Error(pageKey() !== key ? 'you moved to another ticket' : `${opt.label} isn't in this ticket's list`);
     }
     const dialogsBefore = new Set(document.querySelectorAll('[role="dialog"]'));
-    (item.querySelector('button') || item).click();
-    const res = await waitFor(() => {
+    const target = item.querySelector('button') || item;
+    const outcome = () => {
       if (showsStatus(opt, options)) return 'set';
       return [...document.querySelectorAll('[role="dialog"]')].find((d) => !dialogsBefore.has(d)) || null;
-    }, 5000);
+    };
+    target.click();
+    let res = await waitFor(outcome, 1500);
+    // Some HubSpot lists pick on the mouse press rather than the click, so press it properly once more
+    if (!res && target.isConnected) {
+      log(`A click on ${opt.label} didn't take, so pressing it`);
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+        const Ev = type.startsWith('pointer') && typeof PointerEvent === 'function' ? PointerEvent : MouseEvent;
+        target.dispatchEvent(new Ev(type, { bubbles: true, cancelable: true, view: window, button: 0, buttons: type.endsWith('down') ? 1 : 0 }));
+      }
+      res = await waitFor(outcome, 3500);
+    }
     if (res) return res;
     closeDropdown();
     return 'unchanged';
@@ -512,7 +553,7 @@
     if (pageKey() !== key || oldCopy()) return; // moved to another ticket while reading, or the first copy showed up
     // Clicked or typed somewhere while the statuses were read: don't take the keyboard now
     if (ctx.armedAt && lastInput > ctx.armedAt) return offer(key, ctx.statusBefore);
-    if (!data) return toast("Couldn't read this ticket's statuses. Set it in the sidebar instead.");
+    if (!data) return toast("Couldn't read this ticket's statuses. Set it in the sidebar. The browser console says why (search Oolio status prompt).");
     // If the status changed while sending (a send-and-close, or a HubSpot workflow), start on what it is now
     const changed = ctx.statusBefore && ctx.statusBefore !== data.text;
     let index = -1;
