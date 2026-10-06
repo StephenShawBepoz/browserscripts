@@ -1,5 +1,12 @@
 # Changelog
 
+## HubSpot: Search plus
+
+### 0.1.0 (06/10/2026, beta)
+- New. HubSpot's search shows each company's products from *Product(s)*, so two venues with the same name, such as a Bepoz site and an Oolio One site, are easy to tell apart.
+- When *Product(s)* is empty, it shows the *Group Company* instead, with an outline.
+- Looks the companies up with your own login, in one request per search, and remembers them for 10 minutes.
+
 ## HubSpot: Company contacts
 
 ### 1.3.0 (04/10/2026)

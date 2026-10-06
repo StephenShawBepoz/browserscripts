@@ -13,6 +13,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 | **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
+| **HubSpot: Search plus** (beta) | In HubSpot's search, each company shows its products, such as *Bepoz*, *Oolio Pay* or *OrderMate*, so venues with the same name are easy to tell apart. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/search-plus.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
 
@@ -126,6 +127,16 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 - *The company filter isn't working*: HubSpot has changed, so all contacts are listed. Let Stephen know. The browser console (search for *Oolio company contacts*) shows more.
 
 **Had it before it was on GitHub?** Install it from the link above, then delete the old copy (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
+
+### Search plus (beta)
+
+1. Search in HubSpot as usual: click the search bar, or press **Cmd + K** (Mac) or **Ctrl + K** (Windows).
+2. Each company in the results shows its products from the company's *Product(s)* field, for example *Bepoz* and *Oolio Pay*.
+3. If *Product(s)* is empty, it shows the *Group Company* instead, with an outline, for example *Oolio One - AU*. Hover over a tag to see which field it came from.
+
+No tag means neither field is filled in on that company. Fill it in and the tag shows next time you search (within 10 minutes for a company you've just searched for).
+
+**If the tags stop appearing,** HubSpot may have changed its search. The browser console (search for *Oolio search plus*) says what it found. Send that to Stephen.
 
 ## Problems or ideas
 
