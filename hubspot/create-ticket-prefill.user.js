@@ -2,7 +2,7 @@
 // @name         HubSpot: Create ticket prefill
 // @namespace    oolio-userscripts
 // @version      1.0.0
-// @description  Prefills HubSpot's Create ticket panel: Pipeline BP | Bepoz Support, Source Internal, Priority P2 - High, Brands Bepoz.
+// @description  On new tickets in BP | Bepoz Support, prefills Source Internal, Priority P2 - High and Brands Bepoz. Never changes the pipeline.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/create-ticket-prefill.user.js
@@ -20,11 +20,12 @@
   if (window.__oolioTicketPrefill) return;
   window.__oolioTicketPrefill = true;
 
-  // ---- Defaults. Labels must match the dropdown text exactly. ----
+  // ---- Labels must match the dropdown text exactly. ----
+  // Only tickets in this pipeline get the defaults below; the pipeline itself is never changed.
+  const PIPELINE = 'BP | Bepoz Support';
   // Create date is left blank on purpose: HubSpot then stamps the exact time,
   // where a date picked in the form could land at midnight and skew SLA and time-to-close.
   const DEFAULTS = {
-    pipeline: 'BP | Bepoz Support',
     source: 'Internal',
     priority: 'P2 - High',
     brands: ['Bepoz'],
@@ -61,7 +62,7 @@
   const options = () => [...document.querySelectorAll('[role="listbox"] .Select-option')];
   const findOption = (label) => options().find((o) => text(o) === label);
 
-  // Long lists (e.g. Pipeline) are paged behind "Load more", so fall back to the dropdown's search box.
+  // Long lists are paged behind "Load more", so fall back to the dropdown's search box.
   async function findOptionWithSearch(label) {
     await waitFor(() => options().length, 3000);
     let opt = findOption(label);
@@ -115,25 +116,24 @@
     await sleep(200);
   }
 
-  async function prefill() {
-    const pipeline = await waitFor(() => field('hs_pipeline'), 15000);
-    if (!pipeline) return;
-    await sleep(400); // let the form settle
-
-    // Pipeline first: changing it re-renders the dependent fields.
-    if (text(pipeline) !== DEFAULTS.pipeline) {
-      await selectOption('hs_pipeline', DEFAULTS.pipeline);
-      await waitFor(() => text(field('hs_pipeline')) === DEFAULTS.pipeline, 3000);
-      await sleep(600);
-    }
-
+  async function fillDefaults() {
     await selectOption('source_type', DEFAULTS.source);
     await selectOption('ticket_priority', DEFAULTS.priority);
     await selectMultiExact('hs_all_assigned_business_unit_ids', DEFAULTS.brands);
 
-    // Leave the cursor in Ticket name, ready to type.
+    // Leave the cursor in Ticket name, ready to type, unless it's already filled in.
     const name = field('subject');
-    if (name) name.focus();
+    if (name && !name.value) name.focus();
+  }
+
+  // Fills in once, when the pipeline reads Bepoz Support: as the panel opens, or when someone picks it.
+  // In any other pipeline the form is left alone.
+  async function prefill() {
+    if (!(await waitFor(() => field('hs_pipeline'), 15000))) return;
+    await sleep(400); // let the form settle
+    await waitFor(() => text(field('hs_pipeline')) === PIPELINE, Infinity, 500);
+    await sleep(600); // picking a pipeline re-renders the dependent fields
+    await fillDefaults();
   }
 
   // The panel iframe is created fresh each time "Create ticket" is clicked, so this runs once per panel.
