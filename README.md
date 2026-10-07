@@ -12,6 +12,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
+| **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
 | **HubSpot: Status prompt after email** | After you send an email reply on a Help Desk ticket, asks what the status should be. **Enter** sets the waiting status, **Esc** leaves it as it is. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
@@ -30,7 +31,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 
 Tampermonkey checks for new versions once a day and installs them for you. To get one straight away, click the Tampermonkey icon, then **Utilities** > **Check for userscript updates**.
 
-**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exception is *Status prompt after email*: the copy installed by hand stays, so delete it (see *Had the first copy?* below).
+**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exceptions are *Company contacts* and *Status prompt after email*: the copies you had before they were on GitHub stay, so delete them (see each script's notes below).
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
@@ -92,6 +93,14 @@ The trip is shared by all your HubSpot tabs and stays until you clear it. Times 
 
 **Privacy.** Your places are saved in Tampermonkey on your computer only. For home, a nearby corner or your suburb is enough. **Use where I am now** saves your spot to about 100 m without sending an address anywhere, though that point does go to the route services when you get directions. The map services never see the HubSpot page or ticket, only the addresses and map points for the trip. To offer open records as trip stops, each tab notes which record it's showing, in Tampermonkey's storage on your computer.
 
+**If there's no time.** The panel says which map service failed and why. The usual ones:
+- *Couldn't reach ... from this computer*: a VPN, network filter or venue Wi-Fi is blocking it. Try another network.
+- *Refusing your network for now (HTTP 429 or 403)*: too many requests from one office or VPN connection. It normally clears within the hour.
+- *Sent back a web page instead of an answer*: a Wi-Fi sign-in page or network filter is in the way.
+- *Tampermonkey is blocking ...*: allow that domain in the script's Settings tab in the Tampermonkey dashboard.
+
+Meanwhile, Google Maps still works. Or click **Edit address** and paste a Google Maps link to the venue, which skips the address lookup.
+
 **If the company doesn't load.** The script reads the company the same way HubSpot's own pages do, with your login, and tries a few ways in turn. If HubSpot changes and none work, type the address in the panel and let Stephen know. The browser console (search for *Oolio quick actions*) shows which way worked.
 
 ### Cmd/Ctrl + Enter to send
@@ -101,6 +110,23 @@ The trip is shared by all your HubSpot tabs and stays until you clear it. Times 
 3. It presses that box's **Send**, **Comment**, **Save**, **Create** or **OK** button, and a small message shows which one. Where there's no such button, it stays out of the way and leaves the key to HubSpot.
 
 It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
+
+### Company contacts
+
+1. On a ticket or deal, click **Add** on the Contacts card and open the **Add existing** tab.
+2. The list only shows contacts at the record's companies and their parent companies (often the group's head office), 100 to a page. The purple bar under the search box names the companies.
+3. **Can't find someone?** Click **Show all** to search every contact before you create a new one. The next ticket or deal starts with company contacts again.
+
+**Email only** hides contacts without an email address. It stays on until you turn it off.
+
+To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays that way for the rest of that panel.
+
+**If the bar turns amber,** it says what's wrong:
+- *Couldn't load the companies*: all contacts are listed. Click **Try again**.
+- *HubSpot didn't refresh the list*: the list may not match the bar. Type in the search box.
+- *The company filter isn't working*: HubSpot has changed, so all contacts are listed. Let Stephen know. The browser console (search for *Oolio company contacts*) shows more.
+
+**Had it before it was on GitHub?** Install it from the link above, then delete the old copy (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
 
 ### Status prompt after email
 

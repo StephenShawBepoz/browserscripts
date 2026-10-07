@@ -35,7 +35,28 @@
 ### 1.0.0
 - First version, installed by hand.
 
+## HubSpot: Company contacts
+
+### 1.3.0 (04/10/2026)
+- Added to this repo as *HubSpot: Company contacts*, so it now updates itself. Install it from the README link, then delete your old copy (1.2.0 or earlier) in Tampermonkey. The bar reminds you while both are installed.
+- **Show all** now lasts for that ticket or deal only, so the next one starts with company contacts again. **Email only** is still remembered.
+- The bar now reads *Only contacts at ...*, so an empty list doesn't look like the person isn't in HubSpot.
+- If the companies can't be loaded, or take more than 8 seconds, the search goes ahead with all contacts and the bar says so, with **Try again**. Before, a slow lookup could leave the panel searching for ever, and a failed one said the ticket had no company.
+- Typing quickly while the panel opened could show results for what you'd typed earlier. Fixed.
+- The switch to 100 per page waits until you stop typing and puts you back in the search box.
+- Typing straight after clicking the bar is no longer wiped.
+- New amber warnings if HubSpot doesn't refresh the list after a click, or if HubSpot changes and the filter can't work.
+- Leaves searches for several records at once alone, rather than filtering them by the first record's companies.
+- The bar shows the Oolio logomark and says when it's finding the companies.
+
+### 1.2.0
+- Defaults to 100 contacts per page, using HubSpot's own page-size menu so the page numbers stay right.
+
 ## HubSpot: Quick actions
+
+### 0.6.2 (05/10/2026, beta)
+- When a map service fails, the panel now says which one and why, with what to do: blocked by your network or Tampermonkey, turned away because a shared office or VPN connection is busy (HTTP 429), down at its end, too slow, or a Wi-Fi sign-in page in the way. Before, it only said *The map service didn't answer*.
+- The same goes for drive times, public transport, trips, **Best order** and **Add a place**, which used to fail without a reason. A trip with no road between two stops now says so.
 
 ### 0.6.1 (04/10/2026, beta)
 - Help Desk task button finds *Create task* however HubSpot draws it, and opens a collapsed Tasks card first. If it still can't, the console says so before the pop-up is used.
