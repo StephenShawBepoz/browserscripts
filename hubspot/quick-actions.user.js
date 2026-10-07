@@ -502,7 +502,7 @@
   // Drag the dots at the bar's left end to move it. The spot is kept as a distance from the nearest
   // corner, so it stays in that corner when the window changes size, and every HubSpot tab uses it.
   // The panel opens towards the middle of the screen, and the drive time sits on the other side of the bar.
-  const EDGE = 8, CHIP_GAP = 6, CHIP_ROOM = 30, PANEL_GAP = 12;
+  const EDGE = 8, CHIP_H = 24, CHIP_GAP = 6, CHIP_ROOM = CHIP_H + CHIP_GAP, PANEL_GAP = 12;
   const DEFAULT_SPOT = { h: 'right', x: 24, v: 'bottom', y: 90 };
   function savedSpot() {
     const s = store.get('barSpot', null);
@@ -528,30 +528,36 @@
     const within = (n, lo, hi) => Math.max(lo, Math.min(n, hi));
     const px = (n) => Math.round(n) + 'px';
     const left = within(s.h === 'right' ? vw - s.x - w : s.x, EDGE, vw - EDGE - w);
-    const top = within(s.v === 'bottom' ? vh - s.y - h : s.y,
-      EDGE + (s.v === 'top' ? CHIP_ROOM : 0), vh - EDGE - h - (s.v === 'bottom' ? CHIP_ROOM : 0));
+    // The panel opens on whichever side of the bar has more room, judged from where the bar ends up
+    // on this screen (a spot saved on a bigger one can land in the other half)
+    const want = s.v === 'bottom' ? vh - s.y - h : s.y;
+    const up = within(want, 0, vh - h) + h / 2 > vh / 2;
+    const top = within(want, EDGE + (up ? 0 : CHIP_ROOM), vh - EDGE - h - (up ? CHIP_ROOM : 0));
     const right = vw - left - w, bottom = vh - top - h;
 
-    // Held from its own corner, so tucking the bar away shrinks it towards that corner
+    // Held from its own corner, so tucking the bar away shrinks it towards that corner.
+    // The drive time and panel line up with the same edges.
     Object.assign(bar.style,
       s.h === 'right' ? { left: 'auto', right: px(right) } : { left: px(left), right: 'auto' },
       s.v === 'bottom' ? { top: 'auto', bottom: px(bottom) } : { top: px(top), bottom: 'auto' });
 
     const chip = document.getElementById('oqa-chip');
     if (chip) {
+      const chipTop = up ? top + h + CHIP_GAP : top - CHIP_ROOM;
       Object.assign(chip.style,
         s.h === 'right' ? { left: 'auto', right: px(right), maxWidth: px(left + w - 24) } : { left: px(left), right: 'auto', maxWidth: px(vw - left - 24) },
-        s.v === 'bottom' ? { top: px(top + h + CHIP_GAP), bottom: 'auto' } : { top: 'auto', bottom: px(bottom + h + CHIP_GAP) });
+        s.v === 'bottom' ? { top: 'auto', bottom: px(vh - chipTop - CHIP_H) } : { top: px(chipTop), bottom: 'auto' });
     }
 
     const p = panel.el;
     if (p) {
       const pw = p.offsetWidth;
+      const pl = within(s.h === 'right' ? left + w - pw : left, EDGE, vw - EDGE - pw);
       Object.assign(p.style,
-        { left: px(within(s.h === 'right' ? left + w - pw : left, 16, vw - 16 - pw)), right: 'auto' },
-        s.v === 'bottom'
-          ? { top: 'auto', bottom: px(bottom + h + PANEL_GAP), maxHeight: px(Math.max(160, top - PANEL_GAP - 24)) }
-          : { top: px(top + h + PANEL_GAP), bottom: 'auto', maxHeight: px(Math.max(160, vh - top - h - PANEL_GAP - 24)) });
+        s.h === 'right' ? { left: 'auto', right: px(vw - pl - pw) } : { left: px(pl), right: 'auto' },
+        up
+          ? { top: 'auto', bottom: px(bottom + h + PANEL_GAP), maxHeight: px(Math.max(0, top - PANEL_GAP - 24)) }
+          : { top: px(top + h + PANEL_GAP), bottom: 'auto', maxHeight: px(Math.max(0, vh - top - h - PANEL_GAP - 24)) });
     }
     return { h: s.h, x: s.h === 'right' ? right : left, v: s.v, y: s.v === 'bottom' ? bottom : top };
   }
@@ -597,7 +603,7 @@
     });
     bar.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => openPanel(btn.dataset.mode)));
 
-    // The logo tucks the bar away to just itself (remembered), for when it sits over something
+    // The logo tucks the bar away to just itself and the dots (remembered), for when it sits over something
     const markBtn = bar.querySelector('[data-act="collapse"]');
     let tucked = false;
     const chip = document.createElement('button');
@@ -630,11 +636,12 @@
     const grip = bar.querySelector('[data-act="move"]');
     let drag = null, droppedAt = 0;
     grip.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return;
+      // Ctrl + click on a Mac opens the context menu, which swallows the release
+      if (e.button !== 0 || e.ctrlKey) return;
       e.preventDefault();
       const r = bar.getBoundingClientRect();
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: r.left, top: r.top, spot: null };
-      grip.setPointerCapture(e.pointerId);
+      try { grip.setPointerCapture(e.pointerId); } catch (x) { /* the pointer has already gone */ }
       bar.classList.add('oqa-dragging');
       document.documentElement.classList.add('oqa-moving');
     });
@@ -645,21 +652,25 @@
       if (!drag.spot && Math.abs(dx) + Math.abs(dy) < 4) return;
       drag.spot = placeBar(spotAt(drag.left + dx, drag.top + dy, bar)) || drag.spot;
     });
-    const drop = (e, keep) => {
-      if (!drag || e.pointerId !== drag.id) return;
+    const endDrag = (keep) => {
+      if (!drag) return;
       if (drag.spot && keep) { store.set('barSpot', drag.spot); droppedAt = Date.now(); }
+      // A plain click focuses the dots, ready for the arrow keys. A drag leaves focus where it was.
+      else if (keep) grip.focus({ preventScroll: true });
       drag = null;
       bar.classList.remove('oqa-dragging');
       document.documentElement.classList.remove('oqa-moving');
       if (!keep) placeBar();
     };
+    const drop = (e, keep) => { if (drag && e.pointerId === drag.id) endDrag(keep); };
     grip.addEventListener('pointerup', (e) => drop(e, true));
     grip.addEventListener('lostpointercapture', (e) => drop(e, true));
     grip.addEventListener('pointercancel', (e) => drop(e, false));
+    grip.addEventListener('contextmenu', () => endDrag(false));
     grip.addEventListener('keydown', (e) => {
       const step = e.shiftKey ? 50 : 10;
       const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
-      if (!d || drag) return;
+      if (!d || drag || e.altKey || e.ctrlKey || e.metaKey) return;
       e.preventDefault();
       e.stopPropagation();
       const r = bar.getBoundingClientRect();
@@ -1126,7 +1137,7 @@
         all[key] = { text, at: Date.now() };
         store.set('chips', all);
       } catch (e) {
-        log('drive time under the bar failed:', e.message);
+        log('drive time next to the bar failed:', e.message);
       }
       setChip(chip, key, text);
     }, CHIP_WAIT);

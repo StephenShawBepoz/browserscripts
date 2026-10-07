@@ -69,7 +69,7 @@ The purple bar (bottom right) has five buttons. Hover over one to see what it do
 | Train | Public transport to the customer: the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |
 
-**Drive time at a glance.** Under the bar (or above it, if you've moved the bar near the top), each record shows how long the drive is from the nearest Oolio office, for example *25 min from the Sydney office*. Click it for full directions. It's worked out once you've been on a record for a moment and then remembered for a week, so flicking through records costs nothing. Turn it off in the cog's settings.
+**Drive time at a glance.** Under the bar (or above it, if you've moved the bar into the top half of the screen), each record shows how long the drive is from the nearest Oolio office, for example *25 min from the Sydney office*. Click it for full directions. It's worked out once you've been on a record for a moment and then remembered for a week, so flicking through records costs nothing. Turn it off in the cog's settings.
 
 **Esc** closes HubSpot's Schedule and Task windows (an open drop-down closes first). It presses HubSpot's own Cancel or close button, so you lose what you'd typed, as you would with those buttons.
 

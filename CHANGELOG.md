@@ -63,7 +63,7 @@
 
 ### 0.7.0 (07/10/2026, beta)
 - Move the bar anywhere on the page: drag the dots at its left end, or click them and use the arrow keys. Every HubSpot tab uses the same spot, and it stays in its corner when the window changes size.
-- The drive time and the panel move with it. The panel opens towards the middle of the screen, so near the top it opens below the bar.
+- The drive time and the panel move with it. The panel opens towards the middle of the screen, so in the top half it opens below the bar.
 - Double-click the dots, or click **Put them back bottom right** in settings, to put it back.
 
 ### 0.6.2 (05/10/2026, beta)
