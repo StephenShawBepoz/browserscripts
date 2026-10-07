@@ -61,6 +61,11 @@
 
 ## HubSpot: Quick actions
 
+### 0.7.0 (07/10/2026, beta)
+- Move the bar anywhere on the page: drag the dots at its left end, or click them and use the arrow keys. Every HubSpot tab uses the same spot, and it stays in its corner when the window changes size.
+- The drive time and the panel move with it. The panel opens towards the middle of the screen, so near the top it opens below the bar.
+- Double-click the dots, or click **Put them back bottom right** in settings, to put it back.
+
 ### 0.6.2 (05/10/2026, beta)
 - When a map service fails, the panel now says which one and why, with what to do: blocked by your network or Tampermonkey, turned away because a shared office or VPN connection is busy (HTTP 429), down at its end, too slow, or a Wi-Fi sign-in page in the way. Before, it only said *The map service didn't answer*.
 - The same goes for drive times, public transport, trips, **Best order** and **Add a place**, which used to fail without a reason. A trip with no road between two stops now says so.

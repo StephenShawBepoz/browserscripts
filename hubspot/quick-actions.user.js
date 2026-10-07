@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.6.2
+// @version      0.7.0
 // @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -94,12 +94,17 @@
 
       /* ---------- Toolbar ---------- */
       #oqa-bar { position:fixed; right:24px; bottom:90px; z-index:2147483000; display:none; align-items:center; gap:2px;
-        height:44px; padding:0 4px 0 14px; border-radius:999px; background:var(--oolio-purple); color:#fff;
+        height:44px; padding:0 4px 0 2px; border-radius:999px; background:var(--oolio-purple); color:#fff; user-select:none;
         box-shadow:0 6px 20px rgba(103,58,182,.35), 0 1px 3px rgba(34,34,34,.2); }
+      #oqa-bar.oqa-dragging { box-shadow:0 12px 32px rgba(103,58,182,.45), 0 2px 6px rgba(34,34,34,.25); }
+      #oqa-bar .oqa-grip { width:18px; margin-right:2px; color:rgba(255,255,255,.7); cursor:grab; touch-action:none; }
+      #oqa-bar .oqa-grip:hover { color:#fff; }
+      #oqa-bar .oqa-grip svg { width:16px; height:16px; }
+      html.oqa-moving, html.oqa-moving * { cursor:grabbing !important; user-select:none !important; }
       #oqa-bar .oqa-markbtn { width:auto; padding:0 4px; margin-left:-4px; }
       #oqa-bar .oqa-markbtn svg { width:24px; height:auto; }
-      #oqa-bar.oqa-collapsed { padding:0 4px; }
-      #oqa-bar.oqa-collapsed > :not(.oqa-markbtn) { display:none; }
+      #oqa-bar.oqa-collapsed { padding:0 4px 0 2px; }
+      #oqa-bar.oqa-collapsed > :not(.oqa-markbtn):not(.oqa-grip) { display:none; }
       #oqa-bar.oqa-collapsed .oqa-markbtn { margin:0; padding:0 8px; }
       #oqa-bar .oqa-sep { width:1px; height:18px; margin:0 6px 0 10px; background:rgba(255,255,255,.35); }
       #oqa-bar button { position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:36px;
@@ -111,7 +116,7 @@
         background:#fff; color:var(--oolio-purple); font:700 10px/16px Inter, system-ui, sans-serif; text-align:center; }
       #oqa-bar .oqa-badge:empty { display:none; }
 
-      /* ---------- Drive time from the nearest office, under the bar ---------- */
+      /* ---------- Drive time from the nearest office, next to the bar ---------- */
       #oqa-chip { position:fixed; right:24px; bottom:60px; z-index:2147483000; display:none; align-items:center; gap:6px;
         height:24px; padding:0 10px; border:1px solid var(--oolio-line); border-radius:999px; background:#fff; color:var(--oolio-charcoal);
         box-shadow:0 2px 8px rgba(34,34,34,.12); font-size:12px; cursor:pointer; white-space:nowrap; max-width:calc(100vw - 48px); }
@@ -291,6 +296,7 @@
     up: lucide('<path d="m18 15-6-6-6 6"/>'),
     down: lucide('<path d="m6 9 6 6 6-6"/>'),
     back: lucide('<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>'),
+    grip: lucide('<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>'),
   };
   const MARK_PATH = 'd="M140.099 0C173.181 0 200 26.6979 200 59.6314C200 92.5649 173.181 119.263 140.099 119.263C124.677 119.263 110.616 113.461 99.9986 103.93C89.3837 113.461 75.3229 119.263 59.901 119.263C26.8186 119.263 0 92.5649 0 59.6314C0 26.6979 26.8186 0 59.901 0C75.3232 0 89.3841 5.80195 100.001 15.3329C110.616 5.80177 124.677 0 140.099 0ZM140.099 39.9185C129.163 39.9185 120.297 48.7443 120.297 59.6314C120.297 70.5185 129.163 79.3442 140.099 79.3442C151.035 79.3442 159.901 70.5185 159.901 59.6314C159.901 48.7443 151.035 39.9185 140.099 39.9185ZM59.901 39.9185C48.9647 39.9185 40.099 48.7443 40.099 59.6314C40.099 70.5185 48.9647 79.3442 59.901 79.3442C70.8373 79.3442 79.703 70.5185 79.703 59.6314C79.703 48.7443 70.8373 39.9185 59.901 39.9185Z"';
   const OOLIO_MARK = '<svg class="oqa-bigmark" viewBox="0 0 200 120" aria-label="Oolio"><path fill="#673AB6" fill-rule="evenodd" clip-rule="evenodd" ' + MARK_PATH + '/></svg>';
@@ -492,6 +498,64 @@
     return out;
   }
 
+  /* ---------------- Where the bar sits ---------------- */
+  // Drag the dots at the bar's left end to move it. The spot is kept as a distance from the nearest
+  // corner, so it stays in that corner when the window changes size, and every HubSpot tab uses it.
+  // The panel opens towards the middle of the screen, and the drive time sits on the other side of the bar.
+  const EDGE = 8, CHIP_GAP = 6, CHIP_ROOM = 30, PANEL_GAP = 12;
+  const DEFAULT_SPOT = { h: 'right', x: 24, v: 'bottom', y: 90 };
+  function savedSpot() {
+    const s = store.get('barSpot', null);
+    return s && (s.h === 'left' || s.h === 'right') && (s.v === 'top' || s.v === 'bottom') &&
+      isFinite(s.x) && isFinite(s.y) ? s : null;
+  }
+  const viewport = () => ({ vw: document.documentElement.clientWidth, vh: document.documentElement.clientHeight });
+
+  // The spot for the bar with its top-left corner here, measured from the nearest corner
+  function spotAt(left, top, bar) {
+    const { vw, vh } = viewport(), w = bar.offsetWidth, h = bar.offsetHeight;
+    const hs = left + w / 2 > vw / 2 ? 'right' : 'left', vs = top + h / 2 > vh / 2 ? 'bottom' : 'top';
+    return { h: hs, x: hs === 'right' ? vw - left - w : left, v: vs, y: vs === 'bottom' ? vh - top - h : top };
+  }
+
+  // Puts the bar at a spot (or the saved one), kept on screen, with the drive time and panel beside it.
+  // Returns where it ended up, or null while the bar is hidden.
+  function placeBar(spot) {
+    const bar = document.getElementById('oqa-bar');
+    if (!bar || bar.style.display === 'none') return null;
+    const s = spot || savedSpot() || DEFAULT_SPOT;
+    const { vw, vh } = viewport(), w = bar.offsetWidth, h = bar.offsetHeight;
+    const within = (n, lo, hi) => Math.max(lo, Math.min(n, hi));
+    const px = (n) => Math.round(n) + 'px';
+    const left = within(s.h === 'right' ? vw - s.x - w : s.x, EDGE, vw - EDGE - w);
+    const top = within(s.v === 'bottom' ? vh - s.y - h : s.y,
+      EDGE + (s.v === 'top' ? CHIP_ROOM : 0), vh - EDGE - h - (s.v === 'bottom' ? CHIP_ROOM : 0));
+    const right = vw - left - w, bottom = vh - top - h;
+
+    // Held from its own corner, so tucking the bar away shrinks it towards that corner
+    Object.assign(bar.style,
+      s.h === 'right' ? { left: 'auto', right: px(right) } : { left: px(left), right: 'auto' },
+      s.v === 'bottom' ? { top: 'auto', bottom: px(bottom) } : { top: px(top), bottom: 'auto' });
+
+    const chip = document.getElementById('oqa-chip');
+    if (chip) {
+      Object.assign(chip.style,
+        s.h === 'right' ? { left: 'auto', right: px(right), maxWidth: px(left + w - 24) } : { left: px(left), right: 'auto', maxWidth: px(vw - left - 24) },
+        s.v === 'bottom' ? { top: px(top + h + CHIP_GAP), bottom: 'auto' } : { top: 'auto', bottom: px(bottom + h + CHIP_GAP) });
+    }
+
+    const p = panel.el;
+    if (p) {
+      const pw = p.offsetWidth;
+      Object.assign(p.style,
+        { left: px(within(s.h === 'right' ? left + w - pw : left, 16, vw - 16 - pw)), right: 'auto' },
+        s.v === 'bottom'
+          ? { top: 'auto', bottom: px(bottom + h + PANEL_GAP), maxHeight: px(Math.max(160, top - PANEL_GAP - 24)) }
+          : { top: px(top + h + PANEL_GAP), bottom: 'auto', maxHeight: px(Math.max(160, vh - top - h - PANEL_GAP - 24)) });
+    }
+    return { h: s.h, x: s.h === 'right' ? right : left, v: s.v, y: s.v === 'bottom' ? bottom : top };
+  }
+
   /* ---------------- Toolbar ---------------- */
   const MODES = {
     drive: { icon: 'car', title: 'Drive time to the customer', heading: 'Drive' },
@@ -508,6 +572,8 @@
     bar.setAttribute('role', 'toolbar');
     bar.setAttribute('aria-label', 'Oolio quick actions');
     bar.innerHTML =
+      `<button type="button" class="oqa-grip" data-act="move" title="Drag to move. Double-click to put it back." ` +
+      `aria-label="Move these buttons with the arrow keys" aria-roledescription="drag handle">${ICON.grip}</button>` +
       `<button type="button" class="oqa-markbtn" data-act="collapse" aria-expanded="true" title="Hide these buttons" aria-label="Hide Oolio quick actions">${OOLIO_MARK_WHITE}</button>` +
       '<span class="oqa-sep"></span>' +
       `<button type="button" data-act="meeting" title="Book a meeting" aria-label="Book a meeting">${ICON.calendarPlus}</button>` +
@@ -549,6 +615,7 @@
       markBtn.setAttribute('aria-expanded', String(!c));
       markBtn.title = c ? 'Show Oolio quick actions' : 'Hide these buttons';
       markBtn.setAttribute('aria-label', c ? 'Show Oolio quick actions' : 'Hide Oolio quick actions');
+      placeBar();
     };
     markBtn.addEventListener('click', () => {
       const c = !bar.classList.contains('oqa-collapsed');
@@ -559,13 +626,72 @@
     });
     setCollapsed();
 
+    // The dots move the bar: drag them, or focus them and use the arrow keys. Double-click puts it back.
+    const grip = bar.querySelector('[data-act="move"]');
+    let drag = null, droppedAt = 0;
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const r = bar.getBoundingClientRect();
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: r.left, top: r.top, spot: null };
+      grip.setPointerCapture(e.pointerId);
+      bar.classList.add('oqa-dragging');
+      document.documentElement.classList.add('oqa-moving');
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      // A wobble while clicking isn't a move
+      if (!drag.spot && Math.abs(dx) + Math.abs(dy) < 4) return;
+      drag.spot = placeBar(spotAt(drag.left + dx, drag.top + dy, bar)) || drag.spot;
+    });
+    const drop = (e, keep) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (drag.spot && keep) { store.set('barSpot', drag.spot); droppedAt = Date.now(); }
+      drag = null;
+      bar.classList.remove('oqa-dragging');
+      document.documentElement.classList.remove('oqa-moving');
+      if (!keep) placeBar();
+    };
+    grip.addEventListener('pointerup', (e) => drop(e, true));
+    grip.addEventListener('lostpointercapture', (e) => drop(e, true));
+    grip.addEventListener('pointercancel', (e) => drop(e, false));
+    grip.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 50 : 10;
+      const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (!d || drag) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const r = bar.getBoundingClientRect();
+      const spot = placeBar(spotAt(r.left + d[0], r.top + d[1], bar));
+      if (spot) store.set('barSpot', spot);
+    });
+    grip.addEventListener('dblclick', () => {
+      // Two quick drags in a row aren't a double-click
+      if (Date.now() - droppedAt < 800) return;
+      store.remove('barSpot');
+      placeBar();
+    });
+    // Another tab moved it, or the window changed size
+    store.watch('barSpot', () => { if (!drag) placeBar(); });
+    let placing = false;
+    window.addEventListener('resize', () => {
+      if (placing) return;
+      placing = true;
+      requestAnimationFrame(() => { placing = false; if (!drag) placeBar(); });
+    });
+
     // HubSpot is a single-page app, so re-check the URL every second
     let lastKey = recordKey(getRecord());
     const badge = bar.querySelector('.oqa-badge');
     const setBadge = () => { const n = tripStops().length; badge.textContent = n ? String(n) : ''; };
     const sync = () => {
       const rec = getRecord();
-      bar.style.display = rec ? 'inline-flex' : 'none';
+      const display = rec ? 'inline-flex' : 'none';
+      if (bar.style.display !== display) {
+        bar.style.display = display;
+        placeBar();
+      }
       const key = recordKey(rec);
       if (key !== lastKey) {
         lastKey = key;
@@ -956,7 +1082,7 @@
     btn.click();
   }
 
-  /* ---------------- Drive time from the nearest office, under the bar ---------------- */
+  /* ---------------- Drive time from the nearest office, next to the bar ---------------- */
   // Shown on each record you stay on for a moment. Results are kept for a week per record, so a record
   // you've seen costs nothing, and nothing is asked for while you flick between records.
   const CHIP_WAIT = 1500, CHIP_DAYS = 7;
@@ -1619,6 +1745,7 @@
       '<div class="oqa-body"></div><footer></footer>';
     document.body.appendChild(el);
     Object.assign(panel, { el, rec, linked: null, companies: new Map(), picked: '', customer: null, dest: null });
+    placeBar();
     el.querySelector('[data-act="close"]').addEventListener('click', () => closePanel());
     el.querySelector('[data-act="settings"]').addEventListener('click', () => {
       if (el.dataset.view === 'settings') render();
@@ -2315,7 +2442,11 @@
       '<p class="oqa-error-text" hidden></p>' +
       '<small class="oqa-muted">For home, a nearby corner or your suburb is enough. Typed addresses are looked up on OpenStreetMap. ' +
       '"Use where I am now" sends no address and saves your spot to about 100 m; that point goes to the route services when you get directions.</small></form>' +
-      '<h3>Drive time under the buttons</h3>' +
+      '<h3>Where the buttons sit</h3>' +
+      '<p class="oqa-muted" style="margin:0">Drag the dots at the left end of the purple bar to move it anywhere, or click them and use the arrow keys. ' +
+      'Every HubSpot tab uses the same spot.</p>' +
+      '<div class="oqa-inline"><button type="button" class="oqa-btn oqa-quiet" data-act="respot">Put them back bottom right</button></div>' +
+      '<h3>Drive time next to the buttons</h3>' +
       `<label class="oqa-check"><input type="checkbox" data-act="chip"${s.chip ? ' checked' : ''}>` +
       '<span>Show how long the drive is from the nearest Oolio office, on every record you open. ' +
       'Each record is looked up once a week at most.</span></label>' +
@@ -2349,6 +2480,10 @@
       saveSettings(st);
       showSettings();
     }));
+    b.querySelector('[data-act="respot"]').addEventListener('click', () => {
+      store.remove('barSpot');
+      placeBar();
+    });
     b.querySelector('[data-act="chip"]').addEventListener('change', (e) => {
       const st = loadSettings();
       st.chip = e.target.checked;
