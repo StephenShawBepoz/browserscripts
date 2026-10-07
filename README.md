@@ -13,6 +13,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 | **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
+| **HubSpot: Create ticket prefill** | Fills in new tickets for Bepoz Support: Pipeline *BP \| Bepoz Support*, Source *Internal*, Priority *P2 - High*, Brands *Bepoz*. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/create-ticket-prefill.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
 
@@ -126,6 +127,16 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 - *The company filter isn't working*: HubSpot has changed, so all contacts are listed. Let Stephen know. The browser console (search for *Oolio company contacts*) shows more.
 
 **Had it before it was on GitHub?** Install it from the link above, then delete the old copy (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
+
+### Create ticket prefill
+
+1. Click **Create ticket** in HubSpot.
+2. Wait a second while it fills in Pipeline *BP | Bepoz Support*, Source *Internal*, Priority *P2 - High* and Brands *Bepoz*. The cursor lands in **Ticket name**.
+3. Type the name and the rest as usual. You can change anything it filled in before you click **Create**.
+
+It switches every new ticket to Bepoz Support, even when HubSpot had picked another pipeline, so only install it if that's mostly what you create. Create date is left for HubSpot, which records the exact time.
+
+**Had it before it was on GitHub?** Install it from the link above, then delete the old copy: click the Tampermonkey icon, then **Dashboard**. While both are installed they fight over the same drop-downs.
 
 ## Problems or ideas
 

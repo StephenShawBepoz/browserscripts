@@ -1,5 +1,12 @@
 # Changelog
 
+## HubSpot: Create ticket prefill
+
+### 1.0.0 (07/10/2026)
+- New. Fills in HubSpot's Create ticket panel: Pipeline *BP | Bepoz Support*, Source *Internal*, Priority *P2 - High* and Brands *Bepoz*, then puts the cursor in Ticket name.
+- Create date is left blank so HubSpot records the exact time. Picking today's date in the form could set it to midnight and throw out SLA and time-to-close.
+- If *Bepoz* ever isn't in the Brands list, the brand HubSpot picked is left alone rather than cleared.
+
 ## HubSpot: Company contacts
 
 ### 1.3.0 (04/10/2026)
