@@ -1,5 +1,18 @@
 # Changelog
 
+## YourOrder: Download menu images
+
+### 1.3.0 (08/10/2026)
+- Added to this repo, and updates itself from GitHub. If you installed the first copy by hand (*YourOrder - Download Menu Images*), delete it in Tampermonkey. Until you do, this one hides its button.
+- The zip includes `image-sizes.csv`: each image's width, height and file size, smallest first, so you can see which ones to ask the venue to resupply. The images are already the venue's original uploads, the largest copies YourOrder keeps.
+- The on-screen fallback finds images on venues that store them in their own Amazon S3 bucket, which is most of them. Before, it only looked for images.yourorder.io and found nothing on those venues.
+- If YourOrder ever shows its smaller cropped copies, the script downloads the full-size original instead.
+- Products whose only picture is on a size option now get that picture.
+- Oolio purple button, to match the other scripts.
+
+### 1.2
+- First version, installed by hand.
+
 ## HubSpot: Status prompt after email
 
 ### 1.2.0 (05/10/2026)

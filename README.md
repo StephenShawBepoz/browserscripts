@@ -2,12 +2,13 @@
 
 # Browser scripts: Oolio
 
-Small add-ons that make Oolio Office and HubSpot quicker to use. They run in your browser through Tampermonkey and use your own login, so there are no passwords or keys in here. Once installed, they keep themselves up to date.
+Small add-ons that make Oolio Office, HubSpot and YourOrder quicker to use. They run in your browser through Tampermonkey and use your own login, so there are no passwords or keys in here. Once installed, they keep themselves up to date.
 
 ## Scripts
 
 | Script | What it does | Install |
 |---|---|---|
+| **YourOrder: Download menu images** | Adds a **Download menu images** button to YourOrder menus. Saves every product image, full size, into one zip, with a list of each image's size. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/yourorder/menu-images.user.js) |
 | **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
 | **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
@@ -31,7 +32,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 
 Tampermonkey checks for new versions once a day and installs them for you. To get one straight away, click the Tampermonkey icon, then **Utilities** > **Check for userscript updates**.
 
-**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exceptions are *Company contacts* and *Status prompt after email*: the copies you had before they were on GitHub stay, so delete them (see each script's notes below).
+**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exceptions are *Company contacts*, *Status prompt after email* and *Download menu images*: the copies you had before they were on GitHub stay, so delete them (see each script's notes below).
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
@@ -42,6 +43,19 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 1. In Oolio Office, go to **Logs > Devices** and set the venue, date range and filters.
 2. Click **Download logs** (bottom right) and pick **CSV** (for Excel) or **JSON**.
 3. The file saves to Downloads, named with the date range.
+
+### Download menu images (YourOrder)
+
+1. Open the venue's YourOrder site and go into the menu (for example click **Begin Ordering**).
+2. Click **Download menu images** (bottom left).
+3. A zip named after the venue saves to Downloads, with one image per product and `image-sizes.csv`.
+
+- Images are the venue's original uploads, the largest copies YourOrder has. Nothing bigger can be downloaded.
+- `image-sizes.csv` lists each image's width and height, smallest first. Anything under about 800 pixels is worth asking the venue to resupply.
+- If any images couldn't be downloaded, `failed.txt` in the zip lists them.
+- If the menu doesn't load in the usual way, the script saves the images showing on screen instead. Scroll to the bottom of the menu first so they've all loaded.
+
+**Had the first copy?** If you installed *YourOrder - Download Menu Images* by hand, delete it in Tampermonkey (click the icon, then **Dashboard**). Until you do, this one hides its button.
 
 ### Prefill meeting from ticket
 
@@ -153,7 +167,7 @@ Message Stephen Shaw on Teams.
 
 ## For maintainers
 
-- One script per file, grouped by site (`oolio-office/`, `hubspot/`).
+- One script per file, grouped by site (`oolio-office/`, `hubspot/`, `yourorder/`).
 - Every script header needs `@namespace oolio-userscripts`, `@author Stephen Shaw`, and `@updateURL` and `@downloadURL` pointing at its raw file on `main`. Changing the namespace or name makes Tampermonkey install a second copy.
 - Bump `@version` on every change and add a line to [CHANGELOG.md](CHANGELOG.md). Tampermonkey only updates when the version goes up.
 - Updates go out from `main`, so anything merged there reaches everyone within a day. Test before merging.
