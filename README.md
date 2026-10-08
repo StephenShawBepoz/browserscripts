@@ -9,7 +9,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | Script | What it does | Install |
 |---|---|---|
 | **Oolio Office: Download Device Logs** | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/oolio-office/device-logs.user.js) |
-| **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds five buttons to tickets, deals, companies and contacts: book a meeting, create a task, drive time, public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
+| **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds four buttons to tickets, deals, companies and contacts: book a meeting, create a task, a map with drive time and public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 | **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
@@ -57,7 +57,7 @@ On tickets and deals, the meeting title and a link back to the record are filled
 
 This replaces *Prefill meeting from ticket*. Once it's installed, remove that one: click the Tampermonkey icon, then **Dashboard**, and delete it. While both are installed you only see the new buttons, and the meeting details are only added once.
 
-The purple bar (bottom right) has five buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away, and again to bring it back.
+The purple bar (bottom right) has four buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away, and again to bring it back.
 
 **Moving the bar.** Drag the dots at its left end to put it anywhere on the page, for example when it sits over something you need. Or click the dots and use the arrow keys (hold **Shift** for bigger steps). Every HubSpot tab uses the same spot, and it stays in its corner when the window changes size. Double-click the dots, or click **Put them back bottom right** in the cog's settings, to put it back.
 
@@ -65,8 +65,7 @@ The purple bar (bottom right) has five buttons. Hover over one to see what it do
 |---|---|
 | Calendar | Book a meeting. Works exactly like *Prefill meeting from ticket* above. |
 | Checklist | Create a task, linked to the record. The title starts as *Follow up: [record name]* with the cursor at the end, so type the rest. In Help Desk it uses the Tasks card's own *Create task*, so the task window opens right there. |
-| Car | Drive time and distance to the customer, with a small map. |
-| Train | Public transport to the customer: the next departures, each step, and when you'd arrive. |
+| Map | How to get to the customer, with a small map. It opens on **Car**: drive time and distance. Click **Public transport** at the top for the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |
 
 **Drive time at a glance.** Under the bar (or above it, if you've moved the bar into the top half of the screen), each record shows how long the drive is from the nearest Oolio office, for example *25 min from the Sydney office*. Click it for full directions. It's worked out once you've been on a record for a moment and then remembered for a week, so flicking through records costs nothing. Turn it off in the cog's settings.
@@ -75,9 +74,9 @@ The purple bar (bottom right) has five buttons. Hover over one to see what it do
 
 **Where trips start.** Out of the box, from the nearest Oolio office to the customer: Melbourne (North Melbourne), Sydney (Mascot), Brisbane (Pinkenba), Adelaide (Kingswood), Perth (Subiaco), Auckland (Grey Lynn), Warrington or South Carolina. Pick a different start from the list for one trip, or click the cog and star another start (an office, a place you've saved such as *Home*, or your current location) to make it the default.
 
-**Car and train.** Pick a different start from the list, including *My current location* or a one-off address. The arrows swap the trip so it goes from the customer to you. If the record has more than one company (often a Head Office and the venue), click **pick another**. If the address is wrong or missing, click **Edit address**; your fix is kept in your browser only, so update the company in HubSpot as well. Click the result to open the trip in Google Maps for live traffic and turn-by-turn.
+**The map.** Pick a different start from the list, including *My current location* or a one-off address. The arrows swap the trip so it goes from the customer to you. If the record has more than one company (often a Head Office and the venue), click **pick another**. If the address is wrong or missing, click **Edit address**; your fix is kept in your browser only, so update the company in HubSpot as well. Click the result to open the trip in Google Maps for live traffic and turn-by-turn.
 
-Public transport times in the panel are off until you turn them on (see *Where the times come from*). Until then the train button opens Google Maps with live times.
+Public transport times in the panel are off until you turn them on (see *Where the times come from*). Until then, **Public transport** in the map links to Google Maps with live times.
 
 **Trips.** Open each customer's ticket or deal in its own tab, then click the route button in any of them. Every record you have open is listed under *Open in your tabs*; click one to add it, or use **Add to trip** under a drive time. Then:
 - **Best order** works out the quickest order to visit them.

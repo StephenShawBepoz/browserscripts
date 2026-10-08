@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.7.0
-// @description  Meeting, task, drive time, public transport and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
+// @version      0.8.0
+// @description  Meeting, task, map (drive time and public transport) and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js
@@ -167,6 +167,12 @@
       #oqa-panel .oqa-icon-btn svg { width:18px; height:18px; }
       #oqa-panel :focus-visible { outline:2px solid var(--oolio-purple); outline-offset:1px; }
 
+      #oqa-panel .oqa-travel { display:flex; gap:4px; margin:0 0 10px; padding:3px; border-radius:10px; background:var(--oolio-tint); }
+      #oqa-panel .oqa-travel button { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px;
+        padding:0 10px; border:0; border-radius:8px; background:transparent; color:var(--oolio-grey); font-weight:700; cursor:pointer; }
+      #oqa-panel .oqa-travel button:hover { color:var(--oolio-purple); }
+      #oqa-panel .oqa-travel button[aria-pressed="true"] { background:#fff; color:var(--oolio-purple); box-shadow:0 1px 3px rgba(34,34,34,.12); }
+      #oqa-panel .oqa-travel svg { width:16px; height:16px; }
       #oqa-panel .oqa-ends { position:relative; display:grid; grid-template-columns:minmax(0, 1fr); gap:4px; padding:0 40px 12px 0; }
       #oqa-panel .oqa-ends.oqa-solo { padding-right:0; }
       #oqa-panel .oqa-end { display:flex; align-items:flex-start; gap:10px; min-height:36px; min-width:0; }
@@ -291,6 +297,7 @@
     trash: lucide('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>'),
     star: lucide('<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'),
     task: lucide('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'),
+    map: lucide('<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>'),
     route: lucide('<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>'),
     plus: lucide('<path d="M5 12h14"/><path d="M12 5v14"/>'),
     up: lucide('<path d="m18 15-6-6-6 6"/>'),
@@ -564,9 +571,13 @@
 
   /* ---------------- Toolbar ---------------- */
   const MODES = {
-    drive: { icon: 'car', title: 'Drive time to the customer', heading: 'Drive' },
-    transit: { icon: 'train', title: 'Public transport to the customer', heading: 'Public transport' },
+    map: { icon: 'map', title: 'Map: drive time and public transport to the customer', heading: 'Map' },
     trip: { icon: 'route', title: 'Trip with several stops', heading: 'Trip' },
+  };
+  // How you're getting there, in the map panel
+  const TRAVEL = {
+    drive: { icon: 'car', label: 'Car' },
+    transit: { icon: 'train', label: 'Public transport' },
   };
 
   function toolbar() {
@@ -611,7 +622,7 @@
     chip.type = 'button';
     chip.className = 'tm-oolio';
     chip.title = 'Drive time from the nearest Oolio office. Click for directions.';
-    chip.addEventListener('click', () => openPanel('drive'));
+    chip.addEventListener('click', () => openPanel('map'));
     document.body.appendChild(chip);
     const setCollapsed = () => {
       const c = store.get('barCollapsed', false) === true || tucked;
@@ -1680,7 +1691,7 @@
 
   /* ---------------- Panel: drive, public transport and trip ---------------- */
   // The panel is also the lookup context for the record on screen (linked companies, company cache)
-  const panel = { el: null, mode: 'drive', draft: '', ordering: false, focusNext: null, rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
+  const panel = { el: null, mode: 'map', travel: 'drive', draft: '', ordering: false, focusNext: null, rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
 
   // Where you start: your default place, or whatever you picked earlier in this tab
   function currentFrom(s) {
@@ -1712,6 +1723,8 @@
     const rec = getRecord();
     if (!rec) return;
     if (panel.el && panel.mode === mode && recordKey(panel.rec) === recordKey(rec)) return closePanel();
+    // The map always opens on drive time
+    if (mode === 'map' && !(panel.el && panel.mode === 'map')) panel.travel = 'drive';
     panel.mode = mode;
     if (!panel.el || recordKey(panel.rec) !== recordKey(rec)) {
       closePanel(true);
@@ -1782,7 +1795,7 @@
   function focusKey() {
     const f = panel.el && panel.el.contains(document.activeElement) ? document.activeElement : null;
     if (!f) return null;
-    const a = ['data-act', 'data-up', 'data-down', 'data-remove', 'data-suggest'].find((x) => f.hasAttribute(x));
+    const a = ['data-act', 'data-up', 'data-down', 'data-remove', 'data-suggest', 'data-travel'].find((x) => f.hasAttribute(x));
     if (a) return `[${a}="${f.getAttribute(a)}"]`;
     if (f.classList.contains('oqa-from')) return '.oqa-from';
     if (f.classList.contains('oqa-other-input')) return '.oqa-other-input';
@@ -1797,7 +1810,7 @@
 
   function setFooter() {
     const s = loadSettings();
-    const transit = panel.mode === 'transit' && s.transit;
+    const transit = panel.mode === 'map' && panel.travel === 'transit' && s.transit;
     panel.el.querySelector('footer').innerHTML =
       'Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. ' +
       (transit
@@ -2007,7 +2020,7 @@
     box.querySelector('[data-act="cancel"]').addEventListener('click', renderCustomer);
   }
 
-  /* ----- Drive and public transport views ----- */
+  /* ----- Map view: drive or public transport ----- */
   function showRoute() {
     const el = panel.el;
     el.dataset.view = 'route';
@@ -2015,13 +2028,24 @@
     const you = `<div class="oqa-end"><span class="oqa-dot"></span><div>${fromPicker(s, s.direction === 'to' ? 'Start from' : 'Go to')}</div></div>`;
     const cust = '<div class="oqa-end"><span class="oqa-dot oqa-cust-dot"></span><div class="oqa-cust">' + skeleton(160) + skeleton(220) + '</div></div>';
 
-    body().innerHTML =
+    const travel = '<div class="oqa-travel" role="group" aria-label="How you\'re getting there">' +
+      Object.entries(TRAVEL).map(([k, t]) =>
+        `<button type="button" data-travel="${k}" aria-pressed="${panel.travel === k}">${ICON[t.icon]}${t.label}</button>`).join('') + '</div>';
+
+    body().innerHTML = travel +
       '<div class="oqa-ends">' + (s.direction === 'to' ? you + cust : cust + you) +
       `<button type="button" class="oqa-icon-btn oqa-swap" data-act="swap" title="Swap start and end" aria-label="Swap start and end">${ICON.swap}</button></div>` +
       '<div class="oqa-map"></div><div class="oqa-result"></div><p class="oqa-note" hidden></p>' +
       '<div class="oqa-actions"></div><div class="oqa-more"></div>';
 
     const b = body();
+    b.querySelectorAll('[data-travel]').forEach((btn) => btn.addEventListener('click', () => {
+      if (panel.travel === btn.dataset.travel) return;
+      panel.travel = btn.dataset.travel;
+      b.querySelectorAll('[data-travel]').forEach((x) => x.setAttribute('aria-pressed', String(x === btn)));
+      setFooter();
+      calculate();
+    }));
     wireFromPicker(b, s, calculate);
     b.querySelector('[data-act="swap"]').addEventListener('click', () => {
       const st = loadSettings();
@@ -2049,7 +2073,7 @@
     if (!panel.el || panel.el.dataset.view !== 'route') return;
     const run = ++panel.run;
     const live = () => run === panel.run && !!panel.el;
-    const mode = panel.mode;
+    const mode = panel.travel;
     const b = body();
     const result = b.querySelector('.oqa-result');
     const map = b.querySelector('.oqa-map');
@@ -2194,7 +2218,7 @@
     !stops.some((x) => x.url === recordUrl(t) || (x.also || []).includes(recordUrl(t))));
   const suggestionKey = () => tripSuggestions(tripStops()).map((t) => t.key + ':' + t.title).sort().join('|');
 
-  // "Add to trip" under a drive or public transport result
+  // "Add to trip" under a map result
   function tripButton(box, c, dest) {
     const stops = tripStops();
     const i = stops.findIndex((x) => x.key === c.key);
@@ -2465,7 +2489,7 @@
       `<label class="oqa-check"><input type="checkbox" data-act="transit"${s.transit ? ' checked' : ''}>` +
       '<span>Show public transport times in the panel, from <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a>. ' +
       'It\'s a free volunteer service for personal, non-commercial use, and they ask to hear from you before you use it. ' +
-      'When off, the public transport button opens Google Maps.</span></label>' +
+      'When off, Public transport in the map links to Google Maps instead.</span></label>' +
       '<details><summary>Advanced</summary>' +
       '<p class="oqa-muted" style="margin:6px 0 0">Service addresses, in case one moves or asks you to switch. Clear a box to go back to the default.</p>' +
       ['geocode:Address lookup', 'drive:Driving routes', 'transit:Public transport'].map((x) => {
