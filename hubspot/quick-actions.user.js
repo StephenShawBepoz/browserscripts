@@ -168,8 +168,9 @@
       #oqa-panel :focus-visible { outline:2px solid var(--oolio-purple); outline-offset:1px; }
 
       #oqa-panel .oqa-travel { display:flex; gap:4px; margin:0 0 10px; padding:3px; border-radius:10px; background:var(--oolio-tint); }
-      #oqa-panel .oqa-travel button { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px;
-        padding:0 10px; border:0; border-radius:8px; background:transparent; color:var(--oolio-grey); font-weight:700; cursor:pointer; }
+      #oqa-panel .oqa-travel button { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:30px;
+        padding:4px 8px; border:0; border-radius:8px; background:transparent; color:#5F5F5F; font-weight:700; line-height:1.2;
+        text-align:center; cursor:pointer; }
       #oqa-panel .oqa-travel button:hover { color:var(--oolio-purple); }
       #oqa-panel .oqa-travel button[aria-pressed="true"] { background:#fff; color:var(--oolio-purple); box-shadow:0 1px 3px rgba(34,34,34,.12); }
       #oqa-panel .oqa-travel svg { width:16px; height:16px; }
@@ -622,7 +623,7 @@
     chip.type = 'button';
     chip.className = 'tm-oolio';
     chip.title = 'Drive time from the nearest Oolio office. Click for directions.';
-    chip.addEventListener('click', () => openPanel('map'));
+    chip.addEventListener('click', () => openPanel('map', 'drive'));
     document.body.appendChild(chip);
     const setCollapsed = () => {
       const c = store.get('barCollapsed', false) === true || tucked;
@@ -1689,7 +1690,7 @@
     box.innerHTML = html;
   }
 
-  /* ---------------- Panel: drive, public transport and trip ---------------- */
+  /* ---------------- Panel: map and trip ---------------- */
   // The panel is also the lookup context for the record on screen (linked companies, company cache)
   const panel = { el: null, mode: 'map', travel: 'drive', draft: '', ordering: false, focusNext: null, rec: null, linked: null, companies: new Map(), picked: '', customer: null, dest: null, oneOff: '', run: 0, lastVia: '' };
 
@@ -1718,13 +1719,13 @@
     try { sessionStorage.setItem('oolio-qa:from', v); } catch (e) { /* ignore */ }
   }
 
-  // Toolbar buttons: the same button again closes, another one switches
-  function openPanel(mode) {
+  // Toolbar buttons: the same button again closes, another one switches.
+  // The map opens on the car. The drive time under the bar asks for the car, so on public transport it switches back.
+  function openPanel(mode, travel) {
     const rec = getRecord();
     if (!rec) return;
-    if (panel.el && panel.mode === mode && recordKey(panel.rec) === recordKey(rec)) return closePanel();
-    // The map always opens on drive time
-    if (mode === 'map' && !(panel.el && panel.mode === 'map')) panel.travel = 'drive';
+    if (panel.el && panel.mode === mode && (!travel || panel.travel === travel) && recordKey(panel.rec) === recordKey(rec)) return closePanel();
+    if (mode === 'map') panel.travel = travel || 'drive';
     panel.mode = mode;
     if (!panel.el || recordKey(panel.rec) !== recordKey(rec)) {
       closePanel(true);
@@ -1795,7 +1796,7 @@
   function focusKey() {
     const f = panel.el && panel.el.contains(document.activeElement) ? document.activeElement : null;
     if (!f) return null;
-    const a = ['data-act', 'data-up', 'data-down', 'data-remove', 'data-suggest', 'data-travel'].find((x) => f.hasAttribute(x));
+    const a = ['data-act', 'data-up', 'data-down', 'data-remove', 'data-suggest'].find((x) => f.hasAttribute(x));
     if (a) return `[${a}="${f.getAttribute(a)}"]`;
     if (f.classList.contains('oqa-from')) return '.oqa-from';
     if (f.classList.contains('oqa-other-input')) return '.oqa-other-input';
@@ -1916,7 +1917,7 @@
     n.textContent = o ? `Nearest is the ${o.label}${o.label.includes(o.area) ? '' : ' in ' + o.area}` : '';
   }
 
-  /* ----- Customer (drive and public transport views) ----- */
+  /* ----- Customer (map view) ----- */
 
   async function loadCustomer(run) {
     if (!panel.customer || (panel.customer.error && !panel.customer.override)) {
@@ -2489,7 +2490,7 @@
       `<label class="oqa-check"><input type="checkbox" data-act="transit"${s.transit ? ' checked' : ''}>` +
       '<span>Show public transport times in the panel, from <a href="https://transitous.org/api/" target="_blank" rel="noopener">Transitous</a>. ' +
       'It\'s a free volunteer service for personal, non-commercial use, and they ask to hear from you before you use it. ' +
-      'When off, Public transport in the map links to Google Maps instead.</span></label>' +
+      'When off, "Public transport" in the map links to Google Maps instead.</span></label>' +
       '<details><summary>Advanced</summary>' +
       '<p class="oqa-muted" style="margin:6px 0 0">Service addresses, in case one moves or asks you to switch. Clear a box to go back to the default.</p>' +
       ['geocode:Address lookup', 'drive:Driving routes', 'transit:Public transport'].map((x) => {

@@ -62,8 +62,8 @@
 ## HubSpot: Quick actions
 
 ### 0.8.0 (08/10/2026, beta)
-- The car and train buttons are now one **Map** button. It opens on drive time; click **Public transport** at the top of the panel to switch, and **Car** to go back. It opens on the car every time.
-- Clicking the drive time under the bar opens the map, as before.
+- The car and train buttons are now one **Map** button. It always opens on **Car**; click **Public transport** at the top of the panel to switch, and **Car** to go back.
+- Clicking the drive time under the bar opens the map on **Car**, or switches it back to **Car** if it's showing public transport.
 
 ### 0.7.0 (07/10/2026, beta)
 - Move the bar anywhere on the page: drag the dots at its left end, or click them and use the arrow keys. Every HubSpot tab uses the same spot, and it stays in its corner when the window changes size.
