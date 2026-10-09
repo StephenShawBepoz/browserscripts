@@ -64,7 +64,7 @@ The purple bar (bottom right) has four buttons. Hover over one to see what it do
 | Button | What it does |
 |---|---|
 | Calendar | Book a meeting. Works exactly like *Prefill meeting from ticket* above. |
-| Checklist | Create a task, linked to the record. The title starts as *Follow up: [record name]* with the cursor at the end, so type the rest. In Help Desk it uses the Tasks card's own *Create task*, so the task window opens right there. |
+| Checklist | Create a task, linked to the record. The title starts as *Follow up: [record name]* with the cursor at the end, so type the rest. In Help Desk it uses the Tasks card's own *Create task*, so the task window opens right there. If HubSpot is slow to show its own Task button, the task opens in a pop-up instead, and the page you're on is left alone. |
 | Map | How to get to the customer, with a small map. It opens on **Car**: drive time and distance. Click **Public transport** at the top for the next departures, each step, and when you'd arrive. |
 | Route | A trip with up to 9 customers in one drive. |
 

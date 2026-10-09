@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.8.0
+// @version      0.8.1
 // @description  Meeting, task, map (drive time and public transport) and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -112,6 +112,7 @@
       #oqa-bar button:hover, #oqa-bar button[aria-pressed="true"] { background:rgba(255,255,255,.2); }
       #oqa-bar button:focus-visible { outline:2px solid #fff; outline-offset:-2px; }
       #oqa-bar button svg { width:18px; height:18px; }
+      #oqa-bar button[aria-busy="true"] { opacity:.6; cursor:progress; }
       #oqa-bar .oqa-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
         background:#fff; color:var(--oolio-purple); font:700 10px/16px Inter, system-ui, sans-serif; text-align:center; }
       #oqa-bar .oqa-badge:empty { display:none; }
@@ -900,40 +901,41 @@
     }, 250);
   }
 
-  // Record pages: press HubSpot's Task button. If it can't be found, HubSpot opens the task
-  // window from the address too (?interaction=task), so reload with that instead.
+  // Record pages: press HubSpot's Task button, giving the page up to 6 seconds to draw it. If it's
+  // still not there, open the record in a pop-up straight into its task window. That leaves this
+  // page alone, so nothing half-typed in it is lost.
   let taskBusy = false;
   function taskOnRecord(rec) {
     if (taskBusy) return;
     taskBusy = true;
     closePanel();
+    const ours = document.querySelector('#oqa-bar [data-act="task"]');
+    if (ours) ours.setAttribute('aria-busy', 'true');
+    const done = () => {
+      taskBusy = false;
+      if (ours) ours.removeAttribute('aria-busy');
+    };
     const name = recordTitle();
     let tries = 0;
     const timer = setInterval(() => {
+      // Moved to another record while waiting: leave it
+      if (recordKey(getRecord()) !== recordKey(rec)) {
+        clearInterval(timer);
+        return done();
+      }
       const btn = findTaskButton(document);
       if (btn) {
         clearInterval(timer);
-        taskBusy = false;
+        done();
         btn.click();
         prefillTask(document, name);
-      } else if (++tries > 12) {
+      } else if (++tries > 24) {
         clearInterval(timer);
-        taskBusy = false;
-        try { sessionStorage.setItem('oolio-qa:task', recordKey(rec)); } catch (e) { /* ignore */ }
-        const u = new URL(location.href);
-        u.searchParams.set('interaction', 'task');
-        location.assign(u.toString());
+        done();
+        log('Record page: no Task button after 6 seconds, so opening the record in a pop-up instead');
+        recordModal(rec, 'task');
       }
     }, 250);
-  }
-
-  // After that reload: fill the title, once
-  function prefillAfterReload() {
-    let want = '';
-    try { want = sessionStorage.getItem('oolio-qa:task') || ''; sessionStorage.removeItem('oolio-qa:task'); } catch (e) { /* ignore */ }
-    if (want && want === recordKey(getRecord()) && /[?&]interaction=task\b/.test(location.search)) {
-      setTimeout(() => prefillTask(document, recordTitle()), 1500);
-    }
   }
 
   // Help Desk: press "Create task" in its own Tasks card, so HubSpot's task window opens right there.
@@ -967,7 +969,8 @@
     prefillTask(document, name);
   }
 
-  // Fallback when Help Desk has no Tasks card: open the ticket record in a pop-up, straight into its task window
+  // Fallback when there's no Task button to press (Help Desk without a Tasks card, or a record page
+  // that's slow to draw it): open the record in a pop-up, straight into its task window
   function recordModal(t, kind) {
     if (overlay) return;
     closePanel();
@@ -981,7 +984,7 @@
       '<div class="oqa-bar"><i></i></div></div>' +
       '<button id="oqa-close" type="button" title="Close (Esc)" aria-label="Close">' + ICON.x + '</button>';
     const frame = document.createElement('iframe');
-    frame.src = `/contacts/${t.portal}/record/0-5/${t.id}?interaction=${kind}`;
+    frame.src = `/contacts/${t.portal}/record/${t.type}/${t.id}?interaction=${kind}`;
     frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .2s';
     overlay.appendChild(frame);
     document.body.appendChild(overlay);
@@ -2689,6 +2692,5 @@
   // Skip the record page loaded inside the Help Desk meeting modal
   else if (window.top === window) {
     toolbar();
-    prefillAfterReload();
   }
 })();
