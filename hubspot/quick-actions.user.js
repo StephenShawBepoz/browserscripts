@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick actions
 // @namespace    oolio-userscripts
-// @version      0.8.1
+// @version      0.8.2
 // @description  Meeting, task, map (drive time and public transport) and multi-stop trip buttons on HubSpot tickets, deals, companies and contacts, worked out from the record's company address.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -127,8 +127,9 @@
       #oqa-chip b { font-weight:700; }
       #oqa-chip span { overflow:hidden; text-overflow:ellipsis; }
 
-      /* ---------- Meeting loading overlay (Help Desk) ---------- */
+      /* ---------- Loading overlay for the meeting and task pop-ups ---------- */
       #oqa-overlay { position:fixed; inset:0; z-index:2147483002; background:rgba(34,34,34,.55); }
+      #oqa-overlay:focus { outline:none; }
       #oqa-card { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:300px;
         padding:28px 24px 24px; border-radius:16px; background:#fff; text-align:center;
         box-shadow:0 12px 40px rgba(0,0,0,.25); border-top:4px solid var(--oolio-purple); }
@@ -787,6 +788,13 @@
     document.removeEventListener('keydown', onMeetingEsc);
   }
   function onMeetingEsc(e) { if (e.key === 'Escape' && !e.defaultPrevented) closeMeeting(); }
+  // The pop-up is a dialog that takes focus once it's on the page, so screen readers say what's happening
+  // and a second Enter can't reach the bar's button behind it
+  function popupLabel(el, label) {
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', label);
+    el.tabIndex = -1;
+  }
 
   function meetingModal(t) {
     if (overlay) return;
@@ -795,6 +803,7 @@
     overlay = document.createElement('div');
     overlay.id = 'oqa-overlay';
     overlay.className = 'tm-oolio';
+    popupLabel(overlay, 'Opening the scheduler');
     overlay.innerHTML =
       '<div id="oqa-card">' + OOLIO_MARK +
       '<p class="oqa-title">Opening the scheduler</p>' +
@@ -804,9 +813,11 @@
 
     const frame = document.createElement('iframe');
     frame.src = `/contacts/${t.portal}/record/0-5/${t.id}`;
-    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .2s';
+    // Hidden and unclickable until it's ready, so a click on the loading card can't land on the page inside
+    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s';
     overlay.appendChild(frame);
     document.body.appendChild(overlay);
+    overlay.focus();
     overlay.querySelector('#oqa-close').addEventListener('click', () => closeMeeting());
     document.addEventListener('keydown', onMeetingEsc);
     frame.addEventListener('load', () => {
@@ -841,6 +852,7 @@
         seenScheduler = true;
         meetingOpen = true;
         frame.style.opacity = '1';
+        frame.style.pointerEvents = 'auto';
         card.style.display = 'none';
       }
       if (!seenScheduler && tries - clickedAt > 40) {
@@ -906,14 +918,22 @@
   // page alone, so nothing half-typed in it is lost.
   let taskBusy = false;
   function taskOnRecord(rec) {
-    if (taskBusy) return;
+    // Already waiting, or the pop-up is open
+    if (taskBusy || overlay) return;
     taskBusy = true;
     closePanel();
     const ours = document.querySelector('#oqa-bar [data-act="task"]');
-    if (ours) ours.setAttribute('aria-busy', 'true');
+    const label = ours && ours.getAttribute('aria-label');
+    if (ours) {
+      ours.setAttribute('aria-busy', 'true');
+      ours.setAttribute('aria-label', 'Opening the task');
+    }
     const done = () => {
       taskBusy = false;
-      if (ours) ours.removeAttribute('aria-busy');
+      if (ours) {
+        ours.removeAttribute('aria-busy');
+        ours.setAttribute('aria-label', label);
+      }
     };
     const name = recordTitle();
     let tries = 0;
@@ -977,6 +997,7 @@
     overlay = document.createElement('div');
     overlay.id = 'oqa-overlay';
     overlay.className = 'tm-oolio';
+    popupLabel(overlay, 'Opening the task');
     overlay.innerHTML =
       '<div id="oqa-card">' + OOLIO_MARK +
       '<p class="oqa-title">Opening the task</p>' +
@@ -985,13 +1006,22 @@
       '<button id="oqa-close" type="button" title="Close (Esc)" aria-label="Close">' + ICON.x + '</button>';
     const frame = document.createElement('iframe');
     frame.src = `/contacts/${t.portal}/record/${t.type}/${t.id}?interaction=${kind}`;
-    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .2s';
+    // Hidden and unclickable until it's ready, so a click on the loading card can't land on the page inside
+    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s';
     overlay.appendChild(frame);
     document.body.appendChild(overlay);
+    overlay.focus();
     overlay.querySelector('#oqa-close').addEventListener('click', () => closeMeeting());
     document.addEventListener('keydown', onMeetingEsc);
     frame.addEventListener('load', () => {
-      try { frame.contentDocument.addEventListener('keydown', onMeetingEsc); } catch (e) { /* ignore */ }
+      // Esc on an open drop-down in the task window closes just the drop-down. That's decided
+      // before HubSpot handles the key, as the drop-down has gone by the time it reaches us.
+      try {
+        const fd = frame.contentDocument;
+        let dropdown = false;
+        frame.contentWindow.addEventListener('keydown', (e) => { dropdown = e.key === 'Escape' && dropdownOpen(fd); }, true);
+        fd.addEventListener('keydown', (e) => { if (!dropdown) onMeetingEsc(e); });
+      } catch (e) { /* ignore */ }
     });
     const card = overlay.querySelector('#oqa-card');
     const showError = (msg) => {
@@ -1013,6 +1043,7 @@
         seen = true;
         meetingOpen = true;
         frame.style.opacity = '1';
+        frame.style.pointerEvents = 'auto';
         card.style.display = 'none';
         const titleEl = d.querySelector('[data-selenium-test="highlightTitle"]');
         prefillTask(d, clean(titleEl ? titleEl.innerText : ''));
@@ -1091,15 +1122,20 @@
     return null;
   }
 
+  // A drop-down that's open (a list or menu, or one in the task window), which HubSpot closes on Esc
+  function dropdownOpen(doc) {
+    if ([...doc.querySelectorAll('[role="listbox"], [role="menu"]')].some(visible)) return true;
+    const win = taskWindow(doc);
+    return !!(win && win.querySelector('[aria-expanded="true"]'));
+  }
+
   function onEscape(e) {
     if (e.key !== 'Escape' || e.defaultPrevented || e.repeat || e.isComposing) return;
     const doc = document;
     // Our own panel has its own Esc handling
     if (panel.el && (panel.el.contains(doc.activeElement) || doc.activeElement === doc.body)) return;
     // An open drop-down closes first
-    if ([...doc.querySelectorAll('[role="listbox"], [role="menu"]')].some(visible)) return;
-    const win = taskWindow(doc);
-    if (win && win.querySelector('[aria-expanded="true"]')) return;
+    if (dropdownOpen(doc)) return;
     const btn = scheduleCancel(doc) || taskClose(doc) || schedulerFrameCancel(doc) ||
       (window.top !== window && location.pathname.startsWith('/calendar-select-iframe/') ? frameCloseInParent() : null);
     if (!btn) return;
@@ -2689,7 +2725,7 @@
   // Capture, so the key is seen before HubSpot's own boxes swallow it
   window.addEventListener('keydown', onEscape, true);
   if (location.pathname.startsWith('/calendar-select-iframe/')) scheduler();
-  // Skip the record page loaded inside the Help Desk meeting modal
+  // Skip the record page loaded inside our meeting and task pop-ups
   else if (window.top === window) {
     toolbar();
   }

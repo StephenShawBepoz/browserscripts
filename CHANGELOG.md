@@ -61,8 +61,14 @@
 
 ## HubSpot: Quick actions
 
+### 0.8.2 (10/10/2026, beta)
+- Pressing Enter or Space again while the task pop-up loads no longer opens a second pop-up later.
+- Esc on an open drop-down in the pop-up's task window closes just the drop-down, without asking *Close without saving?*
+- Clicks on the meeting and task pop-ups' loading card no longer reach the hidden record page behind it.
+- Screen readers now say *Opening the task* while it waits, and announce the pop-up when it opens.
+
 ### 0.8.1 (09/10/2026, beta)
-- The task button no longer reloads the page when HubSpot's own Task button is slow to appear, so you can't lose a half-written note or email. It waits up to 6 seconds, then opens the task in a pop-up, as Help Desk already does. The button fades while it waits.
+- The task button no longer reloads the page when HubSpot's own Task button is slow to appear, so you can't lose a half-written note or email. It waits up to 6 seconds, then opens the task in a pop-up, the same one Help Desk uses when it has no Tasks card. The button fades while it waits.
 
 ### 0.8.0 (08/10/2026, beta)
 - The car and train buttons are now one **Map** button. It always opens on **Car**; click **Public transport** at the top of the panel to switch, and **Car** to go back.
