@@ -61,6 +61,10 @@
 
 ## HubSpot: Quick actions
 
+### 0.8.3 (12/10/2026, beta)
+- Help Desk tasks open faster. The task button now uses HubSpot's own Task button or the Tasks card's link however HubSpot words it (*Create task*, *Create a task*, *Add task*). When it still needs the pop-up, it presses the ticket's Task button as soon as it's drawn and shows it straight away, instead of waiting 12 seconds.
+- Finds the task window's title box even if HubSpot rewords it. If it still can't, the browser console lists the boxes it saw, so it can be fixed.
+
 ### 0.8.2 (12/10/2026, beta)
 - Fixes the task button sticking on *Opening the task* on records since 0.8.1. When HubSpot's own Task button can't be found, the page reloads with the task window open again, as it did before 0.8.1. If there's unsaved text on the page, such as a half-written note, it asks first.
 - The task pop-up (Help Desk tickets without a Tasks card) no longer sits on its loading card: after 12 seconds it shows the ticket so you can use HubSpot's own Task button.
