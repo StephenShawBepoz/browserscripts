@@ -61,7 +61,10 @@
 
 ## HubSpot: Quick actions
 
-### 0.8.2 (10/10/2026, beta)
+### 0.8.2 (12/10/2026, beta)
+- Fixes the task button sticking on *Opening the task* on records since 0.8.1. When HubSpot's own Task button can't be found, the page reloads with the task window open again, as it did before 0.8.1. If there's unsaved text on the page, such as a half-written note, it asks first.
+- The task pop-up (Help Desk tickets without a Tasks card) no longer sits on its loading card: after 12 seconds it shows the ticket so you can use HubSpot's own Task button.
+- When the Task button can't be found, the browser console (search for *Oolio quick actions*) lists the buttons next to Meeting, so the finder can be fixed.
 - Pressing Enter or Space again while the task pop-up loads no longer opens a second pop-up later.
 - Esc on an open drop-down in the pop-up's task window closes just the drop-down, without asking *Close without saving?*
 - Clicks on the meeting and task pop-ups' loading card no longer reach the hidden record page behind it.

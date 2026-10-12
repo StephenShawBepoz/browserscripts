@@ -873,17 +873,32 @@
 
   // HubSpot's own Task button, in the row with Note, Email, Call and Meeting
   function findTaskButton(doc) {
-    const direct = doc.querySelector('[data-selenium-test="create-engagement-task-button"]');
+    const direct = doc.querySelector('[data-selenium-test="create-engagement-task-button"]') ||
+      [...doc.querySelectorAll('[data-selenium-test^="create-engagement-"], [data-test-id^="create-engagement-"]')]
+        .find((b) => /task/i.test(b.getAttribute('data-selenium-test') || b.getAttribute('data-test-id')));
     if (direct) return direct;
     const meet = doc.querySelector('[data-selenium-test="create-engagement-schedule-button"]');
     let row = meet && meet.parentElement;
     for (let i = 0; row && i < 5; i++, row = row.parentElement) {
       const hit = [...row.querySelectorAll('button, [role="button"]')].find((b) => b !== meet && !b.closest('.tm-oolio') &&
-        /^(create )?task$/i.test(clean(b.getAttribute('aria-label') || b.innerText || '')));
+        /^(create |add |new )?task$/i.test(buttonLabel(b)));
       if (hit) return hit;
     }
     return null;
   }
+  // When the Task button can't be found, the console lists what's next to the Meeting button, to fix the finder from
+  function logTaskButtons(doc) {
+    const meet = doc.querySelector('[data-selenium-test="create-engagement-schedule-button"]');
+    let row = meet && meet.parentElement;
+    for (let i = 0; row && i < 3 && row.parentElement; i++) row = row.parentElement;
+    const seen = row ? [...row.querySelectorAll('button, [role="button"]')].filter((b) => !b.closest('.tm-oolio')).slice(0, 20)
+      .map((b) => [buttonLabel(b) || '(no label)', b.getAttribute('data-selenium-test') || b.getAttribute('data-test-id')].filter(Boolean).join(' / ')) : [];
+    log('Record page: no Task button found.', meet ? 'Buttons near Meeting: ' + JSON.stringify(seen) : 'No Meeting button on the page either.');
+  }
+
+  // Text typed on the page that a reload would lose: a note, email or comment box with something in it
+  const unsavedText = () => [...document.querySelectorAll('[contenteditable="true"], textarea')]
+    .some((el) => !el.closest('.tm-oolio') && visible(el) && clean(el.isContentEditable ? el.textContent : el.value).length > 0);
 
   // The task window's title box ("Enter your task")
   const findTaskTitle = (doc) => doc.querySelector('input[placeholder="Enter your task" i], textarea[placeholder="Enter your task" i]');
@@ -913,9 +928,9 @@
     }, 250);
   }
 
-  // Record pages: press HubSpot's Task button, giving the page up to 6 seconds to draw it. If it's
-  // still not there, open the record in a pop-up straight into its task window. That leaves this
-  // page alone, so nothing half-typed in it is lost.
+  // Record pages: press HubSpot's Task button. If it can't be found, HubSpot opens the task window
+  // from the address too (?interaction=task), so reload with that, asking first if anything typed
+  // on the page would be lost. (0.8.1 opened a pop-up instead, which stuck on its loading card.)
   let taskBusy = false;
   function taskOnRecord(rec) {
     // Already waiting, or the pop-up is open
@@ -949,13 +964,26 @@
         done();
         btn.click();
         prefillTask(document, name);
-      } else if (++tries > 24) {
+      } else if (++tries > 12) {
         clearInterval(timer);
         done();
-        log('Record page: no Task button after 6 seconds, so opening the record in a pop-up instead');
-        recordModal(rec, 'task');
+        logTaskButtons(document);
+        if (unsavedText() && !confirm('To open the task, this page needs to reload, and anything you haven\'t saved on it will be lost. Reload now?')) return;
+        try { sessionStorage.setItem('oolio-qa:task', recordKey(rec)); } catch (e) { /* ignore */ }
+        const u = new URL(location.href);
+        u.searchParams.set('interaction', 'task');
+        location.assign(u.toString());
       }
     }, 250);
+  }
+
+  // After that reload: fill the title, once
+  function prefillAfterReload() {
+    let want = '';
+    try { want = sessionStorage.getItem('oolio-qa:task') || ''; sessionStorage.removeItem('oolio-qa:task'); } catch (e) { /* ignore */ }
+    if (want && want === recordKey(getRecord()) && /[?&]interaction=task\b/.test(location.search)) {
+      setTimeout(() => prefillTask(document, recordTitle()), 1500);
+    }
   }
 
   // Help Desk: press "Create task" in its own Tasks card, so HubSpot's task window opens right there.
@@ -989,8 +1017,7 @@
     prefillTask(document, name);
   }
 
-  // Fallback when there's no Task button to press (Help Desk without a Tasks card, or a record page
-  // that's slow to draw it): open the record in a pop-up, straight into its task window
+  // Fallback when Help Desk has no Tasks card: open the ticket record in a pop-up, straight into its task window
   function recordModal(t, kind) {
     if (overlay) return;
     closePanel();
@@ -1031,13 +1058,14 @@
     };
 
     // Wait for the task window (pressing Task if the address didn't open it), then close once it's gone
-    let seen = false, pressed = false, tries = 0;
+    let seen = false, pressed = false, shown = false, tries = 0;
     const timer = setInterval(() => {
       if (!overlay) return clearInterval(timer);
       tries++;
       let d;
       try { d = frame.contentDocument; } catch (e) { return; }
       if (!d || !d.body) return;
+      const loaded = d.readyState === 'complete' && d.location.href !== 'about:blank';
       const input = findTaskTitle(d);
       if (input && !seen) {
         seen = true;
@@ -1052,7 +1080,18 @@
         const btn = findTaskButton(d);
         if (btn) { pressed = true; btn.click(); }
       }
-      if (!seen && tries > 60) {
+      // No task window to be seen after 12 seconds: show the record as it is rather than leave the card up,
+      // so HubSpot's own Task button can be used there. × closes the pop-up.
+      if (!seen && !shown && loaded && tries > 24) {
+        shown = true;
+        meetingOpen = true;
+        frame.style.opacity = '1';
+        frame.style.pointerEvents = 'auto';
+        card.style.display = 'none';
+        logTaskButtons(d);
+        log('Task pop-up: no task window after 12 seconds, so showing the record as it is');
+      }
+      if (!seen && !shown && tries > 60) {
         clearInterval(timer);
         showError('The task window didn\'t open. Press Esc or × to close.');
       }
@@ -2728,5 +2767,6 @@
   // Skip the record page loaded inside our meeting and task pop-ups
   else if (window.top === window) {
     toolbar();
+    prefillAfterReload();
   }
 })();
