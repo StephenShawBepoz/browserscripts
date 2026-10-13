@@ -2,6 +2,10 @@
 
 ## myTNT: Copy HubSpot note
 
+### 1.1.0 (13/10/2026)
+- New **Copy customer message** button. Copies a message for the customer with their first name, consignment number, full tracking link, expected delivery date and item count.
+- Expected delivery is remembered from the shipment list and Track tab, the same way as the collection date. If it isn't known, the message leaves it out and the copied message says so.
+
 ### 1.0.0 (13/10/2026)
 - New. Adds a **Copy HubSpot note** button to myTNT shipment details. Copies the note as formatted text with the consignment number linked to TNT tracking, plus a plain-text copy.
 - Sent uses the collection date from the shipment list or Track tab, falling back to the booking date. State is worked out from the postcode. Weight is the total of the package lines.
