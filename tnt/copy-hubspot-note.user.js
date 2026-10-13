@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         myTNT: Copy HubSpot note
 // @namespace    oolio-userscripts
-// @version      1.0.0
-// @description  Adds a Copy HubSpot note button to myTNT shipment details. One click copies a formatted note, with the consignment number linked to tracking, ready to paste into a HubSpot ticket.
+// @version      1.1.0
+// @description  Adds Copy HubSpot note and Copy customer message buttons to myTNT shipment details. One click copies a formatted note or a customer-ready message, with the consignment number linked to tracking.
 // @author       Stephen Balderson
 // @match        https://mytnt.tnt.com/*
 // @icon         data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTQwLjA5OSAwQzE3My4xODEgMCAyMDAgMjYuNjk3OSAyMDAgNTkuNjMxNEMyMDAgOTIuNTY0OSAxNzMuMTgxIDExOS4yNjMgMTQwLjA5OSAxMTkuMjYzQzEyNC42NzcgMTE5LjI2MyAxMTAuNjE2IDExMy40NjEgOTkuOTk4NiAxMDMuOTNDODkuMzgzNyAxMTMuNDYxIDc1LjMyMjkgMTE5LjI2MyA1OS45MDEgMTE5LjI2M0MyNi44MTg2IDExOS4yNjMgMCA5Mi41NjQ5IDAgNTkuNjMxNEMwIDI2LjY5NzkgMjYuODE4NiAwIDU5LjkwMSAwQzc1LjMyMzIgMCA4OS4zODQxIDUuODAxOTUgMTAwLjAwMSAxNS4zMzI5QzExMC42MTYgNS44MDE3NyAxMjQuNjc3IDAgMTQwLjA5OSAwWk0xNDAuMDk5IDM5LjkxODVDMTI5LjE2MyAzOS45MTg1IDEyMC4yOTcgNDguNzQ0MyAxMjAuMjk3IDU5LjYzMTRDMTIwLjI5NyA3MC41MTg1IDEyOS4xNjMgNzkuMzQ0MiAxNDAuMDk5IDc5LjM0NDJDMTUxLjAzNSA3OS4zNDQyIDE1OS45MDEgNzAuNTE4NSAxNTkuOTAxIDU5LjYzMTRDMTU5LjkwMSA0OC43NDQzIDE1MS4wMzUgMzkuOTE4NSAxNDAuMDk5IDM5LjkxODVaTTU5LjkwMSAzOS45MTg1QzQ4Ljk2NDcgMzkuOTE4NSA0MC4wOTkgNDguNzQ0MyA0MC4wOTkgNTkuNjMxNEM0MC4wOTkgNzAuNTE4NSA0OC45NjQ3IDc5LjM0NDIgNTkuOTAxIDc5LjM0NDJDNzAuODM3MyA3OS4zNDQyIDc5LjcwMyA3MC41MTg1IDc5LjcwMyA1OS42MzE0Qzc5LjcwMyA0OC43NDQzIDcwLjgzNzMgMzkuOTE4NSA1OS45MDEgMzkuOTE4NVoiIGZpbGw9IiM2NzNBQjYiLz4KPC9zdmc+Cg==
@@ -53,11 +53,13 @@
       packages: '[data-e2e-id="section-packages"]', // "Total items: 4" + "2x Box - 52 x 39 x 28cm - 3kg"
       // Shipment details, Track tab
       originDate: 'tnt-shipment-origin-date', // collection date, "13 October 2026"
+      destinationDate: 'tnt-shipment-destination-date', // expected delivery, "16 October 2026 before 09:00"
       // Shipment history list
       listItem: 'tnt-shipments-overview-item',
       listDetailLink: '[data-e2e-id="shipments-overview.tracking-status-btn"]',
       listConsignment: '[data-e2e-id="shipments-overview.shipment-number"]',
       listCollection: '[data-e2e-id="shipments-overview.collectionDate"]',
+      listDelivery: '[data-e2e-id="shipments-overview.destinationDate"]',
       // Booking confirmation (thank-you) screen. Read from myTNT's code, not yet seen live.
       thanksBox: 'tnt-shipment-information',
       thanksConsignment: '[data-e2e-id="mytnt.createShipment.thankYou.shipmentNumber"]',
@@ -66,8 +68,14 @@
   /* ======================= end of SITE block ========================= */
 
   const REQUIRED = {
-    details: { consignment: 'Consignment number', receiverCompany: 'Receiver company' },
-    thankYou: { consignment: 'Consignment number' },
+    note: {
+      details: { consignment: 'Consignment number', receiverCompany: 'Receiver company' },
+      thankYou: { consignment: 'Consignment number' },
+    },
+    customer: {
+      details: { consignment: 'Consignment number' },
+      thankYou: { consignment: 'Consignment number' },
+    },
   };
 
   /* ---------------- Helpers ---------------- */
@@ -86,6 +94,13 @@
     const month = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase());
     if (month < 0) return '';
     return String(m[1]).padStart(2, '0') + '/' + String(month + 1).padStart(2, '0') + '/' + m[3];
+  }
+
+  // "16/10/2026" -> "Friday 16/10/2026"
+  function withWeekday(ddmmyyyy) {
+    const [d, m, y] = ddmmyyyy.split('/').map(Number);
+    const day = new Date(y, m - 1, d).toLocaleDateString('en-AU', { weekday: 'long' });
+    return day + ' ' + ddmmyyyy;
   }
 
   // Australian postcode to state. myTNT doesn't show the state, and each postcode belongs to one.
@@ -134,38 +149,42 @@
     };
   }
 
-  /* ---------------- Collection dates seen elsewhere ----------------
-   * The Details tab doesn't show the collection date. The list and the Track tab do,
-   * so remember them and use them on Details. Clicking a row in the list reloads the
-   * whole page, so they're kept in this tab's sessionStorage (gone when the tab closes).
+  /* ---------------- Dates seen elsewhere ----------------
+   * The Details tab shows neither the collection date nor the expected delivery date.
+   * The list and the Track tab do, so remember them and use them on Details. Clicking
+   * a row in the list reloads the whole page, so they're kept in this tab's
+   * sessionStorage (gone when the tab closes). Keys: "collect:<id or number>", "deliver:<id or number>".
    */
-  const STORE_KEY = 'oolio-tnt-collection-dates';
-  const STORE_MAX = 300;
-  let collectionDates = {};
-  try { collectionDates = JSON.parse(sessionStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* storage blocked */ }
+  const STORE_KEY = 'oolio-tnt-dates';
+  const STORE_MAX = 600;
+  let rememberedDates = {};
+  try { rememberedDates = JSON.parse(sessionStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { /* storage blocked */ }
 
-  function rememberCollectionDates() {
+  function rememberDates() {
     const hash = location.hash;
     const seen = {};
+    const note = (keys, kind, raw) => {
+      const date = toDDMMYYYY(raw);
+      if (date) keys.filter(Boolean).forEach((k) => { seen[kind + ':' + k] = date; });
+    };
     if (SITE.isList(hash)) {
       for (const item of document.querySelectorAll(SITE.sel.listItem)) {
-        const date = toDDMMYYYY(text(SITE.sel.listCollection, item));
-        if (!date) continue;
         const link = $(SITE.sel.listDetailLink, item);
         const id = link && SITE.detailId('#' + (link.getAttribute('href') || '').split('#')[1]);
-        if (id) seen[id] = date;
-        const con = text(SITE.sel.listConsignment, item);
-        if (con) seen[con] = date;
+        const keys = [id, text(SITE.sel.listConsignment, item)];
+        note(keys, 'collect', text(SITE.sel.listCollection, item));
+        note(keys, 'deliver', text(SITE.sel.listDelivery, item));
       }
     } else if (SITE.isDetails(hash) && SITE.isTrackTab(hash)) {
-      const date = toDDMMYYYY(text(SITE.sel.originDate));
-      const id = SITE.detailId(hash);
-      if (date && id) seen[id] = date;
+      const keys = [SITE.detailId(hash)];
+      note(keys, 'collect', text(SITE.sel.originDate));
+      note(keys, 'deliver', text(SITE.sel.destinationDate));
     }
-    if (Object.keys(seen).every((k) => collectionDates[k] === seen[k])) return;
-    collectionDates = Object.fromEntries(Object.entries({ ...collectionDates, ...seen }).slice(-STORE_MAX));
-    try { sessionStorage.setItem(STORE_KEY, JSON.stringify(collectionDates)); } catch (e) { /* storage blocked */ }
+    if (Object.keys(seen).every((k) => rememberedDates[k] === seen[k])) return;
+    rememberedDates = Object.fromEntries(Object.entries({ ...rememberedDates, ...seen }).slice(-STORE_MAX));
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify(rememberedDates)); } catch (e) { /* storage blocked */ }
   }
+  const recall = (kind, id, con) => rememberedDates[kind + ':' + id] || rememberedDates[kind + ':' + con] || '';
 
   /* ---------------- extract(): page -> plain object ---------------- */
   function extract() {
@@ -195,7 +214,8 @@
       const city = receiver ? text(SITE.sel.city, receiver) : '';
       const country = receiver ? text(SITE.sel.country, receiver) : '';
       const heading = ((text(SITE.sel.heading) || '').match(/(\d{6,})/) || [])[1] || '';
-      const collected = collectionDates[SITE.detailId(hash)] || collectionDates[consignment] || '';
+      const id = SITE.detailId(hash);
+      const collected = recall('collect', id, consignment);
       return {
         kind: 'details',
         carrier: SITE.carrier,
@@ -207,6 +227,7 @@
         service: text(SITE.sel.service),
         receiverCompany: receiver ? text(SITE.sel.company, receiver) : '',
         receiverContact: receiver ? text(SITE.sel.contact, receiver) : '',
+        expectedDelivery: recall('deliver', id, consignment),
         receiverPlace: city ? formatPlace(city, country) : '',
         pieces: pkg.pieces,
         weightKg: pkg.weightKg,
@@ -242,6 +263,37 @@
     };
   }
 
+  /* ---------------- formatCustomer(): plain object -> { html, text } ----------------
+   * The message for the customer. Change the wording here.
+   */
+  function formatCustomer(d) {
+    const firstName = (d.receiverContact || '').split(/\s+/)[0];
+    const carrier = d.carrier || 'TNT';
+    const details = []; // [label, value text, value html]
+    if (d.consignment) details.push(['Consignment number', d.consignment, esc(d.consignment)]);
+    if (d.trackingUrl) {
+      // Full address as the link text, so it still works if an email client drops the link
+      details.push(['Track your delivery', d.trackingUrl, '<a href="' + esc(d.trackingUrl) + '">' + esc(d.trackingUrl) + '</a>']);
+    }
+    if (d.expectedDelivery) details.push(['Expected delivery', withWeekday(d.expectedDelivery), esc(withWeekday(d.expectedDelivery))]);
+    if (d.pieces != null) details.push(['Items', String(d.pieces), String(d.pieces)]);
+
+    const paragraphs = [
+      ['Hi ' + (firstName || 'there') + ','],
+      ['Thanks for your order. Your shipment is ready and has been booked with ' + carrier + '.'],
+      details,
+      ['It can take a few hours after booking for tracking to show the first update.'],
+      ['If you have any questions, just reply to this email.'],
+    ];
+    const asText = (p) => p.map((line) => (Array.isArray(line) ? line[0] + ': ' + line[1] : line)).join('\n');
+    const asHtml = (p) => '<p>' + p.map((line) => (Array.isArray(line) ? esc(line[0]) + ': ' + line[2] : esc(line))).join('<br>') + '</p>';
+    return {
+      text: paragraphs.map(asText).join('\n\n'),
+      html: paragraphs.map(asHtml).join(''),
+      leftOut: [!firstName && 'name', !d.expectedDelivery && 'expected delivery date'].filter(Boolean),
+    };
+  }
+
   /* ---------------- deliver(): note -> clipboard ----------------
    * Kept separate so a later version can POST to the HubSpot relay instead.
    * Puts text/html (keeps the link in HubSpot's note editor) and text/plain on the clipboard.
@@ -268,34 +320,48 @@
     if (!done) throw new Error('The browser blocked the clipboard');
   }
 
-  /* ---------------- Click: extract -> check -> format -> deliver ---------------- */
-  async function onCopyClick() {
+  /* ---------------- Click: extract -> check -> format -> deliver ----------------
+   * which: 'note' (HubSpot note) or 'customer' (message for the customer)
+   */
+  async function onCopyClick(which) {
     const d = extract();
-    if (d.kind === 'trackTab') return toast('Open the Details tab, then copy the note.', 'err');
+    if (d.kind === 'trackTab') return toast('Open the Details tab, then copy.', 'err');
     if (d.kind === 'none') return toast('No shipment on this page.', 'err');
 
-    const missing = Object.entries(REQUIRED[d.kind]).filter(([key]) => !d[key]).map(([, name]) => name);
+    const missing = Object.entries(REQUIRED[which][d.kind]).filter(([key]) => !d[key]).map(([, name]) => name);
     if (missing.length) return toast('Not copied. Missing: ' + missing.join(', ') + '. Wait for the page to load and try again.', 'err');
     if (d.kind === 'details' && d.headingNumber && d.headingNumber !== d.consignment) {
       return toast('Not copied. The page is still changing shipments. Try again in a moment.', 'err');
     }
 
+    const out = which === 'customer' ? formatCustomer(d) : format(d);
     try {
-      await deliver(format(d));
+      await deliver(out);
     } catch (e) {
       return toast('Not copied. ' + e.message + '.', 'err');
     }
-    if (d.kind === 'thankYou') {
+
+    if (which === 'customer') {
+      if (out.leftOut.length) {
+        toast('Customer message copied without the ' + out.leftOut.join(' or ') +
+          ' (not on this page). To include it, open the shipment from Shipment history. Check before sending.', 'warn');
+      } else {
+        toast('Customer message for ' + d.consignment + ' copied. Paste it into your reply.', 'ok');
+      }
+    } else if (d.kind === 'thankYou') {
       toast('Short note copied (number and reference only). For the full note, open this shipment in Shipment history.', 'warn');
     } else {
       toast('Note for ' + d.consignment + ' copied. Paste it into the HubSpot ticket.', 'ok');
     }
   }
 
-  /* ---------------- Oolio-branded button and toast ---------------- */
+  /* ---------------- Oolio-branded buttons and toast ---------------- */
   const ICON_COPY =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+  const ICON_MAIL =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
   const OOLIO_MARK_WHITE =
     '<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
     '<path fill="#fff" fill-rule="evenodd" clip-rule="evenodd" d="M140.099 0C173.181 0 200 26.6979 200 59.6314C200 92.5649 173.181 119.263 140.099 119.263C124.677 119.263 110.616 113.461 99.9986 103.93C89.3837 113.461 75.3229 119.263 59.901 119.263C26.8186 119.263 0 92.5649 0 59.6314C0 26.6979 26.8186 0 59.901 0C75.3232 0 89.3841 5.80195 100.001 15.3329C110.616 5.80177 124.677 0 140.099 0ZM140.099 39.9185C129.163 39.9185 120.297 48.7443 120.297 59.6314C120.297 70.5185 129.163 79.3442 140.099 79.3442C151.035 79.3442 159.901 70.5185 159.901 59.6314C159.901 48.7443 151.035 39.9185 140.099 39.9185ZM59.901 39.9185C48.9647 39.9185 40.099 48.7443 40.099 59.6314C40.099 70.5185 48.9647 79.3442 59.901 79.3442C70.8373 79.3442 79.703 70.5185 79.703 59.6314C79.703 48.7443 70.8373 39.9185 59.901 39.9185Z"/></svg>';
@@ -304,13 +370,17 @@
   // Inter is used if it's installed; nothing is downloaded.
   const STYLE = `
     :host { all: initial; }
-    .b { position: fixed; right: 24px; bottom: 24px; z-index: 2147483000; display: inline-flex; align-items: center;
+    .stack { position: fixed; right: 24px; bottom: 24px; z-index: 2147483000; display: flex; flex-direction: column;
+      align-items: flex-end; gap: 8px; }
+    .stack[hidden] { display: none; }
+    .b { display: inline-flex; align-items: center;
       gap: 10px; height: 44px; padding: 0 16px 0 14px; border: 0; border-radius: 999px; cursor: pointer;
       background: #673AB6; color: #fff; font: 700 14px Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
       letter-spacing: -0.01em; box-shadow: 0 6px 20px rgba(103,58,182,.35), 0 1px 3px rgba(34,34,34,.2);
       transition: background .15s, transform .15s; }
-    .b[hidden] { display: none; }
     .b:hover { background: #5E35B1; transform: translateY(-1px); }
+    .b.alt { height: 38px; padding: 0 14px; background: #fff; color: #673AB6; box-shadow: inset 0 0 0 1.5px #673AB6, 0 4px 14px rgba(34,34,34,.15); }
+    .b.alt:hover { background: #F3EEF9; }
     .b:focus-visible { outline: 2px solid #03A9F4; outline-offset: 2px; }
     .b svg { width: 16px; height: 16px; flex: none; display: block; }
     .b .mark svg { width: 24px; height: auto; }
@@ -326,7 +396,7 @@
   `;
 
   let host;
-  let btn;
+  let stack;
   let toastEl;
   let toastTimer;
 
@@ -336,13 +406,16 @@
     host.id = 'oolio-tnt-hubspot-note';
     const root = host.attachShadow({ mode: 'open' });
     root.innerHTML = '<style>' + STYLE + '</style>' +
-      '<button class="b" type="button" title="Copy a note for the HubSpot ticket" hidden>' +
+      '<div class="stack" hidden>' +
+      '<button class="b alt" type="button" data-copy="customer" title="Copy a message to send the customer">' +
+      ICON_MAIL + '<span>Copy customer message</span></button>' +
+      '<button class="b" type="button" data-copy="note" title="Copy a note for the HubSpot ticket">' +
       '<span class="mark">' + OOLIO_MARK_WHITE + '</span><span class="sep"></span>' + ICON_COPY +
-      '<span>Copy HubSpot note</span></button>' +
+      '<span>Copy HubSpot note</span></button></div>' +
       '<div class="t" role="status" aria-live="polite"></div>';
-    btn = root.querySelector('.b');
+    stack = root.querySelector('.stack');
     toastEl = root.querySelector('.t');
-    btn.addEventListener('click', onCopyClick);
+    root.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => onCopyClick(b.dataset.copy)));
     document.body.appendChild(host);
   }
 
@@ -354,7 +427,7 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), kind === 'ok' ? 2500 : 6000);
   }
 
-  /* ---------------- Show the button only where there's a shipment ---------------- */
+  /* ---------------- Show the buttons only where there's a shipment ---------------- */
   function hasShipment() {
     const hash = location.hash;
     if (SITE.isThankYou(hash)) return !!$(SITE.sel.thanksConsignment);
@@ -364,8 +437,8 @@
 
   function update() {
     mount();
-    rememberCollectionDates();
-    btn.hidden = !hasShipment();
+    rememberDates();
+    stack.hidden = !hasShipment();
   }
 
   // myTNT changes page without reloading, so react to route changes and DOM changes
