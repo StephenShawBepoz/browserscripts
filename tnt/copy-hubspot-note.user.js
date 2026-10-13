@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         myTNT: Copy HubSpot note
 // @namespace    oolio-userscripts
-// @version      1.5.0
+// @version      1.6.0
 // @description  Adds Copy HubSpot note and Copy customer message buttons to myTNT shipment details. One click copies a formatted note or a customer-ready message, with the consignment number linked to tracking.
 // @author       Stephen Shaw
 // @match        https://mytnt.tnt.com/*
@@ -403,7 +403,7 @@
   /* ---------------- Click: extract -> check -> format -> deliver ----------------
    * which: 'note' (HubSpot note) or 'customer' (message for the customer)
    */
-  async function onCopyClick(which) {
+  async function onCopyClick(which, button) {
     const d = extract();
     if (d.kind === 'trackTab') return toast('Open the Details tab, then copy.', 'err');
     if (d.kind === 'none') return toast('No shipment on this page.', 'err');
@@ -420,6 +420,7 @@
     } catch (e) {
       return toast('Not copied. ' + e.message + '.', 'err');
     }
+    if (button && !button.classList.contains('done')) flashDone(button);
 
     if (which === 'customer') {
       if (out.leftOut.length) {
@@ -435,16 +436,21 @@
     }
   }
 
-  /* ---------------- Oolio-branded buttons and toast ---------------- */
-  const ICON_COPY =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
-  const ICON_MAIL =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
-  const OOLIO_MARK_WHITE =
-    '<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-    '<path fill="#fff" fill-rule="evenodd" clip-rule="evenodd" d="M140.099 0C173.181 0 200 26.6979 200 59.6314C200 92.5649 173.181 119.263 140.099 119.263C124.677 119.263 110.616 113.461 99.9986 103.93C89.3837 113.461 75.3229 119.263 59.901 119.263C26.8186 119.263 0 92.5649 0 59.6314C0 26.6979 26.8186 0 59.901 0C75.3232 0 89.3841 5.80195 100.001 15.3329C110.616 5.80177 124.677 0 140.099 0ZM140.099 39.9185C129.163 39.9185 120.297 48.7443 120.297 59.6314C120.297 70.5185 129.163 79.3442 140.099 79.3442C151.035 79.3442 159.901 70.5185 159.901 59.6314C159.901 48.7443 151.035 39.9185 140.099 39.9185ZM59.901 39.9185C48.9647 39.9185 40.099 48.7443 40.099 59.6314C40.099 70.5185 48.9647 79.3442 59.901 79.3442C70.8373 79.3442 79.703 70.5185 79.703 59.6314C79.703 48.7443 70.8373 39.9185 59.901 39.9185Z"/></svg>';
+  /* ---------------- Oolio-branded round buttons and toast ---------------- */
+  // Lucide line icons (24px grid, 2px stroke)
+  const SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  // Internal note: Lucide notebook-pen
+  const ICON_NOTE = SVG_OPEN +
+    '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/>' +
+    '<path d="M2 14h4"/><path d="M2 18h4"/>' +
+    '<path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>';
+  // Customer: Lucide user-round with a small Lucide send (paper plane) at the shoulder
+  const ICON_CUSTOMER = SVG_OPEN +
+    '<circle cx="10" cy="8" r="5"/><path d="M2 21a8 8 0 0 1 8.6-7.95"/>' +
+    '<g transform="translate(11.5 11.5) scale(0.5)" stroke-width="4">' +
+    '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>' +
+    '<path d="m21.854 2.147-10.94 10.939"/></g></svg>';
+  const ICON_CHECK = SVG_OPEN + '<path d="M20 6 9 17l-5-5"/></svg>';
 
   // Shadow DOM keeps our styles away from myTNT's and theirs away from ours.
   // Inter is used if it's installed; nothing is downloaded.
@@ -453,18 +459,20 @@
     .stack { position: fixed; right: 24px; bottom: 24px; z-index: 2147483000; display: flex; flex-direction: column;
       align-items: flex-end; gap: 8px; }
     .stack[hidden] { display: none; }
-    .b { display: inline-flex; align-items: center;
-      gap: 10px; height: 44px; padding: 0 16px 0 14px; border: 0; border-radius: 999px; cursor: pointer;
-      background: #673AB6; color: #fff; font: 700 14px Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-      letter-spacing: -0.01em; box-shadow: 0 6px 20px rgba(103,58,182,.35), 0 1px 3px rgba(34,34,34,.2);
-      transition: background .15s, transform .15s; }
-    .b:hover { background: #5E35B1; transform: translateY(-1px); }
-    .b.alt { height: 38px; padding: 0 14px; background: #fff; color: #673AB6; box-shadow: inset 0 0 0 1.5px #673AB6, 0 4px 14px rgba(34,34,34,.15); }
-    .b.alt:hover { background: #F3EEF9; }
-    .b:focus-visible { outline: 2px solid #03A9F4; outline-offset: 2px; }
-    .b svg { width: 16px; height: 16px; flex: none; display: block; }
-    .b .mark svg { width: 24px; height: auto; }
-    .b .sep { width: 1px; height: 18px; background: rgba(255,255,255,.35); }
+    .r { position: relative; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px;
+      padding: 0; border: 0; border-radius: 50%; cursor: pointer; background: #673AB6; color: #fff;
+      box-shadow: 0 6px 20px rgba(103,58,182,.35), 0 1px 3px rgba(34,34,34,.2); transition: background .15s, transform .15s; }
+    .r:hover { background: #5E35B1; transform: translateY(-1px); }
+    .r.alt { background: #fff; color: #673AB6; box-shadow: inset 0 0 0 1.5px #673AB6, 0 4px 14px rgba(34,34,34,.15); }
+    .r.alt:hover { background: #F3EEF9; }
+    .r.done, .r.done:hover { background: #2E7D32; color: #fff; box-shadow: 0 4px 14px rgba(46,125,50,.35); }
+    .r:focus-visible { outline: 2px solid #03A9F4; outline-offset: 2px; }
+    .r svg { width: 22px; height: 22px; display: block; }
+    /* Label beside the button on hover or keyboard focus */
+    .tip { position: absolute; right: 58px; top: 50%; transform: translate(4px, -50%); white-space: nowrap; pointer-events: none;
+      padding: 6px 10px; border-radius: 8px; background: #222; color: #fff; opacity: 0; transition: opacity .12s, transform .12s;
+      font: 500 13px Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .r:hover .tip, .r:focus-visible .tip { opacity: 1; transform: translate(0, -50%); }
     .t { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 8px); z-index: 2147483002;
       max-width: min(520px, calc(100vw - 32px)); box-sizing: border-box; padding: 10px 14px; border-radius: 12px;
       background: #222; color: #fff; opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s;
@@ -487,16 +495,24 @@
     const root = host.attachShadow({ mode: 'open' });
     root.innerHTML = '<style>' + STYLE + '</style>' +
       '<div class="stack" hidden>' +
-      '<button class="b alt" type="button" data-copy="customer" title="Copy a message to send the customer">' +
-      ICON_MAIL + '<span>Copy customer message</span></button>' +
-      '<button class="b" type="button" data-copy="note" title="Copy a note for the HubSpot ticket">' +
-      '<span class="mark">' + OOLIO_MARK_WHITE + '</span><span class="sep"></span>' + ICON_COPY +
-      '<span>Copy HubSpot note</span></button></div>' +
+      '<button class="r alt" type="button" data-copy="customer" aria-label="Copy customer message">' +
+      '<span class="ic">' + ICON_CUSTOMER + '</span><span class="tip">Copy customer message</span></button>' +
+      '<button class="r" type="button" data-copy="note" aria-label="Copy internal HubSpot note">' +
+      '<span class="ic">' + ICON_NOTE + '</span><span class="tip">Copy internal HubSpot note</span></button></div>' +
       '<div class="t" role="status" aria-live="polite"></div>';
     stack = root.querySelector('.stack');
     toastEl = root.querySelector('.t');
-    root.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => onCopyClick(b.dataset.copy)));
+    root.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => onCopyClick(b.dataset.copy, b)));
     document.body.appendChild(host);
+  }
+
+  // The button shows a tick for a moment after a copy
+  function flashDone(button) {
+    const ic = button.querySelector('.ic');
+    const icon = ic.innerHTML;
+    button.classList.add('done');
+    ic.innerHTML = ICON_CHECK;
+    setTimeout(() => { button.classList.remove('done'); ic.innerHTML = icon; }, 1500);
   }
 
   function toast(message, kind) {
