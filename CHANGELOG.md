@@ -2,6 +2,10 @@
 
 ## myTNT: Copy HubSpot note
 
+### 1.4.0 (13/10/2026)
+- The customer message says TNT is now part of FedEx, so customers know to look out for a FedEx van.
+- Better spacing when pasted into HubSpot. HubSpot dropped the gap between paragraphs, so sections are now separated by a real blank line.
+
 ### 1.3.0 (13/10/2026)
 - The HubSpot note is now laid out in sections: the shipment links, **Shipment**, **Delivering to** and **For accounts**.
 - New **For accounts** section: booking number, price excl. GST, GST, total incl. GST, billing, the company and TNT account invoiced, and TNT's warning that the price is a quote.

@@ -111,7 +111,7 @@ The customer message looks like this:
 ```
 Hi Carrie,
 
-Thanks for your order. Your shipment is ready and has been booked with TNT.
+Thanks for your order. Your shipment is ready and has been booked with TNT. TNT is now part of FedEx, so your delivery will most likely arrive in a FedEx van.
 
 Consignment number: 173448101
 Track your delivery: https://www.tnt.com/express/en_au/site/shipping-tools/tracking.html?searchType=con&cons=173448101

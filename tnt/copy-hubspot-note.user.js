@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         myTNT: Copy HubSpot note
 // @namespace    oolio-userscripts
-// @version      1.3.0
+// @version      1.4.0
 // @description  Adds Copy HubSpot note and Copy customer message buttons to myTNT shipment details. One click copies a formatted note or a customer-ready message, with the consignment number linked to tracking.
 // @author       Stephen Balderson
 // @match        https://mytnt.tnt.com/*
@@ -283,6 +283,10 @@
     return { kind: 'none' };
   }
 
+  // HubSpot drops the space between pasted paragraphs, so blocks are kept apart with a real
+  // blank line instead. Looks the same in a HubSpot note, a ticket reply or an email.
+  const blankLinesBetween = (blocks) => '<div>' + blocks.join('<br><br>') + '</div>';
+
   /* ---------------- format(): plain object -> { html, text } ----------------
    * The internal note, in sections. Lines with nothing to show are left out, and so is
    * a section with no lines. Links show the full address as the link text, because
@@ -334,8 +338,8 @@
     const rowHtml = ([label, , html]) => (label ? esc(label) + ': ' + html : html);
     return {
       text: sections.map(([heading, rows]) => [heading, ...rows.map(rowText)].join('\n')).join('\n\n'),
-      html: sections.map(([heading, rows]) =>
-        '<p><strong>' + esc(heading) + '</strong>' + rows.map((r) => '<br>' + rowHtml(r)).join('') + '</p>').join(''),
+      html: blankLinesBetween(sections.map(([heading, rows]) =>
+        '<strong>' + esc(heading) + '</strong>' + rows.map((r) => '<br>' + rowHtml(r)).join(''))),
     };
   }
 
@@ -356,16 +360,17 @@
 
     const paragraphs = [
       ['Hi ' + (firstName || 'there') + ','],
-      ['Thanks for your order. Your shipment is ready and has been booked with ' + carrier + '.'],
+      ['Thanks for your order. Your shipment is ready and has been booked with ' + carrier + '.' +
+        (carrier === 'TNT' ? ' TNT is now part of FedEx, so your delivery will most likely arrive in a FedEx van.' : '')],
       details,
       ['It can take a few hours after booking for tracking to show the first update.'],
       ['If you have any questions, just reply to this email.'],
     ];
     const asText = (p) => p.map((line) => (Array.isArray(line) ? line[0] + ': ' + line[1] : line)).join('\n');
-    const asHtml = (p) => '<p>' + p.map((line) => (Array.isArray(line) ? esc(line[0]) + ': ' + line[2] : esc(line))).join('<br>') + '</p>';
+    const asHtml = (p) => p.map((line) => (Array.isArray(line) ? esc(line[0]) + ': ' + line[2] : esc(line))).join('<br>');
     return {
       text: paragraphs.map(asText).join('\n\n'),
-      html: paragraphs.map(asHtml).join(''),
+      html: blankLinesBetween(paragraphs.map(asHtml)),
       leftOut: [!firstName && 'name', !d.expectedDelivery && 'expected delivery date'].filter(Boolean),
     };
   }
