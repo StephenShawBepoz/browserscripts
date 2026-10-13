@@ -2,7 +2,7 @@
 
 # Browser scripts: Oolio
 
-Small add-ons that make Oolio Office and HubSpot quicker to use. They run in Tampermonkey and use your own login, so there are no passwords or keys in here.
+Small add-ons that make Oolio Office, HubSpot and myTNT quicker to use. They run in Tampermonkey and use your own login, so there are no passwords or keys in here.
 
 ## Scripts
 
@@ -11,6 +11,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in Tam
 | [Oolio Office: Download Device Logs](oolio-office/device-logs.user.js) | Adds a **Download logs** button to *Logs > Devices*. Exports every line for your current filters as CSV or JSON. |
 | [HubSpot: Prefill meeting from ticket](hubspot/prefill-meeting.user.js) | Adds a **Book meeting** button to Help Desk tickets. Fills in the title and a link back to the ticket. |
 | [HubSpot: Cmd/Ctrl + Enter to send](hubspot/send-shortcut.user.js) | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note or email to send or save it. |
+| [myTNT: Copy HubSpot note](tnt/copy-hubspot-note.user.js) | Adds a **Copy HubSpot note** button to a shipment in myTNT. Paste the note into the HubSpot ticket, with the consignment number linked to tracking. |
 
 ## Set up (once, about 3 minutes)
 
@@ -28,7 +29,9 @@ If the install screen doesn't appear: copy the whole file, click the Tampermonke
 
 ## Updates
 
-The repo is private, so scripts don't update themselves. When a script changes you'll get a message. Install it again the same way and it replaces the old version.
+**myTNT: Copy HubSpot note** updates itself. Tampermonkey checks this repo about once a day and installs new versions for you.
+
+For the other scripts, you'll get a message when one changes. Install it again the same way and it replaces the old version.
 
 ## Using the scripts
 
@@ -56,13 +59,52 @@ The ticket link goes to everyone invited, customers included, but only HubSpot u
 
 It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
 
+### myTNT: Copy HubSpot note
+
+**Install (2 minutes, after the one-off set up above):**
+
+1. Click this link: [install myTNT: Copy HubSpot note](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/tnt/copy-hubspot-note.user.js).
+2. Tampermonkey opens its install screen. Click **Install**.
+3. If myTNT is already open, refresh it.
+
+**Use it:**
+
+1. In myTNT, go to **My shipments > Shipment history** and click the shipment.
+2. Click **Copy HubSpot note** (purple button, bottom right). A message at the bottom says it's copied.
+3. In HubSpot, open the ticket, add a note and paste (**Cmd + V** on Mac, **Ctrl + V** on Windows).
+
+You get this, with the consignment number as a link to TNT tracking:
+
+```
+Item sent via TNT
+Consignment: 173448101
+Sent: 13/10/2026
+Service: Road Express
+To: James Boags, Carrie Watson
+Address: Launceston TAS 7250
+Pieces: 4, 18 kg
+Reference: SOBG15222
+```
+
+Good to know:
+
+- **Sent** is the collection date. myTNT only shows it in the shipment list and on the **Track shipment** tab, so open the shipment from **Shipment history** (as in step 1). If you came in another way, Sent shows the booking date instead.
+- The state is worked out from the postcode. myTNT doesn't show it.
+- Weight is the total for the whole shipment.
+- Any line myTNT doesn't have is left out. If the consignment number or receiver is missing, nothing is copied and a red message says what's missing.
+- On the **Track shipment** tab, switch to **Details** first.
+- Straight after booking, the **Your booking is done** screen also has the button. It copies a short note (consignment and reference only), because that's all the screen shows. For the full note, open the shipment from Shipment history.
+- Keep myTNT in English. Dates in other languages aren't read.
+- Nothing is sent anywhere. The note only goes to your clipboard. To fill in the collection date, the script remembers collection dates from the shipment list in that browser tab until you close it.
+
 ## Problems or ideas
 
 Raise an issue on this repo, or message Stephen.
 
 ## For maintainers
 
-- One script per file, grouped by site (`oolio-office/`, `hubspot/`).
+- One script per file, grouped by site (`oolio-office/`, `hubspot/`, `tnt/`).
+- In the myTNT script, everything that knows about TNT's pages sits in the `SITE` block at the top. When we move to FedEx Ship Manager, rewrite that block and leave the rest. `deliver()` is the only part that touches the clipboard, so it can be swapped for a call to a HubSpot relay later.
 - Keep `@namespace oolio-userscripts` on every script. Changing it makes Tampermonkey install a second copy.
 - Bump `@version` on every change, add a line to [CHANGELOG.md](CHANGELOG.md) and tell colleagues to reinstall.
 - UI follows the Oolio brand: Oolio Purple `#673AB6`, Inter, Lucide line icons.
