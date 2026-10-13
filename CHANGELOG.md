@@ -1,5 +1,27 @@
 # Changelog
 
+## myTNT: Copy HubSpot note
+
+### 1.5.0 (13/10/2026)
+- Added to `main`. The customer message now says the shipment "has been booked with TNT/FedEx", since the vans normally say FedEx.
+
+### 1.4.0 (13/10/2026)
+- Better spacing when pasted into HubSpot. HubSpot dropped the gap between paragraphs, so sections are now separated by a real blank line.
+
+### 1.3.0 (13/10/2026)
+- The HubSpot note is laid out in sections: the shipment links, **Shipment**, **Delivering to** and **For accounts**.
+- **For accounts**: booking number, price excl. GST, GST, total incl. GST, billing, the company and TNT account invoiced, and TNT's warning that the price is a quote.
+- Tracking and the HubSpot ticket are shown as full web addresses that are also links, because HubSpot can drop links hidden behind text. Adds **From** (the sending company).
+
+### 1.2.0 (13/10/2026)
+- A customer reference that's a HubSpot ticket number links to the ticket in the HubSpot note.
+
+### 1.1.0 (13/10/2026)
+- New **Copy customer message** button: first name, consignment number, tracking link, expected delivery date and item count.
+
+### 1.0.0 (13/10/2026)
+- New. **Copy HubSpot note** button on myTNT shipment details and the booking confirmation screen. Collection date from the shipment list or Track tab (falls back to the booking date), state worked out from the postcode, total weight from the package lines.
+
 ## HubSpot: Status prompt after email
 
 ### 1.2.0 (05/10/2026)

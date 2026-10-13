@@ -2,7 +2,7 @@
 
 # Browser scripts: Oolio
 
-Small add-ons that make Oolio Office and HubSpot quicker to use. They run in your browser through Tampermonkey and use your own login, so there are no passwords or keys in here. Once installed, they keep themselves up to date.
+Small add-ons that make Oolio Office, HubSpot and myTNT quicker to use. They run in your browser through Tampermonkey and use your own login, so there are no passwords or keys in here. Once installed, they keep themselves up to date.
 
 ## Scripts
 
@@ -13,6 +13,7 @@ Small add-ons that make Oolio Office and HubSpot quicker to use. They run in you
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
 | **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
+| **myTNT: Copy HubSpot note** | Adds **Copy HubSpot note** and **Copy customer message** buttons to a shipment in myTNT. One gives you a note for the HubSpot ticket, with costs for accounts; the other a ready-to-send message for the customer with their tracking link. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/tnt/copy-hubspot-note.user.js) |
 | **HubSpot: Status prompt after email** | After you send an email reply on a Help Desk ticket, asks what the status should be. **Enter** sets the waiting status, **Esc** leaves it as it is. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js) |
 
 ## Set up Tampermonkey (once, about 3 minutes)
@@ -146,13 +147,79 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 
 **Had the first copy?** If you installed *HubSpot Help Desk: status prompt after email* by hand, delete it in Tampermonkey (click the icon, then **Dashboard**). Until you do, this one stays out of the way and reminds you.
 
+### myTNT: Copy HubSpot note
+
+1. In myTNT, go to **My shipments > Shipment history** and click the shipment.
+2. Bottom right, click **Copy HubSpot note** (purple) for the ticket note, or **Copy customer message** (white) for a message to the customer. A message at the bottom says it's copied.
+3. Paste (**Cmd + V** on Mac, **Ctrl + V** on Windows): the note into a HubSpot ticket note, the customer message into your reply or email.
+
+The HubSpot note looks like this (made-up example). The tracking and ticket addresses are links:
+
+```
+Item sent via TNT
+Consignment: 123456789
+Tracking: https://www.tnt.com/express/en_au/site/shipping-tools/tracking.html?searchType=con&cons=123456789
+HubSpot ticket: https://app.hubspot.com/contacts/5205495/record/0-5/12345678901
+
+Shipment
+Sent: 14/10/2026
+Service: Road Express
+Pieces: 3, 62 kg
+From: Oolio Queensland
+
+Delivering to
+Example Venue Pty Ltd
+Sam Citizen
+Townsville QLD 4810
+
+For accounts
+Booking number: BNE 000000
+Excl. GST: A$215.00
+GST: A$21.50
+Total incl. GST: A$236.50
+Billing: Sender pays on invoice
+Invoiced to: Bepoz Global, TNT account 012345678
+Note: TNT quote. Surcharges may be added on the invoice.
+```
+
+The customer message looks like this:
+
+```
+Hi Sam,
+
+Thanks for your order. Your shipment is ready and has been booked with TNT/FedEx.
+
+Consignment number: 123456789
+Track your delivery: https://www.tnt.com/express/en_au/site/shipping-tools/tracking.html?searchType=con&cons=123456789
+Expected delivery: Friday 16/10/2026
+Items: 3
+
+It can take a few hours after booking for tracking to show the first update.
+
+If you have any questions, just reply to this email.
+```
+
+Good to know:
+
+- **Sent** is the collection date and **Expected delivery** is TNT's delivery date. myTNT only shows these in the shipment list and on the **Track shipment** tab, so open the shipment from **Shipment history** (as in step 1). If you came in another way, Sent shows the booking date and the customer message leaves out the delivery date (the copied message tells you).
+- The customer message greets the receiver's contact by first name, or says "Hi there" if there isn't one. Read it before sending.
+- The state is worked out from the postcode. myTNT doesn't show it. Weight is the total for the whole shipment.
+- If the customer reference is a HubSpot ticket number, the note adds a **HubSpot ticket** link. Other references, like order numbers, show as **Reference**. The customer message never includes the reference.
+- **For accounts** shows TNT's quoted price from myTNT. If TNT lists more than one charge (for example a surcharge), each one is shown.
+- Any line myTNT doesn't have is left out. If the consignment number or receiver is missing, nothing is copied and a red message says what's missing.
+- On the **Track shipment** tab, switch to **Details** first.
+- Straight after booking, the **Your booking is done** screen also has both buttons. The note is short (consignment and reference only), and the customer message has no name or delivery date, because that's all the screen shows. For the full versions, open the shipment from Shipment history.
+- Keep myTNT in English. Dates in other languages aren't read.
+- Nothing is sent anywhere. The note only goes to your clipboard. To fill in the dates, the script remembers collection and delivery dates from the shipment list in that browser tab until you close it.
+
 ## Problems or ideas
 
 Message Stephen Shaw on Teams.
 
 ## For maintainers
 
-- One script per file, grouped by site (`oolio-office/`, `hubspot/`).
+- One script per file, grouped by site (`oolio-office/`, `hubspot/`, `tnt/`).
+- In the myTNT script, everything that knows about TNT's pages sits in the `SITE` block at the top. When we move to FedEx Ship Manager, rewrite that block and leave the rest. The customer message wording is in `formatCustomer()`. `deliver()` is the only part that touches the clipboard, so it can be swapped for a call to a HubSpot relay later.
 - Every script header needs `@namespace oolio-userscripts`, `@author Stephen Shaw`, and `@updateURL` and `@downloadURL` pointing at its raw file on `main`. Changing the namespace or name makes Tampermonkey install a second copy.
 - Bump `@version` on every change and add a line to [CHANGELOG.md](CHANGELOG.md). Tampermonkey only updates when the version goes up.
 - Updates go out from `main`, so anything merged there reaches everyone within a day. Test before merging.
