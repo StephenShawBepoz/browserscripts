@@ -150,7 +150,11 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 ### myTNT: Copy HubSpot note
 
 1. In myTNT, go to **My shipments > Shipment history** and click the shipment.
-2. Bottom right, click **Copy HubSpot note** (purple) for the ticket note, or **Copy customer message** (white) for a message to the customer. A message at the bottom says it's copied.
+2. Bottom right there are two round buttons. Hover over one to see what it does.
+   - Purple, notebook: **Copy internal HubSpot note** for the ticket.
+   - White, person with a paper plane: **Copy customer message** for your reply to the customer.
+
+   The button turns into a green tick when it's copied.
 3. Paste (**Cmd + V** on Mac, **Ctrl + V** on Windows): the note into a HubSpot ticket note, the customer message into your reply or email.
 
 The HubSpot note looks like this (made-up example). The tracking and ticket addresses are links:

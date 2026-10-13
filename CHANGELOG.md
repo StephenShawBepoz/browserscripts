@@ -2,6 +2,10 @@
 
 ## myTNT: Copy HubSpot note
 
+### 1.6.0 (13/10/2026)
+- New round icon buttons: a notebook for the internal HubSpot note, and a person with a paper plane for the customer message. Hover to see the label.
+- The button you click turns into a green tick for a moment, so you can see it's copied.
+
 ### 1.5.0 (13/10/2026)
 - Added to `main`. The customer message now says the shipment "has been booked with TNT/FedEx", since the vans normally say FedEx.
 
