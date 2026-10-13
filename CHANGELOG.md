@@ -2,6 +2,12 @@
 
 ## myTNT: Copy HubSpot note
 
+### 1.3.0 (13/10/2026)
+- The HubSpot note is now laid out in sections: the shipment links, **Shipment**, **Delivering to** and **For accounts**.
+- New **For accounts** section: booking number, price excl. GST, GST, total incl. GST, billing, the company and TNT account invoiced, and TNT's warning that the price is a quote.
+- Tracking and the HubSpot ticket are shown as full web addresses that are also links, because HubSpot can drop links hidden behind text.
+- Adds **From** (the sending company).
+
 ### 1.2.0 (13/10/2026)
 - In the HubSpot note, a customer reference that's a HubSpot ticket number now links to the ticket. Any text after the number (for example `48286955329 FJM Property`) stays as it is. Other references are unchanged, and the customer message doesn't include the reference.
 

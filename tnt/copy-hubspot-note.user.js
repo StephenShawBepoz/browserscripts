@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         myTNT: Copy HubSpot note
 // @namespace    oolio-userscripts
-// @version      1.2.0
+// @version      1.3.0
 // @description  Adds Copy HubSpot note and Copy customer message buttons to myTNT shipment details. One click copies a formatted note or a customer-ready message, with the consignment number linked to tracking.
 // @author       Stephen Balderson
 // @match        https://mytnt.tnt.com/*
@@ -51,6 +51,16 @@
       city: '[data-e2e-id="shipment.details.address.city"]', // "7250 Launceston" (postcode first)
       country: '[data-e2e-id="shipment.details.address.country"]',
       packages: '[data-e2e-id="section-packages"]', // "Total items: 4" + "2x Box - 52 x 39 x 28cm - 3kg"
+      sender: '[data-e2e-id="shipment.details.OriginAddress"]',
+      bookingNumber: '[data-e2e-id="shipment.history.details.bookingNumberValue"]',
+      // Shipping costs panel. Charge lines are the rows without a data-e2e-id above the totals.
+      priceExcl: '[data-e2e-id="total-price-excl-vat"]',
+      priceGst: '[data-e2e-id="total-price-vat"]',
+      priceTotal: '[data-e2e-id="total-price-incl-vat"]',
+      price: 'tnt-price',
+      invoiceTo: '[data-e2e-id="invoice-address"]',
+      invoiceCompany: '[data-e2e-id="shipment.details.alt.address.companyName"]',
+      invoiceAccount: '[data-e2e-id="shipment.details.alt.address.tntAccountNumber"]', // "TNT account number: 050006154"
       // Shipment details, Track tab
       originDate: 'tnt-shipment-origin-date', // collection date, "13 October 2026"
       destinationDate: 'tnt-shipment-destination-date', // expected delivery, "16 October 2026 before 09:00"
@@ -195,6 +205,27 @@
   }
   const recall = (kind, id, con) => rememberedDates[kind + ':' + id] || rememberedDates[kind + ':' + con] || '';
 
+  // Shipping costs panel -> { charges: [[name, amount]], excl, gst, total, billing, quoteOnly }
+  function readCosts() {
+    const exclRow = $(SITE.sel.priceExcl);
+    if (!exclRow) return {};
+    const amount = (row) => (row ? text(SITE.sel.price, row) : '');
+    const panel = exclRow.closest('table').parentElement;
+    const charges = [...panel.querySelectorAll('tr:not([data-e2e-id])')]
+      .map((tr) => [(tr.cells[0] ? tr.cells[0].textContent : '').replace(/\s+/g, ' ').trim(), amount(tr)])
+      .filter(([name, value]) => name && value);
+    const billingHeading = [...panel.querySelectorAll('h3, h4')].find((h) => /^\s*billing\s*$/i.test(h.textContent));
+    const billingValue = billingHeading && billingHeading.nextElementSibling;
+    return {
+      charges,
+      excl: amount(exclRow),
+      gst: amount($(SITE.sel.priceGst)),
+      total: amount($(SITE.sel.priceTotal)),
+      billing: billingValue ? billingValue.textContent.replace(/\s+/g, ' ').trim() : '',
+      quoteOnly: /quote estimate/i.test(panel.textContent),
+    };
+  }
+
   /* ---------------- extract(): page -> plain object ---------------- */
   function extract() {
     const hash = location.hash;
@@ -241,45 +272,70 @@
         pieces: pkg.pieces,
         weightKg: pkg.weightKg,
         reference: text(SITE.sel.reference),
+        senderCompany: text(SITE.sel.company, $(SITE.sel.sender) || document.createElement('div')),
+        bookingNumber: text(SITE.sel.bookingNumber),
+        costs: readCosts(),
+        invoiceCompany: text(SITE.sel.invoiceCompany, $(SITE.sel.invoiceTo) || document.createElement('div')),
+        invoiceAccount: text(SITE.sel.invoiceAccount).replace(/^.*?:\s*/, ''),
       };
     }
 
     return { kind: 'none' };
   }
 
-  /* ---------------- format(): plain object -> { html, text } ---------------- */
+  /* ---------------- format(): plain object -> { html, text } ----------------
+   * The internal note, in sections. Lines with nothing to show are left out, and so is
+   * a section with no lines. Links show the full address as the link text, because
+   * HubSpot can drop links hidden behind other text.
+   */
   function format(d) {
-    const lines = []; // [label, value text, value html]
-    const add = (label, value, html) => { if (value) lines.push([label, value, html || esc(value)]); };
+    const link = (url) => '<a href="' + esc(url) + '">' + esc(url) + '</a>';
+    const line = (label, value, html) => (value ? [label, value, html || esc(value)] : null);
+    const ticket = (d.reference || '').match(HUBSPOT.ticketId);
+    const costs = d.costs || {};
 
-    if (d.consignment) {
-      const link = d.trackingUrl ? '<a href="' + esc(d.trackingUrl) + '">' + esc(d.consignment) + '</a>' : esc(d.consignment);
-      lines.push(['Consignment', d.consignment + (d.trackingUrl ? ' (' + d.trackingUrl + ')' : ''), link]);
-    }
-    add('Sent', d.sentDate);
-    add('Service', d.service);
-    add('To', [d.receiverCompany, d.receiverContact].filter(Boolean).join(', '));
-    add('Address', d.receiverPlace);
-    if (d.pieces != null && d.weightKg != null) add('Pieces', d.pieces + ', ' + d.weightKg + ' kg');
-    else if (d.pieces != null) add('Pieces', String(d.pieces));
-    else if (d.weightKg != null) add('Weight', d.weightKg + ' kg');
-    if (d.reference) {
-      const m = d.reference.match(HUBSPOT.ticketId);
-      if (m) {
-        const url = HUBSPOT.ticketUrl(m[1]);
-        const before = d.reference.slice(0, m.index);
-        const after = d.reference.slice(m.index + m[1].length);
-        lines.push(['Reference', d.reference + ' (' + url + ')',
-          esc(before) + '<a href="' + esc(url) + '">' + esc(m[1]) + '</a>' + esc(after)]);
-      } else {
-        add('Reference', d.reference);
-      }
-    }
+    let pieces = '';
+    if (d.pieces != null && d.weightKg != null) pieces = d.pieces + ', ' + d.weightKg + ' kg';
+    else if (d.pieces != null) pieces = String(d.pieces);
+    else if (d.weightKg != null) pieces = d.weightKg + ' kg';
 
-    const title = 'Item sent via ' + (d.carrier || 'TNT');
+    const sections = [
+      ['Item sent via ' + (d.carrier || 'TNT'), [
+        line('Consignment', d.consignment),
+        d.trackingUrl ? line('Tracking', d.trackingUrl, link(d.trackingUrl)) : null,
+        ticket ? line('HubSpot ticket', HUBSPOT.ticketUrl(ticket[1]), link(HUBSPOT.ticketUrl(ticket[1]))) : null,
+        // Skip the reference when it's only the ticket number shown just above
+        ticket && d.reference.trim() === ticket[1] ? null : line('Reference', d.reference),
+      ]],
+      ['Shipment', [
+        line('Sent', d.sentDate),
+        line('Service', d.service),
+        line('Pieces', pieces),
+        line('From', d.senderCompany),
+      ]],
+      ['Delivering to', [
+        line('', d.receiverCompany),
+        line('', d.receiverContact),
+        line('', d.receiverPlace),
+      ]],
+      ['For accounts', [
+        line('Booking number', d.bookingNumber),
+        ...((costs.charges || []).length > 1 ? costs.charges.map(([name, value]) => line(name, value)) : []),
+        line('Excl. GST', costs.excl),
+        line('GST', costs.gst),
+        line('Total incl. GST', costs.total),
+        line('Billing', costs.billing),
+        line('Invoiced to', [d.invoiceCompany, d.invoiceAccount && 'TNT account ' + d.invoiceAccount].filter(Boolean).join(', ')),
+        costs.quoteOnly && costs.total ? line('Note', 'TNT quote. Surcharges may be added on the invoice.') : null,
+      ]],
+    ].map(([heading, rows]) => [heading, rows.filter(Boolean)]).filter(([, rows], i) => i === 0 || rows.length);
+
+    const rowText = ([label, value]) => (label ? label + ': ' + value : value);
+    const rowHtml = ([label, , html]) => (label ? esc(label) + ': ' + html : html);
     return {
-      text: [title, ...lines.map(([l, v]) => l + ': ' + v)].join('\n'),
-      html: '<p>' + [esc(title), ...lines.map(([l, , h]) => esc(l) + ': ' + h)].join('<br>') + '</p>',
+      text: sections.map(([heading, rows]) => [heading, ...rows.map(rowText)].join('\n')).join('\n\n'),
+      html: sections.map(([heading, rows]) =>
+        '<p><strong>' + esc(heading) + '</strong>' + rows.map((r) => '<br>' + rowHtml(r)).join('') + '</p>').join(''),
     };
   }
 

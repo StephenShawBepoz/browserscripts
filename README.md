@@ -77,17 +77,33 @@ It never presses Cancel, Delete or Schedule, and does nothing if it can't tell w
    A message at the bottom says it's copied.
 3. Paste (**Cmd + V** on Mac, **Ctrl + V** on Windows): the note into a HubSpot ticket note, the customer message into your reply or email.
 
-The HubSpot note looks like this, with the consignment number as a link to TNT tracking:
+The HubSpot note looks like this. The tracking and ticket addresses are links:
 
 ```
 Item sent via TNT
-Consignment: 173448101
-Sent: 13/10/2026
+Consignment: 173405551
+Tracking: https://www.tnt.com/express/en_au/site/shipping-tools/tracking.html?searchType=con&cons=173405551
+HubSpot ticket: https://app.hubspot.com/contacts/5205495/record/0-5/48696877349
+
+Shipment
+Sent: 14/10/2026
 Service: Road Express
-To: James Boags, Carrie Watson
-Address: Launceston TAS 7250
-Pieces: 4, 18 kg
-Reference: SOBG15222
+Pieces: 3, 625 kg
+From: Oolio Queensland
+
+Delivering to
+Mackay Entertainment & Convention Centre (MECC)
+Caitlin Bell
+Mackay QLD 4740
+
+For accounts
+Booking number: BNE 897980
+Excl. GST: A$1,215.56
+GST: A$121.56
+Total incl. GST: A$1,337.12
+Billing: Sender pays on invoice
+Invoiced to: Bepoz Global, TNT account 050006154
+Note: TNT quote. Surcharges may be added on the invoice.
 ```
 
 The customer message looks like this:
@@ -113,7 +129,8 @@ Good to know:
 - The customer message greets the receiver's contact by first name, or says "Hi there" if there isn't one. Read it before sending.
 - The state is worked out from the postcode. myTNT doesn't show it.
 - Weight is the total for the whole shipment.
-- If the customer reference is a HubSpot ticket number (like `48696877349`), the note links it to that ticket. Other references, like `SOBG15222`, stay as plain text. The customer message never includes the reference.
+- If the customer reference is a HubSpot ticket number (like `48696877349`), the note adds a **HubSpot ticket** link. Other references, like `SOBG15222`, show as **Reference**. The customer message never includes the reference.
+- **For accounts** shows TNT's quoted price from myTNT. If TNT lists more than one charge (for example a surcharge), each one is shown.
 - Any line myTNT doesn't have is left out. If the consignment number or receiver is missing, nothing is copied and a red message says what's missing.
 - On the **Track shipment** tab, switch to **Details** first.
 - Straight after booking, the **Your booking is done** screen also has both buttons. The note is short (consignment and reference only), and the customer message has no name or delivery date, because that's all the screen shows. For the full versions, open the shipment from Shipment history.
