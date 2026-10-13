@@ -113,6 +113,7 @@ Good to know:
 - The customer message greets the receiver's contact by first name, or says "Hi there" if there isn't one. Read it before sending.
 - The state is worked out from the postcode. myTNT doesn't show it.
 - Weight is the total for the whole shipment.
+- If the customer reference is a HubSpot ticket number (like `48696877349`), the note links it to that ticket. Other references, like `SOBG15222`, stay as plain text. The customer message never includes the reference.
 - Any line myTNT doesn't have is left out. If the consignment number or receiver is missing, nothing is copied and a red message says what's missing.
 - On the **Track shipment** tab, switch to **Details** first.
 - Straight after booking, the **Your booking is done** screen also has both buttons. The note is short (consignment and reference only), and the customer message has no name or delivery date, because that's all the screen shows. For the full versions, open the shipment from Shipment history.

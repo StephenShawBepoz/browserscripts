@@ -2,6 +2,9 @@
 
 ## myTNT: Copy HubSpot note
 
+### 1.2.0 (13/10/2026)
+- In the HubSpot note, a customer reference that's a HubSpot ticket number now links to the ticket. Any text after the number (for example `48286955329 FJM Property`) stays as it is. Other references are unchanged, and the customer message doesn't include the reference.
+
 ### 1.1.0 (13/10/2026)
 - New **Copy customer message** button. Copies a message for the customer with their first name, consignment number, full tracking link, expected delivery date and item count.
 - Expected delivery is remembered from the shipment list and Track tab, the same way as the collection date. If it isn't known, the message leaves it out and the copied message says so.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         myTNT: Copy HubSpot note
 // @namespace    oolio-userscripts
-// @version      1.1.0
+// @version      1.2.0
 // @description  Adds Copy HubSpot note and Copy customer message buttons to myTNT shipment details. One click copies a formatted note or a customer-ready message, with the consignment number linked to tracking.
 // @author       Stephen Balderson
 // @match        https://mytnt.tnt.com/*
@@ -76,6 +76,15 @@
       details: { consignment: 'Consignment number' },
       thankYou: { consignment: 'Consignment number' },
     },
+  };
+
+  /* HubSpot: a customer reference that holds a ticket ID links to the ticket in the internal note.
+   * Ticket IDs are 10 to 13 digits and don't start with 0 (so phone numbers and order codes
+   * like SOBG15222 are left alone). The rest of the reference stays as plain text.
+   */
+  const HUBSPOT = {
+    ticketId: /\b([1-9]\d{9,12})\b/,
+    ticketUrl: (id) => 'https://app.hubspot.com/contacts/5205495/record/0-5/' + id,
   };
 
   /* ---------------- Helpers ---------------- */
@@ -254,7 +263,18 @@
     if (d.pieces != null && d.weightKg != null) add('Pieces', d.pieces + ', ' + d.weightKg + ' kg');
     else if (d.pieces != null) add('Pieces', String(d.pieces));
     else if (d.weightKg != null) add('Weight', d.weightKg + ' kg');
-    add('Reference', d.reference);
+    if (d.reference) {
+      const m = d.reference.match(HUBSPOT.ticketId);
+      if (m) {
+        const url = HUBSPOT.ticketUrl(m[1]);
+        const before = d.reference.slice(0, m.index);
+        const after = d.reference.slice(m.index + m[1].length);
+        lines.push(['Reference', d.reference + ' (' + url + ')',
+          esc(before) + '<a href="' + esc(url) + '">' + esc(m[1]) + '</a>' + esc(after)]);
+      } else {
+        add('Reference', d.reference);
+      }
+    }
 
     const title = 'Item sent via ' + (d.carrier || 'TNT');
     return {
