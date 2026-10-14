@@ -63,6 +63,13 @@
 
 ## HubSpot: Company filters
 
+### 2.2.0 (14/10/2026)
+- Settings in *Add existing Company* have two new drop-downs:
+  - **Companies: lifecycle stages to show.** Tick the stages you want, including *No stage*. Opportunity starts unticked, and its chip stays in the bar as a shortcut. The bar says how many other stages are hidden.
+  - **Tickets: pipelines to show.** Untick pipelines to leave their tickets out of a company's **Tickets** list. **Find** narrows the list, and **All** or **None** apply to what it shows, so "BP" then **None** hides every BP pipeline.
+- HubSpot is checked once for each new kind of filter before the panel uses it. If HubSpot ever refuses one, the panel falls back to hiding companies on the page instead of failing.
+- The chips no longer flash purple when the panel opens.
+
 ### 2.1.0 (14/10/2026)
 - In *Add existing Company*, each ticket in a company's **Tickets** list now shows its owner and pipeline, then the date it was created.
 

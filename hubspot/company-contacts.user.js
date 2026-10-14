@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.1.0
+// @version      2.2.0
 // @description  Add existing Contact lists only contacts at the ticket's or deal's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -460,8 +460,22 @@
     const OTHER_VALUES = ['Deliverit', 'OrderMate', 'Fortis', 'Captial', 'eBev'];
     const OTHER = '__other';
     const NONE = '__none';
-    // Lifecycle stage. Its chip sits after the products; switched off, opportunities are hidden.
+    // Lifecycle stages, chosen in settings. Opportunity also has a chip after the products.
+    // value = what HubSpot stores, label = what you see (and what LS, O, T starts with).
+    const STAGES = [
+      { value: 'subscriber', label: 'Subscriber' },
+      { value: 'lead', label: 'Lead' },
+      { value: 'marketingqualifiedlead', label: 'Marketing Qualified Lead' },
+      { value: 'salesqualifiedlead', label: 'Sales Qualified Lead' },
+      { value: 'opportunity', label: 'Opportunity' },
+      { value: 'customer', label: 'Customer' },
+      { value: 'evangelist', label: 'Evangelist' },
+      { value: 'other', label: 'Other' },
+      { value: '', label: 'No stage' },
+    ];
     const OPP = '__opportunity';
+    // A hidden stage is kept in settings.off like a chip. Opportunity keeps the key it had as a chip.
+    const stageKey = (v) => (v === 'opportunity' ? OPP : '__stage:' + (v || 'none'));
 
     // Extra fields you can switch on. All of these come with the list, so they cost nothing to show.
     const FIELDS = [
@@ -485,6 +499,7 @@
       tickets: true,
       open: true,
       fields: [],
+      pipelinesOff: [],                     // ticket pipeline IDs left out of a company's ticket list
     };
     let settings = load();
 
@@ -494,6 +509,7 @@
         const s = { ...DEFAULTS, ...saved };
         if (!Array.isArray(s.off)) s.off = DEFAULTS.off;
         if (!Array.isArray(s.fields)) s.fields = [];
+        if (!Array.isArray(s.pipelinesOff)) s.pipelinesOff = [];
         // Settings saved before the Opportunity chip existed: start it switched off, once
         if (Object.keys(saved).length && !saved.oppStartsOff) {
           s.oppStartsOff = true;
@@ -559,16 +575,22 @@
     // "product is one of your chips" to that call means HubSpot only sends your companies, so
     // pages are full and the total is right. If HubSpot ever rejects the filter, the original
     // request is sent instead and the script falls back to hiding rows on the page.
-    // Renamed when the stage filter was added, so HubSpot's answer is checked once more
-    const SERVER_KEY = 'oolio-company-search-server-filter-2';
-    let serverFilter = (() => { try { return localStorage.getItem(SERVER_KEY) || 'unknown'; } catch (e) { return 'unknown'; } })();
+    // HubSpot is asked once whether it accepts each kind of filter (which fields, which operators).
+    // Each kind it accepts is remembered, so a new kind is never sent to the panel untested.
+    const SERVER_KEY = 'oolio-company-search-server-filters';
+    const accepted = new Set((() => { try { return JSON.parse(localStorage.getItem(SERVER_KEY) || '[]'); } catch (e) { return []; } })());
+    let serverFilter = 'unknown'; // 'broken' once HubSpot rejects a filter: rows are then hidden on the page
     let lastServer = '';
-    function setServerFilter(state, msg) {
+    function setServerFilter(state, msg, kind) {
       serverFilter = state;
       lastServer = msg || '';
       // Only success is remembered, so a one-off failure is retried on the next page load
-      try { if (state === 'works') localStorage.setItem(SERVER_KEY, state); else localStorage.removeItem(SERVER_KEY); } catch (e) { /* ignore */ }
+      if (state === 'works' && kind && !accepted.has(kind)) {
+        accepted.add(kind);
+        try { localStorage.setItem(SERVER_KEY, JSON.stringify([...accepted])); } catch (e) { /* ignore */ }
+      }
     }
+    const kindOf = (filters) => [...new Set(filters.map((f) => f.property + ':' + f.operator))].sort().join(',');
 
     // The filter groups for your chips, or null when everything is switched on (or off)
     function productFilters() {
@@ -585,10 +607,18 @@
       return out;
     }
 
-    // Added to every filter group. NEQ keeps companies with no lifecycle stage.
-    const stageFilters = () => (isOff(OPP) ? [{ property: 'lifecyclestage', operator: 'NEQ', value: 'opportunity' }] : []);
+    // Added to every filter group. NEQ and NOT_IN keep companies with no lifecycle stage,
+    // so hiding "No stage" is its own filter.
+    function stageFilters() {
+      const hidden = STAGES.filter((st) => st.value && isOff(stageKey(st.value))).map((st) => st.value);
+      const out = [];
+      if (hidden.length === 1) out.push({ property: 'lifecyclestage', operator: 'NEQ', value: hidden[0] });
+      else if (hidden.length) out.push({ property: 'lifecyclestage', operator: 'NOT_IN', values: hidden });
+      if (isOff(stageKey(''))) out.push({ property: 'lifecyclestage', operator: 'HAS_PROPERTY' });
+      return out;
+    }
 
-    // Returns the changed request body, or null to leave the request alone
+    // Returns { body, kind } with the changed request body, or null to leave the request alone
     function filteredBody(url, body) {
       if (typeof body !== 'string' || body.length > 300000 || !/\/api\/graphql\/crm/.test(String(url))) return null;
       let j;
@@ -603,7 +633,7 @@
       // groups is repeated once per product condition, and every group gets the stage filter.
       v.filterGroups = groups.flatMap((g) => (extra || [null]).map((f) =>
         ({ ...g, filters: [...(g.filters || []), ...always, ...(f ? [f] : [])] })));
-      return JSON.stringify(j);
+      return { body: JSON.stringify(j), kind: kindOf([...always, ...(extra || [])]) };
     }
 
     function searchFailed(j) {
@@ -617,19 +647,19 @@
 
     const pageFetch = window.fetch;
     window.fetch = async function (input, init) {
-      let body = null;
+      let out = null;
       try {
         if (serverFilter !== 'broken' && init && typeof init.body === 'string') {
-          body = filteredBody(typeof input === 'string' ? input : input && input.url, init.body);
+          out = filteredBody(typeof input === 'string' ? input : input && input.url, init.body);
         }
-      } catch (e) { body = null; }
-      if (!body) return pageFetch.apply(this, arguments);
+      } catch (e) { out = null; }
+      if (!out) return pageFetch.apply(this, arguments);
       searchSeenVia = 'fetch';
       try {
-        const res = await pageFetch.call(window, input, { ...init, body });
+        const res = await pageFetch.call(window, input, { ...init, body: out.body });
         const problem = res.ok ? searchFailed(await res.clone().json()) : `HubSpot returned ${res.status}`;
         if (!problem) {
-          if (serverFilter !== 'works') { setServerFilter('works'); note('Filter accepted by HubSpot'); }
+          if (!accepted.has(out.kind)) { setServerFilter('works', '', out.kind); note('Filter accepted by HubSpot: ' + out.kind); }
           return res;
         }
         setServerFilter('broken', problem);
@@ -642,24 +672,24 @@
     };
 
     // HubSpot sends this search with XMLHttpRequest. A request can't be retried once sent, so
-    // the first time the filter is checked with a one-row test search; until that answers, the
-    // real request waits (a fraction of a second). After that every search goes out filtered.
+    // the first time each kind of filter is used it's checked with a one-row test search; until
+    // that answers, the real request waits (a fraction of a second). After that it goes out filtered.
     let searchSeenVia = 'none';
-    let probe = null;
-    function checkFilter(url, headers, body) {
-      if (!probe) {
+    const probes = new Map(); // kind -> test search on its way
+    function checkFilter(url, headers, body, kind) {
+      if (!probes.has(kind)) {
         const j = JSON.parse(body);
         j.variables.count = 1;
-        probe = pageFetch.call(window, url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(j) })
+        probes.set(kind, pageFetch.call(window, url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(j) })
           .then(async (res) => {
             const problem = res.ok ? searchFailed(await res.json()) : `HubSpot returned ${res.status}`;
             if (problem) { setServerFilter('broken', problem); note('Filter rejected, hiding on the page instead: ' + problem); }
-            else { setServerFilter('works'); note('Filter accepted by HubSpot'); }
+            else { setServerFilter('works', '', kind); note('Filter accepted by HubSpot: ' + kind); }
           })
           .catch((e) => { setServerFilter('broken', e.message); note('Filter check failed: ' + e.message); })
-          .finally(() => { probe = null; scheduleRun(0); });
+          .finally(() => { probes.delete(kind); scheduleRun(0); }));
       }
-      return probe;
+      return probes.get(kind);
     }
 
     const xhrOpen = XMLHttpRequest.prototype.open;
@@ -675,15 +705,15 @@
       return xhrHeader.apply(this, arguments);
     };
     XMLHttpRequest.prototype.send = function (b) {
-      let body = null;
-      try { if (serverFilter !== 'broken') body = filteredBody(this.__ocpUrl, b); } catch (e) { body = null; }
-      if (!body) return xhrSend.apply(this, arguments);
+      let out = null;
+      try { if (serverFilter !== 'broken') out = filteredBody(this.__ocpUrl, b); } catch (e) { out = null; }
+      if (!out) return xhrSend.apply(this, arguments);
       searchSeenVia = 'xhr';
-      if (serverFilter === 'works') return xhrSend.call(this, body);
+      if (accepted.has(out.kind)) return xhrSend.call(this, out.body);
       const xhr = this;
-      checkFilter(xhr.__ocpUrl, { ...xhr.__ocpHeaders }, body).then(() => {
+      checkFilter(xhr.__ocpUrl, { ...xhr.__ocpHeaders }, out.body, out.kind).then(() => {
         if (xhr.readyState !== 1) return; // cancelled meanwhile
-        try { xhrSend.call(xhr, serverFilter === 'works' ? body : b); } catch (e) { note('Search send failed: ' + e.message); }
+        try { xhrSend.call(xhr, accepted.has(out.kind) ? out.body : b); } catch (e) { note('Search send failed: ' + e.message); }
       });
     };
 
@@ -812,14 +842,20 @@
 
     // Ticket pipeline names: tickets only carry the pipeline's ID. Tried once per page load,
     // the first time a company's tickets are listed.
-    const pipelines = new Map();
+    const pipelines = new Map(); // ID -> name
+    let pipelineList = []; // active pipelines by name, for the settings list
     let pipelinesState = 'idle'; // idle | loading | ok | failed
     async function loadPipelines() {
       if (pipelinesState !== 'idle' || !portalId()) return;
       pipelinesState = 'loading';
       try {
         const j = await api(`/api/crm-pipelines/v1/pipelines/0-5?portalId=${portalId()}`);
-        for (const pl of Array.isArray(j) ? j : j.results || []) if (pl && pl.pipelineId != null) pipelines.set(String(pl.pipelineId), pl.label || '');
+        for (const pl of Array.isArray(j) ? j : j.results || []) {
+          if (!pl || pl.pipelineId == null) continue;
+          pipelines.set(String(pl.pipelineId), pl.label || '');
+          if (pl.active !== false) pipelineList.push({ id: String(pl.pipelineId), label: pl.label || 'Unnamed pipeline' });
+        }
+        pipelineList.sort((a, b) => a.label.localeCompare(b.label));
         pipelinesState = pipelines.size ? 'ok' : 'failed';
       } catch (e) {
         pipelinesState = 'failed';
@@ -891,28 +927,40 @@
       tickets: {
         type: '0-5',
         props: ['subject', 'createdate', 'hubspot_owner_id', 'hs_pipeline'],
-        filters: (id) => [
-          [{ property: 'associations.company', operator: 'EQ', value: id }],
-          [{ property: 'associations.0-2', operator: 'EQ', value: id }],
-        ],
+        // Pipelines switched off in settings are left out. NOT_IN keeps tickets with no pipeline.
+        filters: (id) => {
+          const off = settings.pipelinesOff.length ? [{ property: 'hs_pipeline', operator: 'NOT_IN', values: settings.pipelinesOff }] : [];
+          return [
+            [{ property: 'associations.company', operator: 'EQ', value: id }, ...off],
+            [{ property: 'associations.0-2', operator: 'EQ', value: id }, ...off],
+          ];
+        },
         sortBy: 'createdate',
         // Owner and pipeline are names looked up separately, so they're turned into text when drawn
         item: (p) => ({ title: p('subject') || 'Untitled ticket', created: fmtValue(p('createdate')), owner: p('hubspot_owner_id'), pipeline: p('hs_pipeline') }),
       },
     };
 
-    async function toggleList(id, kind) {
+    function toggleList(id, kind) {
       const cur = expanded.get(id);
       if (cur && cur.kind === kind) { expanded.delete(id); scheduleRun(0); return; }
+      fetchList(id, kind);
+    }
+
+    async function fetchList(id, kind) {
       const def = LISTS[kind];
       if (!def) return;
-      expanded.set(id, { kind, state: 'loading' });
+      const req = { kind, state: 'loading' };
+      expanded.set(id, req);
       if (kind === 'tickets') { loadOwners(); loadPipelines(); }
       scheduleRun(0);
+      // Only the latest request for this company may fill in the list (or the list was closed)
+      const current = () => expanded.get(id) === req;
       let lastErr = null;
       for (const filters of def.filters(id)) {
         try {
           const j = await crmSearch(def.type, { filters, count: 25, props: def.props });
+          if (!current()) return;
           const items = (j.results || []).map((r) => {
             const props = r.properties || {};
             const p = (k) => { const v = props[k]; return v == null ? '' : String(typeof v === 'object' ? v.value || '' : v); };
@@ -925,9 +973,15 @@
           lastErr = e;
         }
       }
+      if (!current()) return;
       note(`${kind} list failed: ${lastErr.message}`);
       expanded.set(id, { kind, state: 'error', msg: lastErr.message });
       scheduleRun(0);
+    }
+
+    // After the pipelines in settings change, list each open tickets list again
+    function refreshTicketLists() {
+      for (const [id, ex] of expanded) if (ex.kind === 'tickets') fetchList(id, 'tickets');
     }
 
     /* ---------------- Products and filtering ---------------- */
@@ -942,7 +996,12 @@
     }
     const wanted = (recs) => [...chipKeys(recs)].some((k) => !isOff(k));
     // HubSpot's list may not carry lifecyclestage itself, but LS, O, T starts with the stage's label
-    const isOpp = (rec) => norm(rec.props.lifecyclestage) === 'opportunity' || /^opportunity\b/i.test(rec.props.lifecycle__owner__tech || '');
+    const STAGE_BY_LABEL = new Map(STAGES.filter((st) => st.value).map((st) => [norm(st.label), st.value]));
+    function stageOf(rec) {
+      const v = norm(rec.props.lifecyclestage);
+      if (v) return v;
+      return STAGE_BY_LABEL.get(norm(String(rec.props.lifecycle__owner__tech || '').split(',')[0])) || '';
+    }
 
     /* ---------------- Styles and icons ---------------- */
     function injectStyles() {
@@ -1017,6 +1076,22 @@
           color:#673AB6; font-weight:600; cursor:pointer; }
         .ocp-actions button:hover { background:#F3EEF9; }
         .ocp-debug { width:100%; height:120px; box-sizing:border-box; font:11px/1.4 ui-monospace, monospace; }
+        .ocp-dd { font-weight:400; }
+        .ocp-dd > summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
+          box-sizing:border-box; height:30px; padding:0 8px; border:1px solid #D6D6D6; border-radius:6px; background:#fff;
+          color:#222; cursor:pointer; }
+        .ocp-dd > summary::-webkit-details-marker { display:none; }
+        .ocp-dd > summary:focus-visible { outline:2px solid #03A9F4; outline-offset:1px; }
+        .ocp-dd[open] > summary { border-color:#673AB6; }
+        .ocp-dd[open] > summary svg { transform:rotate(180deg); }
+        .ocp-dd-sum { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ocp-dd-menu { margin-top:4px; padding:6px 8px; border:1px solid #E6E0F0; border-radius:6px; background:#fff; }
+        .ocp-dd-tools { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+        .ocp-dd-tools input { flex:1; min-width:0; box-sizing:border-box; height:26px; padding:0 6px; border:1px solid #D6D6D6;
+          border-radius:4px; font:inherit; }
+        .ocp-dd-list { display:grid; gap:1px; max-height:220px; overflow:auto; }
+        .ocp-dd-list label { display:flex; align-items:center; gap:6px; padding:2px 0; cursor:pointer; }
+        .ocp-dd-list label[hidden] { display:none; }
       `;
       document.head.appendChild(css);
     }
@@ -1029,6 +1104,7 @@
     const ICON_USER = svg('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>');
     const ICON_USERS = svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>');
     const ICON_TICKET = svg('<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>');
+    const ICON_CHEVRON = svg('<path d="m6 9 6 6 6-6"/>');
     const ICON_EXT = svg('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>');
 
     /* ---------------- Finding the panel and its rows ---------------- */
@@ -1272,14 +1348,19 @@
       if (ex.state === 'error') {
         return `<div class="ocp-sub"><span class="ocp-note" title="${esc(ex.msg)}">Couldn't list ${what} here.</span> ${openCompany('See them on the company')}</div>`;
       }
-      if (!ex.items.length) return `<div class="ocp-sub"><span class="ocp-note">No ${what}.</span></div>`;
+      const leftOut = what === 'tickets' && settings.pipelinesOff.length;
+      if (!ex.items.length) {
+        return `<div class="ocp-sub"><span class="ocp-note">${leftOut ? 'No tickets in the pipelines you show.' : `No ${what}.`}</span>` +
+          (leftOut ? ` ${openCompany('See all on the company')}` : '') + '</div>';
+      }
       const type = what === 'contacts' ? '0-1' : '0-5';
       const lis = ex.items.slice(0, 10).map((i) => {
         const meta = what === 'tickets' ? ticketMeta(i) : i.meta;
         return `<li><a href="${recordUrl(type, i.id)}" target="_blank" rel="noopener" data-act="open">${esc(i.title)}</a>` +
           (meta ? `<span class="ocp-note">${esc(meta)}</span>` : '') + '</li>';
       }).join('');
-      const more = ex.total > 10 ? openCompany(`See all ${ex.total} on the company`) : '';
+      const more = leftOut ? `<span class="ocp-note">Some pipelines are hidden in settings.</span> ${openCompany('See all on the company')}`
+        : ex.total > 10 ? openCompany(`See all ${ex.total} on the company`) : '';
       return `<div class="ocp-sub"><ul>${lis}</ul>${more}</div>`;
     }
 
@@ -1312,6 +1393,59 @@
       { key: NONE, label: 'No product', title: 'Companies with no product set' },
       { key: OPP, label: 'Opportunity', title: 'Companies whose lifecycle stage is Opportunity', divider: true }];
 
+    // A drop-down list of tick boxes, with All and None (and a search box for long lists)
+    function dropdown(name, searchable, items) {
+      return `<details class="ocp-dd" data-dd="${name}"><summary><span class="ocp-dd-sum"></span>${ICON_CHEVRON}</summary>` +
+        '<div class="ocp-dd-menu"><div class="ocp-dd-tools">' +
+        (searchable ? `<input type="search" data-dd-search="${name}" placeholder="Find" aria-label="Find a pipeline">` : '') +
+        `<button type="button" class="ocp-link" data-act="dd-all" data-dd="${name}">All</button>` +
+        `<button type="button" class="ocp-link" data-act="dd-none" data-dd="${name}">None</button>` +
+        `</div><div class="ocp-dd-list">${items}</div></div></details>`;
+    }
+
+    // "All stages", "All but Opportunity", "Bepoz | Support, BP | Implementation" or "5 of 52"
+    function summarise(shown, hidden, noun) {
+      if (!hidden.length) return 'All ' + noun;
+      if (!shown.length) return 'None';
+      if (hidden.length <= 2 && hidden.length < shown.length) return 'All but ' + hidden.join(', ');
+      if (shown.length <= 2) return shown.join(', ');
+      return `${shown.length} of ${shown.length + hidden.length}`;
+    }
+
+    // Tick boxes and summaries in the two drop-downs, kept in step with the chips
+    function updateDropdowns(bar) {
+      for (const el of bar.querySelectorAll('[data-stage]')) {
+        const on = !isOff(stageKey(el.dataset.stage));
+        if (el.checked !== on) el.checked = on;
+      }
+      const stageSum = bar.querySelector('[data-dd="stages"] .ocp-dd-sum');
+      const stageText = summarise(STAGES.filter((st) => !isOff(stageKey(st.value))).map((st) => st.label),
+        STAGES.filter((st) => isOff(stageKey(st.value))).map((st) => st.label), 'stages');
+      if (stageSum.textContent !== stageText) stageSum.textContent = stageText;
+
+      const list = bar.querySelector('[data-dd="pipelines"] .ocp-dd-list');
+      if (list.__ocpFor !== pipelinesState + pipelineList.length) {
+        list.__ocpFor = pipelinesState + pipelineList.length;
+        setHTML(list, pipelinesState === 'ok'
+          ? pipelineList.map((pl) => `<label><input type="checkbox" data-pipeline="${esc(pl.id)}">${esc(pl.label)}</label>`).join('')
+          : `<span class="ocp-note">${pipelinesState === 'failed' ? "Couldn't load the pipelines." : 'Loading pipelines…'}</span>`);
+      }
+      for (const el of list.querySelectorAll('[data-pipeline]')) {
+        const on = !settings.pipelinesOff.includes(el.dataset.pipeline);
+        if (el.checked !== on) el.checked = on;
+      }
+      const pipeSum = bar.querySelector('[data-dd="pipelines"] .ocp-dd-sum');
+      const pipeText = pipelinesState !== 'ok' && !settings.pipelinesOff.length ? 'All pipelines'
+        : summarise(pipelineList.filter((pl) => !settings.pipelinesOff.includes(pl.id)).map((pl) => pl.label),
+          settings.pipelinesOff.map((id) => pipelines.get(id) || 'an archived pipeline'), 'pipelines');
+      if (pipeSum.textContent !== pipeText) pipeSum.textContent = pipeText;
+    }
+
+    function setStages(on) {
+      const keys = STAGES.map((st) => stageKey(st.value));
+      settings.off = on ? settings.off.filter((k) => !keys.includes(k)) : [...new Set([...settings.off, ...keys])];
+    }
+
     function buildBar() {
       const bar = document.createElement('div');
       bar.className = 'ocp-ui ocp-bar';
@@ -1319,7 +1453,7 @@
         '<div class="ocp-bar-row">' +
         `<span class="ocp-bar-label">${ICON_FILTER}Show</span>` +
         CHIPS.map((c) => (c.divider ? '<span class="ocp-divider" aria-hidden="true"></span>' : '') +
-          `<button type="button" class="ocp-chip" data-chip="${esc(c.key)}"${c.title ? ` title="${esc(c.title)}"` : ''}>` +
+          `<button type="button" class="ocp-chip" data-chip="${esc(c.key)}" aria-pressed="${!isOff(c.key)}"${c.title ? ` title="${esc(c.title)}"` : ''}>` +
           `${ICON_CHECK}<span class="ocp-chip-label">${esc(c.label)}</span><span class="ocp-n"></span></button>`).join('') +
         '<span class="ocp-status"></span>' +
         `<button type="button" class="ocp-gear" data-act="settings" title="Settings" aria-label="Settings" aria-expanded="false">${ICON_SLIDERS}</button>` +
@@ -1335,6 +1469,10 @@
         '<div class="ocp-set">Extra fields<div class="ocp-checks">' +
         FIELDS.map((f) => `<label><input type="checkbox" data-field="${f.name}">${esc(f.label)}</label>`).join('') +
         '</div></div>' +
+        '<div class="ocp-set">Companies: lifecycle stages to show' +
+        dropdown('stages', false, STAGES.map((st) => `<label><input type="checkbox" data-stage="${esc(st.value)}">${esc(st.label)}</label>`).join('')) +
+        '</div>' +
+        '<div class="ocp-set">Tickets: pipelines to show' + dropdown('pipelines', true, '') + '</div>' +
         '<div class="ocp-actions"><button type="button" data-act="debug">Copy debug info</button><button type="button" data-act="reset">Reset</button></div>' +
         '</div>');
 
@@ -1351,7 +1489,18 @@
           const box = bar.querySelector('.ocp-settings');
           box.hidden = !box.hidden;
           act.setAttribute('aria-expanded', String(!box.hidden));
-          if (!box.hidden) fillSettings(bar);
+          if (!box.hidden) { fillSettings(bar); loadPipelines(); }
+        } else if (act && (act.dataset.act === 'dd-all' || act.dataset.act === 'dd-none')) {
+          const on = act.dataset.act === 'dd-all';
+          if (act.dataset.dd === 'stages') { setStages(on); save(); refreshSearch(); }
+          else {
+            // Only the pipelines the Find box shows, so "BP" then None hides every BP pipeline
+            const shown = [...bar.querySelectorAll('[data-dd="pipelines"] .ocp-dd-list label:not([hidden]) [data-pipeline]')].map((el) => el.dataset.pipeline);
+            settings.pipelinesOff = on ? settings.pipelinesOff.filter((id) => !shown.includes(id)) : [...new Set([...settings.pipelinesOff, ...shown])];
+            save();
+            refreshTicketLists();
+          }
+          updateDropdowns(bar);
         } else if (act && act.dataset.act === 'showhidden') {
           settings.showHidden = !settings.showHidden;
           save();
@@ -1365,6 +1514,7 @@
           settings = { ...DEFAULTS };
           save();
           refreshSearch();
+          refreshTicketLists();
           fillSettings(bar);
         } else {
           return;
@@ -1373,7 +1523,19 @@
       });
       bar.addEventListener('change', (e) => {
         const el = e.target;
-        if (el.dataset.field) {
+        if (el.dataset.stage != null) {
+          const k = stageKey(el.dataset.stage);
+          settings.off = el.checked ? settings.off.filter((x) => x !== k) : [...settings.off, k];
+          save();
+          refreshSearch();
+          updateDropdowns(bar);
+        } else if (el.dataset.pipeline) {
+          const id = el.dataset.pipeline;
+          settings.pipelinesOff = el.checked ? settings.pipelinesOff.filter((x) => x !== id) : [...settings.pipelinesOff, id];
+          save();
+          refreshTicketLists();
+          updateDropdowns(bar);
+        } else if (el.dataset.field) {
           settings.fields = el.checked ? [...settings.fields, el.dataset.field] : settings.fields.filter((f) => f !== el.dataset.field);
         } else if (el.dataset.set === 'pageSize') {
           settings.pageSize = Number(el.value) || 0;
@@ -1386,6 +1548,13 @@
         save();
         scheduleRun(0);
       });
+      // Find a pipeline: hide the ones that don't match
+      bar.addEventListener('input', (e) => {
+        const name = e.target.dataset && e.target.dataset.ddSearch;
+        if (!name) return;
+        const q = norm(e.target.value);
+        for (const label of bar.querySelectorAll(`[data-dd="${name}"] .ocp-dd-list label`)) label.hidden = !!q && !norm(label.textContent).includes(q);
+      });
       for (const t of ['mousedown', 'pointerdown', 'keydown', 'keyup', 'keypress']) bar.addEventListener(t, (e) => e.stopPropagation());
       return bar;
     }
@@ -1394,6 +1563,7 @@
       bar.querySelector('[data-set="pageSize"]').value = String(settings.pageSize || 0);
       for (const k of ['owner', 'contacts', 'tickets', 'open']) bar.querySelector(`[data-set="${k}"]`).checked = !!settings[k];
       for (const el of bar.querySelectorAll('[data-field]')) el.checked = settings.fields.includes(el.dataset.field);
+      updateDropdowns(bar);
     }
 
     function updateBar(bar, counts, stats) {
@@ -1416,10 +1586,15 @@
           html += '<button type="button" class="ocp-link" data-act="nextpage">Next page ›</button>';
         }
       }
+      const otherStages = STAGES.filter((st) => st.value !== 'opportunity' && isOff(stageKey(st.value))).map((st) => st.label);
+      if (otherStages.length) {
+        html += `<span title="${esc('Hidden in settings: ' + otherStages.join(', '))}">+${otherStages.length} stage${otherStages.length === 1 ? '' : 's'} hidden</span>`;
+      }
       if (serverFilter === 'broken') html += `<span class="ocp-warn" title="${esc(lastServer)}">Filtering this page only</span>`;
       if (window.ocpDebug !== ownDebug) html = '<span class="ocp-warn">Delete <i>Products in company search</i> in Tampermonkey.</span>' + html;
       const status = bar.querySelector('.ocp-status');
       if (status.__ocpHtml !== html) { setHTML(status, html); status.__ocpHtml = html; }
+      updateDropdowns(bar);
     }
 
     /* ---------------- Rows per page ---------------- */
@@ -1503,9 +1678,9 @@
         let hide = false;
         if (r.state === 'ready') {
           for (const k of chipKeys(r.recs)) counts.set(k, (counts.get(k) || 0) + 1);
-          const opp = r.recs.every(isOpp);
-          if (opp) counts.set(OPP, (counts.get(OPP) || 0) + 1);
-          hide = !wanted(r.recs) || (opp && isOff(OPP));
+          const stages = r.recs.map(stageOf);
+          if (stages.every((st) => st === 'opportunity')) counts.set(OPP, (counts.get(OPP) || 0) + 1);
+          hide = !wanted(r.recs) || stages.every((st) => isOff(stageKey(st)));
         }
         if (hide) stats.filtered++;
         const hidden = hide && !settings.showHidden;
@@ -1565,7 +1740,8 @@
         `Panel: ${p ? (p.fallback ? 'found (fallback checkboxes)' : 'found') : 'not found'}, rows: ${rows.length}, rows-per-page control: ${ctl ? `"${ctl.textContent.trim()}"` : 'not found'}`,
         `Row data from: ${JSON.stringify(how)}, owners: ${ownersState} (${owners.size}), Trusted Types policy: ${!!ttPolicy}`,
         `Last pass: ${lastPass ? JSON.stringify(lastPass.stats) : 'none'}, row depth: ${rowDepth}`,
-        `Filters in HubSpot's search: ${serverFilter}${lastServer ? ' (' + lastServer + ')' : ''}, search seen via: ${searchSeenVia}`,
+        `Filters in HubSpot's search: ${serverFilter === 'broken' ? 'rejected' : 'accepted ' + [...accepted].join(' | ')}${lastServer ? ' (' + lastServer + ')' : ''}, search seen via: ${searchSeenVia}`,
+        `Hidden: ${settings.off.join(', ') || 'none'}; ticket pipelines hidden: ${settings.pipelinesOff.length} (pipelines ${pipelinesState}, ${pipelineList.length})`,
         `Last API error: ${apiError || 'none'}`,
         `Last run error: ${lastError || 'none'}`,
         '', 'Notes:', ...notes.map((l) => '  ' + l),

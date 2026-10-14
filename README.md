@@ -140,9 +140,11 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there. Each ticket shows its owner, pipeline and created date.
 3. The chips above the list choose which companies you see, and HubSpot only searches those, so the count and pages only include your companies. Click a chip to switch it on or off, and the script remembers your choice.
    - **Products:** Idealpos, SwiftPOS and Other start switched off.
-   - **Opportunity:** companies whose lifecycle stage is *Opportunity* start hidden. Click the chip to show them. Companies with no lifecycle stage always show.
+   - **Opportunity:** companies whose lifecycle stage is *Opportunity* start hidden. Click the chip to show them.
+   - **Other lifecycle stages:** pick them in settings under **Companies: lifecycle stages to show**. The bar says how many are hidden.
 4. **Show** brings hidden companies back, faded. If a whole page is hidden, click **Next page** in the bar.
-5. Click the sliders icon to change rows per page, what shows under each company, or to add extra fields such as address or phone. **Reset** puts every chip back to how it started.
+5. Click the sliders icon to change rows per page, what shows under each company, which lifecycle stages to show, or to add extra fields such as address or phone. **Reset** puts every setting back to how it started.
+6. **Tickets: pipelines to show** in settings leaves the pipelines you untick out of each company's **Tickets** list. Type in **Find** to narrow the list; **All** and **None** apply to the pipelines it shows.
 
 If something looks wrong, open the settings, click **Copy debug info** and send it to Stephen.
 
@@ -240,7 +242,7 @@ Message Stephen Shaw on Teams.
 
 - One script per file, grouped by site (`oolio-office/`, `hubspot/`, `tnt/`).
 - In the myTNT script, everything that knows about TNT's pages sits in the `SITE` block at the top. When we move to FedEx Ship Manager, rewrite that block and leave the rest. The customer message wording is in `formatCustomer()`. `deliver()` is the only part that touches the clipboard, so it can be swapped for a call to a HubSpot relay later.
-- *Company filters* lives in `hubspot/company-contacts.user.js`, its file name from before the two scripts were combined, so existing copies keep updating. Its product chips come from `PRODUCTS` in `companyPanel()`. Each `value` must match an option of the HubSpot company property `product`.
+- *Company filters* lives in `hubspot/company-contacts.user.js`, its file name from before the two scripts were combined, so existing copies keep updating. Its product chips come from `PRODUCTS` in `companyPanel()`. Each `value` must match an option of the HubSpot company property `product`. The lifecycle stages come from `STAGES`, matching the options of `lifecyclestage`. Ticket pipelines are read from HubSpot each time.
 - Every script header needs `@namespace oolio-userscripts`, `@author Stephen Shaw`, and `@updateURL` and `@downloadURL` pointing at its raw file on `main`. Changing the namespace or name makes Tampermonkey install a second copy.
 - Bump `@version` on every change and add a line to [CHANGELOG.md](CHANGELOG.md). Tampermonkey only updates when the version goes up.
 - Updates go out from `main`, so anything merged there reaches everyone within a day. Test before merging.
