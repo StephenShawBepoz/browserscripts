@@ -140,7 +140,7 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there.
 3. The chips above the list choose which companies you see, and HubSpot only searches those, so the count and pages only include your companies. Click a chip to switch it on or off, and the script remembers your choice.
    - **Products:** Idealpos, SwiftPOS and Other start switched off.
-   - **Opportunity:** switch it off to hide companies whose lifecycle stage is *Opportunity*. Companies with no lifecycle stage still show.
+   - **Opportunity:** companies whose lifecycle stage is *Opportunity* start hidden. Click the chip to show them. Companies with no lifecycle stage always show.
 4. **Show** brings hidden companies back, faded. If a whole page is hidden, click **Next page** in the bar.
 5. Click the sliders icon to change rows per page, what shows under each company, or to add extra fields such as address or phone. **Reset** puts every chip back to how it started.
 

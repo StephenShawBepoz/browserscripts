@@ -63,12 +63,12 @@
 
 ## HubSpot: Company filters
 
-### 2.0.0 (14/10/2026)
+### 2.0.1 (14/10/2026)
 - *Company contacts* and *Products in company search* are now one script. Copies of *Company contacts* update to it by themselves. Delete *Products in company search* in Tampermonkey. While both are installed only one of them works in *Add existing Company*, so you may not see the new chip.
-- New **Opportunity** chip in *Add existing Company*. Switch it off to hide companies whose lifecycle stage is *Opportunity*. HubSpot only searches the rest, so the count and pages are right. Companies with no lifecycle stage still show.
+- New **Opportunity** chip in *Add existing Company*. Companies whose lifecycle stage is *Opportunity* start hidden; click the chip to show them, and your choice is remembered. HubSpot only searches the rest, so the count and pages are right. Companies with no lifecycle stage still show.
 - The bar's *No company on this ticket* and *Showing all contacts* messages in *Add existing Contact* now say when **Email only** is on.
 
-## HubSpot: Company contacts (before 2.0.0)
+## HubSpot: Company contacts (before 2.0)
 
 ### 1.3.1 (07/10/2026)
 - **Try again** no longer leaves the bar stuck on *Finding this ticket's companies* when HubSpot doesn't search again.
@@ -92,7 +92,7 @@
 ### 1.2.0
 - Defaults to 100 contacts per page, using HubSpot's own page-size menu so the page numbers stay right.
 
-## HubSpot: Products in company search (before 2.0.0)
+## HubSpot: Products in company search (before 2.0)
 
 ### 1.2.1 (05/10/2026)
 - Fixed: the product filter wasn't reaching HubSpot's search, because HubSpot sends it a different way than expected. It now does, after a one-off check that HubSpot accepts it.

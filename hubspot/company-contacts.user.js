@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.0.0
+// @version      2.0.1
 // @description  Add existing Contact lists only contacts at the ticket's or deal's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -476,7 +476,8 @@
     /* ---------------- Your settings (saved in this browser) ---------------- */
     const STORE_KEY = 'oolio-company-search';
     const DEFAULTS = {
-      off: ['Idealpos', 'SwiftPOS', OTHER], // chips switched off: those companies are hidden
+      off: ['Idealpos', 'SwiftPOS', OTHER, OPP], // chips switched off: those companies are hidden
+      oppStartsOff: true,                   // OPP has been switched off once for older saved settings
       showHidden: false,                    // show hidden companies faded instead
       pageSize: 100,                        // 10, 30 or 100. 0 leaves HubSpot's choice alone
       owner: true,
@@ -489,9 +490,16 @@
 
     function load() {
       try {
-        const s = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORE_KEY) || '{}') };
+        const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+        const s = { ...DEFAULTS, ...saved };
         if (!Array.isArray(s.off)) s.off = DEFAULTS.off;
         if (!Array.isArray(s.fields)) s.fields = [];
+        // Settings saved before the Opportunity chip existed: start it switched off, once
+        if (Object.keys(saved).length && !saved.oppStartsOff) {
+          s.oppStartsOff = true;
+          if (!s.off.includes(OPP)) s.off = [...s.off, OPP];
+          try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) { /* private window */ }
+        }
         return s;
       } catch (e) {
         return { ...DEFAULTS };
