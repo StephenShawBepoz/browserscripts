@@ -137,7 +137,7 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 #### Add existing Company
 
 1. On a contact or ticket, go to the Companies card, click **Add** and pick **Add existing**.
-2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there.
+2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there. Each ticket shows its owner, pipeline and created date.
 3. The chips above the list choose which companies you see, and HubSpot only searches those, so the count and pages only include your companies. Click a chip to switch it on or off, and the script remembers your choice.
    - **Products:** Idealpos, SwiftPOS and Other start switched off.
    - **Opportunity:** companies whose lifecycle stage is *Opportunity* start hidden. Click the chip to show them. Companies with no lifecycle stage always show.

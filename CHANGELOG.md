@@ -63,6 +63,9 @@
 
 ## HubSpot: Company filters
 
+### 2.1.0 (14/10/2026)
+- In *Add existing Company*, each ticket in a company's **Tickets** list now shows its owner and pipeline, then the date it was created.
+
 ### 2.0.1 (14/10/2026)
 - *Company contacts* and *Products in company search* are now one script. Copies of *Company contacts* update to it by themselves. Delete *Products in company search* in Tampermonkey. While both are installed only one of them works in *Add existing Company*, so you may not see the new chip.
 - New **Opportunity** chip in *Add existing Company*. Companies whose lifecycle stage is *Opportunity* start hidden; click the chip to show them, and your choice is remembered. HubSpot only searches the rest, so the count and pages are right. Companies with no lifecycle stage still show.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.0.1
+// @version      2.1.0
 // @description  Add existing Contact lists only contacts at the ticket's or deal's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -810,6 +810,24 @@
       scheduleRun(0);
     }
 
+    // Ticket pipeline names: tickets only carry the pipeline's ID. Tried once per page load,
+    // the first time a company's tickets are listed.
+    const pipelines = new Map();
+    let pipelinesState = 'idle'; // idle | loading | ok | failed
+    async function loadPipelines() {
+      if (pipelinesState !== 'idle' || !portalId()) return;
+      pipelinesState = 'loading';
+      try {
+        const j = await api(`/api/crm-pipelines/v1/pipelines/0-5?portalId=${portalId()}`);
+        for (const pl of Array.isArray(j) ? j : j.results || []) if (pl && pl.pipelineId != null) pipelines.set(String(pl.pipelineId), pl.label || '');
+        pipelinesState = pipelines.size ? 'ok' : 'failed';
+      } catch (e) {
+        pipelinesState = 'failed';
+        note('Pipelines: ' + e.message.slice(0, 60));
+      }
+      scheduleRun(0);
+    }
+
     // Fallback when a row's company can't be read from the page: search HubSpot by name
     const NAME_PROPS = ['name', 'domain', PRODUCT_PROPERTY, 'lifecyclestage', 'num_associated_contacts', 'hubspot_owner_id', ...FIELDS.map((f) => f.name)];
     const nameJobs = new Map(); // normalised label -> { state, ids, msg, at }
@@ -872,13 +890,14 @@
       },
       tickets: {
         type: '0-5',
-        props: ['subject', 'createdate'],
+        props: ['subject', 'createdate', 'hubspot_owner_id', 'hs_pipeline'],
         filters: (id) => [
           [{ property: 'associations.company', operator: 'EQ', value: id }],
           [{ property: 'associations.0-2', operator: 'EQ', value: id }],
         ],
         sortBy: 'createdate',
-        item: (p) => ({ title: p('subject') || 'Untitled ticket', meta: fmtValue(p('createdate')) }),
+        // Owner and pipeline are names looked up separately, so they're turned into text when drawn
+        item: (p) => ({ title: p('subject') || 'Untitled ticket', created: fmtValue(p('createdate')), owner: p('hubspot_owner_id'), pipeline: p('hs_pipeline') }),
       },
     };
 
@@ -888,6 +907,7 @@
       const def = LISTS[kind];
       if (!def) return;
       expanded.set(id, { kind, state: 'loading' });
+      if (kind === 'tickets') { loadOwners(); loadPipelines(); }
       scheduleRun(0);
       let lastErr = null;
       for (const filters of def.filters(id)) {
@@ -1194,6 +1214,12 @@
       return owners.get(String(id)) || '';
     }
 
+    // Under a ticket: owner, pipeline and created date. Names still loading are left out for now.
+    function ticketMeta(i) {
+      const owner = !i.owner ? 'No owner' : owners.get(String(i.owner)) || '';
+      return [owner, pipelines.get(String(i.pipeline)) || '', i.created].filter(Boolean).join(' · ');
+    }
+
     function lineHtml(r) {
       if (r.state === 'loading') return '<span class="ocp-note">Loading products…</span>';
       if (r.state === 'error') return `<span class="ocp-note ocp-warn" title="${esc(r.msg)}">Couldn't load details</span>`;
@@ -1248,9 +1274,11 @@
       }
       if (!ex.items.length) return `<div class="ocp-sub"><span class="ocp-note">No ${what}.</span></div>`;
       const type = what === 'contacts' ? '0-1' : '0-5';
-      const lis = ex.items.slice(0, 10).map((i) =>
-        `<li><a href="${recordUrl(type, i.id)}" target="_blank" rel="noopener" data-act="open">${esc(i.title)}</a>` +
-        (i.meta ? `<span class="ocp-note">${esc(i.meta)}</span>` : '') + '</li>').join('');
+      const lis = ex.items.slice(0, 10).map((i) => {
+        const meta = what === 'tickets' ? ticketMeta(i) : i.meta;
+        return `<li><a href="${recordUrl(type, i.id)}" target="_blank" rel="noopener" data-act="open">${esc(i.title)}</a>` +
+          (meta ? `<span class="ocp-note">${esc(meta)}</span>` : '') + '</li>';
+      }).join('');
       const more = ex.total > 10 ? openCompany(`See all ${ex.total} on the company`) : '';
       return `<div class="ocp-sub"><ul>${lis}</ul>${more}</div>`;
     }
