@@ -12,7 +12,7 @@ Small add-ons that make Oolio Office, HubSpot and myTNT quicker to use. They run
 | **HubSpot: Quick actions** (beta) | Replaces *Prefill meeting*. Adds four buttons to tickets, deals, companies and contacts: book a meeting, create a task, a map with drive time and public transport, and a trip planner for visiting several customers in one go. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) |
 | **HubSpot: Prefill meeting from ticket** | Adds a **Book meeting** button to Help Desk tickets and to contact, company, deal and ticket records. Fills in the title and a link back to the ticket or deal. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/prefill-meeting.user.js) |
 | **HubSpot: Cmd/Ctrl + Enter to send** | Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js) |
-| **HubSpot: Company contacts** | On tickets and deals, *Add existing* only lists contacts at the record's companies and their parent companies, 100 to a page. **Show all** searches everyone. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
+| **HubSpot: Company filters** | *Add existing Contact* only lists contacts at the ticket's or deal's companies. *Add existing Company* shows each company's products, owner and contacts, and filters by product and lifecycle stage (for example, hide opportunities). Both show 100 to a page. Replaces *Company contacts* and *Products in company search*. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js) |
 | **myTNT: Copy HubSpot note** | Adds **Copy HubSpot note** and **Copy customer message** buttons to a shipment in myTNT. One gives you a note for the HubSpot ticket, with costs for accounts; the other a ready-to-send message for the customer with their tracking link. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/tnt/copy-hubspot-note.user.js) |
 | **HubSpot: Status prompt after email** | After you send an email reply on a Help Desk ticket, asks what the status should be. **Enter** sets the waiting status, **Esc** leaves it as it is. | [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js) |
 
@@ -32,7 +32,7 @@ Small add-ons that make Oolio Office, HubSpot and myTNT quicker to use. They run
 
 Tampermonkey checks for new versions once a day and installs them for you. To get one straight away, click the Tampermonkey icon, then **Utilities** > **Check for userscript updates**.
 
-**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exceptions are *Company contacts* and *Status prompt after email*: the copies you had before they were on GitHub stay, so delete them (see each script's notes below).
+**Installed a script before October 2026?** Click its **Install** link once more. Older copies don't know where to look for updates, and this fixes that. It replaces the old copy, so you won't end up with two. The exceptions are *Company contacts* (now *Company filters*) and *Status prompt after email*: the copies you had before they were on GitHub stay, so delete them (see each script's notes below).
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
@@ -113,7 +113,11 @@ Meanwhile, Google Maps still works. Or click **Edit address** and paste a Google
 
 It never presses Cancel, Delete or Schedule, and does nothing if it can't tell which button belongs to the box you're typing in.
 
-### Company contacts
+### Company filters
+
+This used to be two scripts, *Company contacts* and *Products in company search*. If you had *Company contacts*, it updates to this one by itself. If you had *Products in company search*, delete it: click the Tampermonkey icon, then **Dashboard**. While both are installed only one of them works in *Add existing Company*, so you may not see the **Opportunity** chip.
+
+#### Add existing Contact
 
 1. On a ticket or deal, click **Add** on the Contacts card and open the **Add existing** tab.
 2. The list only shows contacts at the record's companies and their parent companies (often the group's head office), 100 to a page. The purple bar under the search box names the companies it used.
@@ -128,7 +132,19 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 - *HubSpot didn't refresh the list*: the list may not match the bar. Type in the search box.
 - *The company filter isn't working*: HubSpot has changed, so all contacts are listed. Let Stephen know. The browser console (search for *Oolio company contacts*) shows more.
 
-**Had it before it was on GitHub?** Install it from the link above, then delete the old copy, called *HubSpot: company contacts in "Add existing Contact"* (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
+**Had *Company contacts* before it was on GitHub?** Install it from the link above, then delete the old copy, called *HubSpot: company contacts in "Add existing Contact"* (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
+
+#### Add existing Company
+
+1. On a contact or ticket, go to the Companies card, click **Add** and pick **Add existing**.
+2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there.
+3. The chips above the list choose which companies you see, and HubSpot only searches those, so the count and pages only include your companies. Click a chip to switch it on or off, and the script remembers your choice.
+   - **Products:** Idealpos, SwiftPOS and Other start switched off.
+   - **Opportunity:** switch it off to hide companies whose lifecycle stage is *Opportunity*. Companies with no lifecycle stage still show.
+4. **Show** brings hidden companies back, faded. If a whole page is hidden, click **Next page** in the bar.
+5. Click the sliders icon to change rows per page, what shows under each company, or to add extra fields such as address or phone. **Reset** puts every chip back to how it started.
+
+If something looks wrong, open the settings, click **Copy debug info** and send it to Stephen.
 
 ### Status prompt after email
 
@@ -224,6 +240,7 @@ Message Stephen Shaw on Teams.
 
 - One script per file, grouped by site (`oolio-office/`, `hubspot/`, `tnt/`).
 - In the myTNT script, everything that knows about TNT's pages sits in the `SITE` block at the top. When we move to FedEx Ship Manager, rewrite that block and leave the rest. The customer message wording is in `formatCustomer()`. `deliver()` is the only part that touches the clipboard, so it can be swapped for a call to a HubSpot relay later.
+- *Company filters* lives in `hubspot/company-contacts.user.js`, its file name from before the two scripts were combined, so existing copies keep updating. Its product chips come from `PRODUCTS` in `companyPanel()`. Each `value` must match an option of the HubSpot company property `product`.
 - Every script header needs `@namespace oolio-userscripts`, `@author Stephen Shaw`, and `@updateURL` and `@downloadURL` pointing at its raw file on `main`. Changing the namespace or name makes Tampermonkey install a second copy.
 - Bump `@version` on every change and add a line to [CHANGELOG.md](CHANGELOG.md). Tampermonkey only updates when the version goes up.
 - Updates go out from `main`, so anything merged there reaches everyone within a day. Test before merging.

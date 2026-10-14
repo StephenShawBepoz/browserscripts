@@ -61,7 +61,14 @@
 ### 1.0.0
 - First version, installed by hand.
 
-## HubSpot: Company contacts
+## HubSpot: Company filters
+
+### 2.0.0 (14/10/2026)
+- *Company contacts* and *Products in company search* are now one script. Copies of *Company contacts* update to it by themselves. Delete *Products in company search* in Tampermonkey. While both are installed only one of them works in *Add existing Company*, so you may not see the new chip.
+- New **Opportunity** chip in *Add existing Company*. Switch it off to hide companies whose lifecycle stage is *Opportunity*. HubSpot only searches the rest, so the count and pages are right. Companies with no lifecycle stage still show.
+- The bar's *No company on this ticket* and *Showing all contacts* messages in *Add existing Contact* now say when **Email only** is on.
+
+## HubSpot: Company contacts (before 2.0.0)
 
 ### 1.3.1 (07/10/2026)
 - **Try again** no longer leaves the bar stuck on *Finding this ticket's companies* when HubSpot doesn't search again.
@@ -84,6 +91,48 @@
 
 ### 1.2.0
 - Defaults to 100 contacts per page, using HubSpot's own page-size menu so the page numbers stay right.
+
+## HubSpot: Products in company search (before 2.0.0)
+
+### 1.2.1 (05/10/2026)
+- Fixed: the product filter wasn't reaching HubSpot's search, because HubSpot sends it a different way than expected. It now does, after a one-off check that HubSpot accepts it.
+
+### 1.2.0 (04/10/2026)
+- The product chips now filter HubSpot's own search, not just the page. A search returns only companies on your products, so pages are full and the company count is right (for example "burger" goes from 539 companies to only yours).
+- Changing a chip searches again straight away.
+- If HubSpot ever rejects the filter, the panel works as before and the bar says "Filtering this page only".
+- **Next page** in the bar now uses HubSpot's own next-page button.
+
+### 1.1.3 (04/10/2026)
+- Fixed: while searching, company names split across several lines around the bolded search term. The details now sit under the whole name.
+- Hidden means hidden, including while you search. When every company on a page is filtered out, the bar says so and offers **Next page**.
+
+### 1.1.2 (04/10/2026)
+- Search results now get their products and details too, not just the first page of the normal list.
+- Fixed: a search that finds a single company now shows its details.
+- Fixed: opening the settings could make the next search hide the wrong part of the list.
+
+### 1.1.0 (04/10/2026)
+- Rebuilt around what HubSpot's panel actually holds, confirmed on the live page. Products, owner and contact counts now appear instantly with no extra lookups.
+- Shows the company owner's name.
+- Products have their own colours: Bepoz blue, Oolio One purple, OolioPay teal.
+- Idealpos, SwiftPOS and Other start hidden. One click on a chip brings them back.
+- Rows per page options match HubSpot's: 10, 30 or 100.
+- Extra fields are now tick boxes: LS, O, T, address, phone, website, last contacted and created date.
+- Fixed duplicate company names picking up the wrong company.
+
+### 1.0.2 (04/10/2026)
+- Fixed: nothing showed in **Add existing Company**. HubSpot shows that panel inside its own frame, which the script now finds.
+
+### 1.0.1 (04/10/2026)
+- Works on pages that block plain HTML changes (Trusted Types), and inside embedded frames.
+- Type `ocpDebug()` in the browser console to see what the script can find, even when nothing shows on the page.
+
+### 1.0.0 (04/10/2026)
+- New. In **Add existing Company**, each company shows its products under its name, so there's no need to hover.
+- Chips above the list hide companies by product (Bepoz, Oolio One, Oolio Pay, SwiftPOS, Idealpos, Other, No product). Your choice is remembered, and **Show** brings hidden ones back faded.
+- Under each company: number of contacts and its tickets (click to list them with links), an **Open** link, and any extra fields you pick in settings.
+- Sets the list to 100 rows per page when the panel opens. Change or turn this off in settings.
 
 ## HubSpot: Quick actions
 
