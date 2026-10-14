@@ -2,6 +2,9 @@
 
 [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js) · [All scripts](../README.md) · [What changed](../CHANGELOG.md)
 
+<img src="../assets/screenshots/status-prompt.png" width="720" alt="The status prompt after sending an email, with Pending (Waiting on contact) highlighted">
+<sub>Made-up example. The HubSpot page around the script is a mock-up, so the real one looks a little different.</sub>
+
 1. Send an email reply on a ticket in Help Desk.
 2. A purple box asks what the status should be, with the waiting status highlighted (for example *Pending (Waiting on contact)*).
 3. Press **Enter** to set it. **Tab**, the arrow keys or a number move the highlight, and **Esc** (or the **×**) leaves the status as it is. You can also click a status.

@@ -2,6 +2,9 @@
 
 [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js) · [All scripts](../README.md) · [What changed](../CHANGELOG.md)
 
+<img src="../assets/screenshots/quick-actions-bar.png" width="720" alt="The Quick actions bar bottom right on a ticket, with the drive time underneath">
+<sub>Made-up example. The HubSpot page around the script is a mock-up, so the real one looks a little different.</sub>
+
 This replaces *Prefill meeting from ticket*. Once it's installed, remove that one: click the Tampermonkey icon, then **Dashboard**, and delete it. While both are installed you only see the new buttons, and the meeting details are only added once.
 
 The purple bar (bottom right) has four buttons. Hover over one to see what it does. Click the Oolio logo to tuck the bar away, and again to bring it back.
@@ -20,6 +23,8 @@ The purple bar (bottom right) has four buttons. Hover over one to see what it do
 **Esc** closes HubSpot's Schedule and Task windows (an open drop-down closes first). It presses HubSpot's own Cancel or close button, so you lose what you'd typed, as you would with those buttons.
 
 **Where trips start.** Out of the box, from the nearest Oolio office to the customer: Melbourne (North Melbourne), Sydney (Mascot), Brisbane (Pinkenba), Adelaide (Kingswood), Perth (Subiaco), Auckland (Grey Lynn), Warrington or South Carolina. Pick a different start from the list for one trip, or click the cog and star another start (an office, a place you've saved such as *Home*, or your current location) to make it the default.
+
+<img src="../assets/screenshots/quick-actions-map.png" width="340" alt="The Map panel on Car: start, customer, a small map with the route, and 25 min by car">
 
 **The map.** Pick a different start from the list, including *My current location* or a one-off address. The arrows swap the trip so it goes from the customer to you. If the record has more than one company (often a Head Office and the venue), click **pick another**. If the address is wrong or missing, click **Edit address**; your fix is kept in your browser only, so update the company in HubSpot as well. Click the result to open the trip in Google Maps for live traffic and turn-by-turn.
 

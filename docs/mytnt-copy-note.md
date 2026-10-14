@@ -2,6 +2,9 @@
 
 [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/tnt/copy-hubspot-note.user.js) · [All scripts](../README.md) · [What changed](../CHANGELOG.md)
 
+<img src="../assets/screenshots/mytnt-buttons.png" width="720" alt="The two round buttons bottom right on a myTNT shipment, with the note button's label showing">
+<sub>Made-up example. The myTNT page around the script is a mock-up, so the real one looks a little different.</sub>
+
 1. In myTNT, go to **My shipments > Shipment history** and click the shipment.
 2. Bottom right there are two round buttons. Hover over one to see what it does.
    - Purple, notebook: **Copy internal HubSpot note** for the ticket.
