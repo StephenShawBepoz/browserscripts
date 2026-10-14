@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Company contacts
 // @namespace    oolio-userscripts
-// @version      1.3.1
-// @description  On tickets and deals, the Add existing Contact panel lists only contacts at the record's companies and their parent companies, 100 to a page. Optional email-only filter.
+// @version      1.4.0
+// @description  On tickets and deals, the Add existing Contact panel lists only contacts at the record's companies and their parent companies, 100 to a page. Optional email-only and hide-opportunities filters.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js
@@ -25,6 +25,7 @@
   window.__oolioCompanyContacts = true;
 
   const EMAIL_KEY = 'oolio-company-contacts-email-only';
+  const OPPS_KEY = 'oolio-company-contacts-hide-opportunities';
   // HubSpot-defined association type IDs (contact -> X) seen in the panel's search request
   const FROM_TYPE = { 15: 'ticket', 4: 'deal' };
   const MAX_COMPANIES = 20;
@@ -36,8 +37,11 @@
 
   const portalId = (location.pathname.match(/object-builder\/(\d+)/) || [])[1];
   // status: null (no search seen yet), 'loading', 'ready' or 'failed'.
-  // "Company only" starts on for each record; "Email only" is remembered.
-  const state = { record: null, fromType: null, status: null, companies: [], on: true, emailOnly: readPref(EMAIL_KEY, false), stale: false };
+  // "Company only" starts on for each record; "Email only" and "Hide opportunities" are remembered.
+  const state = {
+    record: null, fromType: null, status: null, companies: [], on: true,
+    emailOnly: readPref(EMAIL_KEY, false), hideOpps: readPref(OPPS_KEY, false), stale: false
+  };
   const lookups = {};
   let lastSearch = 0; // when the panel last sent a ticket or deal contact search
   let changedAt = 0; // when the bar was last clicked
@@ -118,13 +122,16 @@
       extra.push({ property: 'associations.company', operator: 'IN', values: companies.map(c => c.id) });
     }
     if (state.emailOnly) extra.push({ property: 'email', operator: 'HAS_PROPERTY' });
+    // NEQ keeps contacts with no lifecycle stage
+    if (state.hideOpps) extra.push({ property: 'lifecyclestage', operator: 'NEQ', value: 'opportunity' });
     if (!extra.length) return body;
     const v = search.v;
     const groups = v.filterGroups && v.filterGroups.length ? v.filterGroups : [{ filters: [] }];
     v.filterGroups = groups.map(g => {
       const filters = (g && g.filters) || [];
-      // Skip any filter already there, for example from an older copy of this script
-      const add = extra.filter(x => !filters.some(f => f && f.property === x.property && f.operator === x.operator));
+      // Skip any filter already there, for example from an older copy of this script.
+      // The value counts too, so a HubSpot "stage is not Lead" filter doesn't stop ours.
+      const add = extra.filter(x => !filters.some(f => f && f.property === x.property && f.operator === x.operator && f.value === x.value));
       return Object.assign({}, g, { filters: filters.concat(add) });
     });
     return JSON.stringify(search.req);
@@ -299,6 +306,7 @@
     const action = btn && btn.getAttribute('data-occ');
     if (action === 'company') state.on = !state.on;
     else if (action === 'email') { state.emailOnly = !state.emailOnly; savePref(EMAIL_KEY, state.emailOnly); }
+    else if (action === 'opps') { state.hideOpps = !state.hideOpps; savePref(OPPS_KEY, state.hideOpps); }
     else if (action === 'retry') {
       const rec = state.record;
       if (!rec) return;
@@ -366,12 +374,14 @@
     if (prev !== anchor) anchor.insertAdjacentElement('afterend', bar);
 
     const record = esc(state.fromType || 'record');
-    const all = state.emailOnly ? 'all contacts with an email address' : 'all contacts';
+    const all = 'all contacts' + (state.emailOnly ? ' with an email address' : '') +
+      (state.hideOpps ? (state.emailOnly ? ',' : '') + ' except opportunities' : '');
     const names = state.companies.map(c => c.name + (c.isParent ? ' (parent)' : '')).join(', ');
     const nameHtml = state.companies
       .map(c => '<b>' + esc(c.name) + '</b>' + (c.isParent ? ' <span class="occ-parent">(parent)</span>' : ''))
       .join(', ');
-    const emailBtn = `<button type="button" data-occ="email" aria-pressed="${state.emailOnly}" title="Only show contacts with an email address">Email only</button>`;
+    const filterBtns = `<button type="button" data-occ="email" aria-pressed="${state.emailOnly}" title="Only show contacts with an email address">Email only</button>` +
+      `<button type="button" data-occ="opps" aria-pressed="${state.hideOpps}" title="Hide contacts whose lifecycle stage is Opportunity">Hide opportunities</button>`;
     const companyBtn = !state.companies.length ? ''
       : state.on ? '<button type="button" data-occ="company" title="Not here? Search every contact before you create a new one">Show all</button>'
       : `<button type="button" data-occ="company" title="${esc('Only contacts at ' + names)}">Company only</button>`;
@@ -385,23 +395,23 @@
       html = label('The company filter isn\'t working here, so all contacts are listed. HubSpot may have changed.');
     } else if (state.status === 'loading') {
       cls = '';
-      html = label(`Finding this ${record}'s companies…`) + `<span class="occ-actions">${emailBtn}</span>`;
+      html = label(`Finding this ${record}'s companies…`) + `<span class="occ-actions">${filterBtns}</span>`;
     } else if (state.stale) {
       cls = 'warn';
-      html = label('HubSpot didn\'t refresh the list. Type in the search box to update it.') + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
+      html = label('HubSpot didn\'t refresh the list. Type in the search box to update it.') + `<span class="occ-actions">${filterBtns}${companyBtn}</span>`;
     } else if (state.status === 'failed') {
       cls = 'warn';
       html = label(`Couldn't load this ${record}'s companies, so showing ${all}.`) +
-        `<span class="occ-actions">${emailBtn}<button type="button" data-occ="retry">Try again</button></span>`;
+        `<span class="occ-actions">${filterBtns}<button type="button" data-occ="retry">Try again</button></span>`;
     } else if (!state.companies.length) {
       cls = 'off';
-      html = label(`No company on this ${record}, so showing all contacts.`) + `<span class="occ-actions">${emailBtn}</span>`;
+      html = label(`No company on this ${record}, so showing ${all}.`) + `<span class="occ-actions">${filterBtns}</span>`;
     } else if (state.on) {
       cls = '';
-      html = label(`Only contacts at ${nameHtml}`, names) + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
+      html = label(`Only contacts at ${nameHtml}`, names) + `<span class="occ-actions">${filterBtns}${companyBtn}</span>`;
     } else {
       cls = 'off';
-      html = label('Showing all contacts') + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
+      html = label('Showing ' + all) + `<span class="occ-actions">${filterBtns}${companyBtn}</span>`;
     }
     // Only touch the DOM when something changed, so the observer doesn't loop
     if (bar.className !== cls) bar.className = cls;

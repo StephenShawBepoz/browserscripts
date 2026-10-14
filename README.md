@@ -121,6 +121,8 @@ It never presses Cancel, Delete or Schedule, and does nothing if it can't tell w
 
 **Email only** hides contacts without an email address. It stays on until you turn it off.
 
+**Hide opportunities** hides contacts whose lifecycle stage is *Opportunity* (sales prospects). Contacts with no lifecycle stage still show. It also stays on until you turn it off.
+
 To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays that way for the rest of that panel.
 
 **If the bar turns amber,** it says what's wrong:

@@ -63,6 +63,11 @@
 
 ## HubSpot: Company contacts
 
+### 1.4.0 (13/10/2026)
+- New **Hide opportunities** button: hides contacts whose lifecycle stage is *Opportunity*. Contacts with no lifecycle stage still show. Like **Email only**, it stays on until you turn it off, and it works with **Show all** too.
+- The bar's *No company on this ticket* and *Showing all contacts* messages now say when **Email only** or **Hide opportunities** is on.
+- A lifecycle-stage filter added in HubSpot's own panel no longer stops **Hide opportunities** from applying.
+
 ### 1.3.1 (07/10/2026)
 - **Try again** no longer leaves the bar stuck on *Finding this ticket's companies* when HubSpot doesn't search again.
 - If the old copy (1.2.0 or earlier) is still installed, this one stands aside, so the old bar's **Show all** and **Email only** really work until you delete it.
