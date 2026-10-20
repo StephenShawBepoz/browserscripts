@@ -31,6 +31,11 @@
 ### 1.0.0 (13/10/2026)
 - New. **Copy HubSpot note** button on myTNT shipment details and the booking confirmation screen. Collection date from the shipment list or Track tab (falls back to the booking date), state worked out from the postcode, total weight from the package lines.
 
+## HubSpot: Unlinked contacts
+
+### 1.0.0 (21/10/2026)
+- New. On Help Desk tickets, marks contacts who aren't linked to the ticket's company (or its parent) and links them with one click, with Undo.
+
 ## HubSpot: Status prompt after email
 
 ### 1.2.0 (05/10/2026)

@@ -33,6 +33,11 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/status-prompt.user.js)** · [How to use](docs/status-prompt.md)
 
+#### Unlinked contacts
+**Spot contacts who aren't on the customer's company, and fix it in one click.** On a Help Desk ticket, an amber chip by the title says how many contacts aren't linked to the ticket's company, and their cards are marked. Click **Link** to add the company to the contact, with **Undo** if you picked the wrong one.
+
+**[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/unlinked-contacts.user.js)** · [How to use](docs/unlinked-contacts.md)
+
 #### Cmd/Ctrl + Enter to send
 **Send without reaching for the mouse.** Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it.
 
