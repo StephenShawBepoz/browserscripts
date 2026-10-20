@@ -351,7 +351,7 @@
 
   function rowHTML(c) {
     const t = state.ticket;
-    const meta = [c.email, c.others.length ? `Linked to ${c.others.join(', ')}` : 'Not linked to any company'].filter(Boolean);
+    const meta = [c.email, c.justLinked && c.ok ? '' : c.others.length ? `Linked to ${c.others.join(', ')}` : 'Not linked to any company'].filter(Boolean);
     let actions;
     if (c.justLinked && c.ok) {
       actions = `<div class="done">${lucide(CHECK)} Linked to ${esc(c.justLinked.name)}
