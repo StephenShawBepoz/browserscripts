@@ -2,6 +2,9 @@
 
 ## HubSpot: Payments badge
 
+### 1.1.0 (21/10/2026)
+- Shows as installed on the [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app). On that page it only says it's there; it doesn't run anything.
+
 ### 1.0.0 (21/10/2026)
 - New. Shows whether a company pays through Adyen or WPay: under the name on company and ticket records, next to the title in Help Desk, and as a *Payments:* line on company cards. Reads *Acquirer - POS*, and the merchant IDs when that's blank.
 
@@ -32,6 +35,9 @@
 - New. **Copy HubSpot note** button on myTNT shipment details and the booking confirmation screen. Collection date from the shipment list or Track tab (falls back to the booking date), state worked out from the postcode, total weight from the package lines.
 
 ## HubSpot: Unlinked contacts
+
+### 1.1.0 (21/10/2026)
+- Shows as installed on the [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app). On that page it only says it's there; it doesn't run anything.
 
 ### 1.0.1 (21/10/2026)
 - Tidier line on the contact card: it uses HubSpot's own font, sits under a thin divider with the company name in bold, and has a lighter Link button. The card is marked with an amber edge instead of a full outline.
@@ -75,6 +81,9 @@
 - First version, installed by hand.
 
 ## HubSpot: Company filters
+
+### 2.3.0 (21/10/2026)
+- Shows as installed on the [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app). On that page it only says it's there; it doesn't run anything.
 
 ### 2.2.0 (14/10/2026)
 - Settings in *Add existing Company* have two new drop-downs:
@@ -158,6 +167,9 @@
 - Sets the list to 100 rows per page when the panel opens. Change or turn this off in settings.
 
 ## HubSpot: Quick actions
+
+### 0.9.0 (21/10/2026)
+- Shows as installed on the [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app). On that page it only says it's there; it doesn't run anything.
 
 ### 0.8.3 (12/10/2026, beta)
 - Help Desk tasks open faster. The task button now uses HubSpot's own Task button or the Tasks card's link however HubSpot words it (*Create task*, *Create a task*, *Add task*). When it still needs the pop-up, it presses the ticket's Task button as soon as it's drawn and shows it straight away, instead of waiting 12 seconds.

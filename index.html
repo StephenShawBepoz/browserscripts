@@ -647,6 +647,19 @@
   .bubble-slot { width: 100%; height: 192px; display: flex; flex-direction: column; justify-content: flex-end; }
   .guide.loose .bubble-slot { width: 270px; }
 
+
+  /* ---------- Installed ticks (each script marks itself on this page) ---------- */
+  .card.installed .tilt { border-color: #4F9A54; box-shadow: 0 0 0 3px rgba(79, 154, 84, .25), var(--shadow); }
+  .card .got { position: absolute; right: 14px; top: 14px; z-index: 3; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+    background: #2F7D3A; color: #fff; font: 900 13px Nunito, sans-serif; border: 2px solid #1D4F25; box-shadow: 0 3px 0 #1D4F25; transform: rotate(3deg); }
+  .card.installed .got { animation: stamp .6s cubic-bezier(.2, 1.8, .4, 1) both; }
+  @keyframes stamp { from { transform: scale(2.2) rotate(-12deg); opacity: 0; } to { transform: rotate(3deg); opacity: 1; } }
+  .card.installed .install { background: #fff; color: #2F7D3A; border-color: #2F7D3A; box-shadow: 0 5px 0 #2F7D3A; }
+  .card.installed .install:hover { background: #EEF7EC; }
+  .howto .have { margin-left: auto; white-space: nowrap; font-weight: 900; color: #2F7D3A; background: #EEF7EC; border: 2px solid #4F9A54; border-radius: 999px; padding: 3px 12px; }
+  .done-flag { font: 900 13px Nunito, sans-serif; color: #fff; background: #2F7D3A; border: 2px solid #1D4F25; border-radius: 8px; padding: 4px 9px; transform: rotate(4deg); text-shadow: none; }
+  @media (max-width: 900px) { .howto { flex-wrap: wrap; } .howto .have { margin-left: 0; } }
+
   /* Something Stephen is talking about gets a sunny glow */
   .speaking { outline: 4px solid color-mix(in srgb, var(--sun) 80%, transparent); outline-offset: 5px; border-radius: 22px; }
   .btn.speaking { border-radius: 14px; }
@@ -967,7 +980,7 @@
       </svg>
       <div class="koala-hang" data-animal="koala" data-eats="leaves" data-name="Kev the koala" data-say="That's Kev. He's been hanging there since step one. Honestly, relatable." data-mood="wink"></div>
     </div>
-    <div class="post"><div class="board"><span class="trail">Trail 1</span><h2>Set up Tampermonkey</h2></div></div>
+    <div class="post"><div class="board"><span class="trail">Trail 1</span><h2>Set up Tampermonkey</h2><span class="done-flag" hidden>✓ Done</span></div></div>
     <p class="lead">Tampermonkey is the Chrome extension that runs the scripts. Three steps, once, and you're set for good.</p>
     <div class="steps">
       <div class="step reveal" style="--i:0" data-say="Click the button, then Add to Chrome, then Add extension. Chrome will ask you to confirm. That's fine, it's the official Tampermonkey.">
@@ -1072,10 +1085,11 @@
     <div class="howto reveal" data-say="Same three clicks for every script. Install here, Install again on Tampermonkey's screen, then refresh HubSpot.">
       <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       <span>Click <b>Install</b>, click <b>Install</b> again on Tampermonkey's screen, then refresh HubSpot.</span>
+      <span class="have" hidden></span>
     </div>
 
     <div class="cards">
-      <article class="card reveal" style="--i:0" data-say="Adding someone to a ticket? This only lists people at that customer's companies and their head office. Like an emu, no detours.">
+      <article class="card reveal" data-script="company-filters" data-name="Company filters" style="--i:0" data-say="Adding someone to a ticket? This only lists people at that customer's companies and their head office. Like an emu, no detours.">
         <div class="tilt">
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/company-filters.md" aria-label="Company filters guide">
             <img src="assets/screenshots/company-filters-contact-panel.png" alt="Add existing Contact showing only contacts at the ticket's companies" loading="lazy" style="object-position: left top">
@@ -1100,7 +1114,7 @@
         </div>
       </article>
 
-      <article class="card reveal" style="--i:1; --r: 1.5deg" data-say="See an amber chip by the ticket title? Someone on the ticket isn't linked to the company. Click Link and they cling on like a koala. Picked the wrong one? Undo.">
+      <article class="card reveal" data-script="unlinked-contacts" data-name="Unlinked contacts" style="--i:1; --r: 1.5deg" data-say="See an amber chip by the ticket title? Someone on the ticket isn't linked to the company. Click Link and they cling on like a koala. Picked the wrong one? Undo.">
         <div class="tilt">
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/unlinked-contacts.md" aria-label="Unlinked contacts guide">
             <img src="assets/screenshots/unlinked-contacts.png" alt="An amber chip by a Help Desk ticket title and the list of contacts with Link buttons" loading="lazy" style="object-position: center top">
@@ -1122,7 +1136,7 @@
         </div>
       </article>
 
-      <article class="card reveal" style="--i:2" data-say="Green for Adyen, blue for WPay. Hover the badge in HubSpot for the merchant ID. A dashed outline means the Acquirer field is blank, so it's worth filling in.">
+      <article class="card reveal" data-script="payments-badge" data-name="Payments badge" style="--i:2" data-say="Green for Adyen, blue for WPay. Hover the badge in HubSpot for the merchant ID. A dashed outline means the Acquirer field is blank, so it's worth filling in.">
         <div class="tilt">
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/payments-badge.md" aria-label="Payments badge guide">
             <img src="assets/screenshots/payments-badge.png" alt="An Adyen Balance badge by a Help Desk ticket title and a Payments line on each company card" loading="lazy" style="object-position: right top">
@@ -1144,7 +1158,7 @@
         </div>
       </article>
 
-      <article class="card reveal" style="--i:3; --r: 1.5deg" data-say="Book a meeting, add a task or check the drive time, straight from the record. Quick as a roo. It's in beta, so tell me what breaks!" data-mood="wink">
+      <article class="card reveal" data-script="quick-actions" data-name="Quick actions" style="--i:3; --r: 1.5deg" data-say="Book a meeting, add a task or check the drive time, straight from the record. Quick as a roo. It's in beta, so tell me what breaks!" data-mood="wink">
         <div class="tilt">
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/quick-actions.md" aria-label="Quick actions guide">
             <img src="assets/screenshots/quick-actions-bar.png" alt="The Quick actions bar bottom right of a ticket, with the drive time underneath" loading="lazy" style="object-position: right bottom">
@@ -2285,6 +2299,55 @@
     talk('Coffee? Did someone say COFFEE? MORE. COFFEE. NOW.', 'wink');
     setTimeout(() => { me.classList.remove('caffeinated'); talk("Right. I could fix every ticket in Australia. Watch me.", 'wave'); }, 4300);
   }
+})();
+</script>
+<script>
+/* ---------- Installed ticks: the scripts mark this page (data-installed-<script>) when they're installed ---------- */
+(function () {
+  const cards = [...document.querySelectorAll('.card[data-script]')];
+  const have = document.querySelector('.howto .have');
+  const flag = document.querySelector('.done-flag');
+  let shown = '';
+  let greeted = false;
+  function check() {
+    const got = cards.filter((card) => {
+      const v = document.documentElement.getAttribute('data-installed-' + card.dataset.script);
+      const btn = card.querySelector('.install');
+      if (!v) return false;
+      if (!card.classList.contains('installed')) {
+        card.classList.add('installed');
+        const badge = document.createElement('span');
+        badge.className = 'got';
+        badge.textContent = v === 'yes' ? '✓ Installed' : `✓ Installed v${v}`;
+        card.querySelector('.pen').appendChild(badge);
+        btn.lastChild.textContent = 'Installed';
+        btn.dataset.say = `You've already got ${card.dataset.name}${v === 'yes' ? '' : ' (version ' + v + ')'}. It updates itself. Only click this if you want to reinstall it.`;
+      }
+      return true;
+    });
+    const key = got.map((c) => c.dataset.script).join();
+    if (key === shown) return;
+    shown = key;
+    have.hidden = !got.length;
+    have.textContent = `✓ You've got ${got.length} of ${cards.length}`;
+    if (flag) flag.hidden = !got.length;
+    // Scripts report in at slightly different times, so count them all before Stephen says anything
+    if (got.length && !greeted) {
+      greeted = true;
+      setTimeout(() => {
+        const now = cards.filter((c) => c.classList.contains('installed')).map((c) => c.dataset.name);
+        const list = now.length > 1 ? now.slice(0, -1).join(', ') + ' and ' + now[now.length - 1] : now[0];
+        const left = cards.length - now.length;
+        const line = !left
+          ? "You've got all four installed. Legend. Nothing to do here but feed the animals."
+          : `Nice, you've already got ${list}. ${left} more to go if you want ${left === 1 ? 'it' : 'them'}.`;
+        if (window.stephenSay) window.stephenSay(line, 'wave');
+      }, 3200);
+    }
+  }
+  document.addEventListener('zoo:installed', check);
+  check();
+  [400, 1200, 2500, 5000].forEach((t) => setTimeout(check, t));
 })();
 </script>
 <style>
