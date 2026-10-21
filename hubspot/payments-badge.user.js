@@ -157,6 +157,7 @@
     const my = ++seq;
     const key = `${p.type}/${p.portal}/${p.id}`;
     state = { key, page: p, loading: true, companies: [] };
+    render(); // the last record's badge goes straight away
     try {
       const ids = p.type === 'company' ? [p.id] : await ticketCompanies(p);
       const stale = ids.filter((id) => !cache.has(id) || Date.now() - cache.get(id).at > FRESH_MS);

@@ -1,5 +1,10 @@
 # Changelog
 
+## HubSpot: Payments badge
+
+### 1.0.0 (21/10/2026)
+- New. Shows whether a company pays through Adyen or WPay: under the name on company and ticket records, next to the title in Help Desk, and as a *Payments:* line on company cards. Reads *Acquirer - POS*, and the merchant IDs when that's blank.
+
 ## myTNT: Copy HubSpot note
 
 ### 1.6.0 (13/10/2026)
