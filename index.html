@@ -30,7 +30,7 @@
     --ink-soft: #6A5544;
     --water: #4FB3D9;
 
-    /* names Stephen's speech bubble and outfit picker already use */
+    /* names Stephen's speech bubble already uses */
     --bg: var(--cream);
     --surface: #FFFFFF;
     --text: var(--ink);
@@ -246,13 +246,68 @@
   code.kbd { font-family: Consolas, ui-monospace, Menlo, monospace; font-size: 14px; background: var(--leaf-tint); padding: 1px 6px; border-radius: 6px; color: var(--gum-dark); }
 
   /* ---------- The creek: platypus swimming, an emu dashing past ---------- */
-  .creek { container-type: inline-size; position: relative; height: 150px; margin: 60px -24px 0; overflow: hidden; }
-  .creek .bank { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; }
-  .creek .water { position: absolute; left: 0; right: 0; bottom: 26px; height: 54px; overflow: hidden; }
-  .creek .waves { position: absolute; left: 0; bottom: 0; width: 200%; height: 100%; animation: waves 8s linear infinite; }
-  .creek .waves.back { opacity: .55; animation-duration: 13s; animation-direction: reverse; bottom: 8px; }
+  /* The billabong runs the full width of the window */
+  .creek { container-type: inline-size; position: relative; height: 330px; width: 100vw; overflow: hidden; margin: 70px 0 0 calc(-1 * (max(0px, (100vw - 1240px) / 2) + 24px)); }
+  .creek > div { position: absolute; }
+  .creek > div[data-say] { cursor: pointer; }
+  .creek svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .creek .speaking { outline: none; }
+  .far-bank { position: absolute; left: 0; top: 0; width: 100%; height: 108px !important; }
+  .gum-far { top: -18px; width: 90px; opacity: .85; }
+  .gum-far .gum { transform-origin: 50% 100%; animation: treesway 6s ease-in-out infinite; }
+  .gum-far.g1 { left: 12%; } .gum-far.g2 { left: 47%; width: 70px; top: -6px; } .gum-far.g3 { left: 79%; width: 104px; top: -26px; }
+  .creek .water { left: 0; right: 0; top: 92px; bottom: 56px; overflow: hidden; background: linear-gradient(180deg, #6CC3E4 0%, #47A9D3 45%, #2F86B8 100%); }
+  .creek .waves { position: absolute; left: 0; top: -2px; width: 200%; height: 34px; animation: waves 9s linear infinite; }
+  .creek .waves.back { top: -8px; opacity: .8; animation-duration: 14s; animation-direction: reverse; }
   @keyframes waves { to { transform: translateX(-50%); } }
-  .platy { position: absolute; bottom: 34px; left: 0; width: 132px; animation: swim 22s ease-in-out infinite; cursor: pointer; }
+  .creek .shimmer { position: absolute; inset: 30px 0 0; opacity: .5; animation: shimmer 6s linear infinite;
+    background: radial-gradient(ellipse 30px 3px at 20px 10px, rgba(255, 255, 255, .7), transparent 70%) 0 0 / 140px 46px,
+      radial-gradient(ellipse 22px 2px at 90px 32px, rgba(255, 255, 255, .55), transparent 70%) 0 0 / 180px 64px; }
+  @keyframes shimmer { to { background-position: 140px 0, -180px 0; } }
+  .near-bank { position: absolute; left: 0; bottom: 0; width: 100%; height: 76px !important; z-index: 2; }
+  .reed { z-index: 3; transform-origin: 50% 100%; animation: reedsway 3.6s ease-in-out infinite alternate; }
+  .reed.r1 { left: 2%; top: 48px; width: 70px; } .reed.r2 { left: 64%; top: 58px; width: 46px; animation-delay: -1.4s; }
+  .reed.r3 { left: 85%; bottom: 30px; width: 84px; animation-delay: -.7s; }
+  @keyframes reedsway { from { transform: rotate(-3deg) skewX(-3deg); } to { transform: rotate(3deg) skewX(3deg); } }
+  .lily { width: 62px; z-index: 1; animation: lily 3.4s ease-in-out infinite alternate; }
+  .lily.l1 { left: 31%; top: 210px; } .lily.l2 { left: 35.5%; top: 190px; width: 54px; animation-delay: -1s; } .lily.l3 { left: 73%; top: 232px; width: 48px; animation-delay: -2s; }
+  @keyframes lily { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(3px) rotate(2deg); } }
+  .jetty { left: 2.5%; top: 128px; width: 220px; z-index: 2; }
+  .jetty .rod { transform-box: view-box; transform-origin: 160px 52px; animation: rod 4s ease-in-out infinite; }
+  @keyframes rod { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-6deg); } 86% { transform: rotate(2deg); } }
+  .jetty .float { position: absolute; left: 92%; top: 72%; width: 12px; animation: bobfloat 2s ease-in-out infinite; }
+  @keyframes bobfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } 72% { transform: translateY(10px); } }
+  .pelican { left: 0; top: 96px; width: 100px; z-index: 1; animation: pelican 70s linear infinite; animation-delay: -20s; }
+  .pelican svg { animation: bob 2.4s ease-in-out infinite; }
+  @keyframes pelican { 0% { transform: translateX(-120px) scaleX(-1); } 48% { transform: translateX(calc(100cqw + 20px)) scaleX(-1); }
+    50% { transform: translateX(calc(100cqw + 20px)) scaleX(1); } 98% { transform: translateX(-120px) scaleX(1); } 100% { transform: translateX(-120px) scaleX(-1); } }
+  .croc { left: 52%; top: 150px; width: 190px; z-index: 1; animation: crocdrift 26s ease-in-out infinite alternate; }
+  .croc-clip { height: 40px; overflow: hidden; }
+  .croc-clip svg { animation: surface 11s ease-in-out infinite; }
+  .croc .ripple { height: 8px; margin: -5px 10px 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .7); animation: ripplepulse 11s ease-in-out infinite; }
+  @keyframes surface { 0%, 8% { transform: translateY(40px); } 20%, 70% { transform: translateY(0); } 76% { transform: translateY(4px); } 82%, 100% { transform: translateY(40px); } }
+  @keyframes ripplepulse { 0%, 10% { opacity: 0; transform: scaleX(.4); } 20%, 70% { opacity: 1; transform: scaleX(1); } 82%, 100% { opacity: 0; transform: scaleX(1.3); } }
+  @keyframes crocdrift { from { transform: translateX(-8cqw); } to { transform: translateX(10cqw); } }
+  .fish { width: 34px; opacity: 0; z-index: 1; animation: jump 7s linear infinite; }
+  .fish.f1 { left: 22%; top: 180px; } .fish.f2 { left: 46%; top: 216px; animation-delay: -2.4s; animation-duration: 8s; } .fish.f3 { left: 86%; top: 176px; animation-delay: -4.6s; animation-duration: 9s; }
+  @keyframes jump { 0%, 72% { opacity: 0; transform: translate(0, 0) rotate(-55deg); } 73% { opacity: 1; } 81% { transform: translate(34px, -78px) rotate(-5deg); }
+    89% { opacity: 1; transform: translate(68px, 0) rotate(55deg); } 90%, 100% { opacity: 0; transform: translate(68px, 4px) rotate(55deg); } }
+  .splash { width: 40px; opacity: 0; z-index: 1; animation: splash 7s ease-out infinite; }
+  .splash.s1 { left: calc(22% - 4px); top: 186px; } .splash.s2 { left: calc(46% - 4px); top: 222px; animation-delay: -2.4s; animation-duration: 8s; } .splash.s3 { left: calc(86% - 4px); top: 182px; animation-delay: -4.6s; animation-duration: 9s; }
+  @keyframes splash { 0%, 72% { opacity: 0; transform: scale(.3); } 74% { opacity: 1; transform: scale(1); } 80% { opacity: 0; transform: scale(1.4); }
+    88% { opacity: 0; transform: translateX(68px) scale(.3); } 90% { opacity: 1; transform: translateX(68px) scale(1); } 97%, 100% { opacity: 0; transform: translateX(68px) scale(1.5); } }
+  .dragonfly { width: 32px; z-index: 4; animation: dart 18s ease-in-out infinite; }
+  .dragonfly.d1 { left: 0; top: 70px; } .dragonfly.d2 { left: 0; top: 120px; width: 26px; animation-duration: 23s; animation-delay: -9s; }
+  .dragonfly .df-wing { transform-box: fill-box; transform-origin: 50% 100%; animation: flap .05s linear infinite alternate; }
+  @keyframes dart { 0% { transform: translate(8cqw, 0); } 12% { transform: translate(20cqw, -30px); } 14% { transform: translate(20cqw, -30px); } 28% { transform: translate(38cqw, 20px); }
+    30% { transform: translate(38cqw, 20px); } 46% { transform: translate(62cqw, -20px); } 60% { transform: translate(80cqw, 30px); } 62% { transform: translate(80cqw, 30px); }
+    78% { transform: translate(55cqw, -10px); } 90% { transform: translate(28cqw, 26px); } 100% { transform: translate(8cqw, 0); } }
+  .rocks { left: 34%; bottom: 10px; width: 120px; z-index: 3; }
+  .billabong-sign { left: 56%; bottom: 14px; width: 118px; z-index: 3; transform-origin: 50% 100%; animation: sway 7s ease-in-out infinite; }
+  .creek .bubbles span { bottom: 70px; z-index: 1; }
+  .creek .platy { bottom: 62px; z-index: 1; }
+  .creek .emu-dash { bottom: 18px; z-index: 4; }
+  .platy { position: absolute; bottom: 92px; left: 0; width: 132px; animation: swim 22s ease-in-out infinite; cursor: pointer; }
   .platy-svg .bob { animation: bob 1.6s ease-in-out infinite; }
   .platy-svg .p-tail { transform-box: fill-box; transform-origin: 100% 50%; animation: paddle .5s ease-in-out infinite alternate; }
   .platy-svg .p-foot { transform-box: fill-box; transform-origin: 50% 0; animation: paddle .35s ease-in-out infinite alternate; }
@@ -260,9 +315,9 @@
     50% { transform: translateX(calc(100cqw - 140px)) scaleX(-1); } 98% { transform: translateX(-140px) scaleX(-1); } 100% { transform: translateX(-140px) scaleX(1); } }
   @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(4px) rotate(2deg); } }
   @keyframes paddle { to { transform: rotate(18deg); } }
-  .bubbles span { position: absolute; bottom: 40px; width: 8px; height: 8px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .85); animation: rise 3s ease-in infinite; }
+  .bubbles span { position: absolute; bottom: 70px; width: 8px; height: 8px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .85); animation: rise 3s ease-in infinite; }
   @keyframes rise { from { transform: translateY(0) scale(.6); opacity: 1; } to { transform: translateY(-70px) scale(1.2); opacity: 0; } }
-  .emu-dash { position: absolute; bottom: 64px; left: -140px; width: 92px; z-index: 1; pointer-events: none; }
+  .emu-dash { position: absolute; bottom: 18px; left: -140px; width: 92px; z-index: 1; pointer-events: none; }
   .emu-dash.go { animation: emu-across 3.2s linear forwards; }
   .emu-dash .e-body { animation: emubob .3s ease-in-out infinite alternate; }
   .emu .e-leg { transform-box: view-box; transform-origin: 52px 98px; }
@@ -360,7 +415,7 @@
   .bubble.done .caret { display: none; }
   @keyframes caret { 50% { opacity: 0; } }
   .avatar { width: auto; margin-top: 22px; cursor: pointer; background: none; border: 0; padding: 0; }
-  .avatar svg { height: min(400px, calc(100vh - 400px)); min-height: 240px; width: auto; display: block; filter: drop-shadow(0 10px 18px rgba(103, 58, 182, .18)); }
+  .avatar svg { height: min(400px, calc(100vh - 440px)); min-height: 240px; width: auto; display: block; filter: drop-shadow(0 10px 18px rgba(103, 58, 182, .18)); }
   .nameplate { margin-top: -6px; font-size: 13px; font-weight: 700; background: var(--purple); color: #fff; padding: 3px 14px; border-radius: 999px; position: relative; }
   .me .m-open, .me .wink-r { display: none; }
   .me.mouth-open .m-smile { display: none; }
@@ -368,47 +423,15 @@
   .me.wink .eye-r { display: none; }
   .me.wink .wink-r { display: inline; }
   .me.wave .eye-r { display: inline; }
-  /* Outfits: each one recolours the same clothes and switches on its own kit (hats, socks, props) */
-  .me { --top: #1F2E4F; --sleeve: #F5D8C5; --fore: #F5D8C5; --cuff: #F5D8C5; --collar: #FFFFFF; --collar-line: #D5D9E2;
-    --thigh: #A8956A; --shin: #F5D8C5; --shoe: #F5D8C5; --shoe-line: #E2B49C; --sole: #1E88E5; --detail: #8C7A47; --btn: #F1EBDD; }
-  .me[data-outfit="guard"] { --top: #C8102E; --sleeve: #B70E29; --fore: #B70E29; --cuff: #1B2445; --thigh: #15182A; --shin: #15182A;
-    --shoe: #111114; --shoe-line: #000000; --sole: #000000; }
-  .me[data-outfit="surf"] { --top: #F7C600; --sleeve: #EDBD00; --fore: #EDBD00; --cuff: #EDBD00; --collar: #F7C600; --collar-line: #C79F00;
-    --thigh: #D3202A; --sole: #E9BFA6; --detail: #C79F00; --btn: #D3202A; }
-  .me[data-outfit="beef"] { --top: #A3121C; --sleeve: #94101A; --fore: #94101A; --cuff: #D9A93A; --thigh: #A3121C; --shin: #A3121C;
-    --shoe: #111114; --shoe-line: #000000; --sole: #000000; }
-  .me[data-outfit="croc"] { --top: #C2A46A; --sleeve: #B39558; --collar: #C9AC72; --collar-line: #8C7A47; --thigh: #A88E58;
-    --shoe: #5B3A21; --shoe-line: #3E2716; --sole: #2E1D10; --detail: #8C7A47; --btn: #6E5B30; }
-  .me[data-outfit="hols"] { --top: #F6F6F2; --sleeve: #F3BFA6; --fore: #F3BFA6; --cuff: #F3BFA6; --thigh: #C9B48A;
-    --shoe: #FFFFFF; --shoe-line: #D5D9E2; --sole: #7A5230; }
-  .me[data-outfit="cricket"] { --top: #F4F0E2; --sleeve: #EEE9D8; --fore: #EEE9D8; --cuff: #F4F0E2; --collar: #F4F0E2; --collar-line: #CFC6A8;
-    --thigh: #F1ECDC; --shin: #F1ECDC; --shoe: #FFFFFF; --shoe-line: #CDD1DA; --sole: #D9DCE3; --detail: #CFC6A8; --btn: #0B4D2B; }
-  .me[data-outfit="morris"] { --top: #FFFFFF; --sleeve: #F3F4F7; --fore: #F3F4F7; --cuff: #FFFFFF; --collar: #FFFFFF;
-    --thigh: #FFFFFF; --shin: #FFFFFF; --shoe: #151515; --shoe-line: #000000; --sole: #000000; --detail: #D5D9E2; --btn: #C9CDD6; }
+  /* Steve Irwin khakis: shirt with flap pockets and epaulettes, shorts, grey socks, boots */
+  .me { --top: #C2A46A; --sleeve: #B39558; --fore: #F5D8C5; --cuff: #F5D8C5; --collar: #C9AC72; --collar-line: #8C7A47;
+    --thigh: #A88E58; --shin: #F5D8C5; --shoe: #5B3A21; --shoe-line: #3E2716; --sole: #2E1D10; --detail: #8C7A47; --btn: #6E5B30; }
   .me .top { fill: var(--top); } .me .slv { fill: var(--sleeve); } .me .frm { fill: var(--fore); } .me .cuff { fill: var(--cuff); }
   .me .collar { fill: var(--collar); stroke: var(--collar-line); } .me .thigh { fill: var(--thigh); } .me .shin { fill: var(--shin); }
   .me .shoe { fill: var(--shoe); stroke: var(--shoe-line); } .me .sole { fill: var(--sole); }
-  .me .placket path, .me .placket-short path, .me .pocket { stroke: var(--detail); } .me .placket circle, .me .placket-short circle { fill: var(--btn); }
-  .me .top, .me .slv, .me .frm, .me .cuff, .me .collar, .me .thigh, .me .shin, .me .shoe, .me .sole { transition: fill .3s ease; }
-  .me .kit, .me .collar, .me .vneck-scoop, .me .vneck-polo, .me .placket, .me .placket-short, .me .pocket { display: none; }
-  .me[data-outfit="cork"] .kit-cork, .me[data-outfit="guard"] .kit-guard, .me[data-outfit="surf"] .kit-surf, .me[data-outfit="beef"] .kit-beef,
-  .me[data-outfit="croc"] .kit-croc, .me[data-outfit="hols"] .kit-hols, .me[data-outfit="cricket"] .kit-cricket, .me[data-outfit="morris"] .kit-morris { display: inline; }
-  .me[data-outfit="cork"] .vneck-scoop, .me[data-outfit="hols"] .vneck-scoop { display: inline; }
-  .me[data-outfit="surf"] .collar, .me[data-outfit="croc"] .collar, .me[data-outfit="cricket"] .collar, .me[data-outfit="morris"] .collar,
-  .me[data-outfit="surf"] .vneck-polo, .me[data-outfit="croc"] .vneck-polo, .me[data-outfit="cricket"] .vneck-polo, .me[data-outfit="morris"] .vneck-polo { display: inline; }
-  .me[data-outfit="croc"] .placket, .me[data-outfit="morris"] .placket, .me[data-outfit="croc"] .pocket,
-  .me[data-outfit="cricket"] .placket-short, .me[data-outfit="surf"] .placket-short { display: inline; }
-  .me.swap .fig { animation: swap .38s ease-in-out; }
-  @keyframes swap { 50% { transform: scaleX(.8) translateY(-6px); } }
+  .me .placket path, .me .pocket { stroke: var(--detail); } .me .placket circle { fill: var(--btn); }
   .avatar { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 
-  /* Outfit picker under the nameplate */
-  .outfits { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
-  .outfits button { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--purple); background: var(--surface); color: var(--link);
-    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-  .outfits button:hover { background: var(--tint); }
-  .outfits .oname { min-width: 104px; text-align: center; font-weight: 600; color: var(--text); }
-  .outfits .icon { width: 16px; height: 16px; }
 
   /* Joints: shoulders, elbows, hips and heels turn on their own points */
   .me { overflow: visible; }
@@ -620,6 +643,10 @@
   .eggs:hover { transform: translateY(-2px) rotate(-2deg); }
   .eggs.all { background: var(--sun); }
 
+  /* The bubble lives in a fixed-height slot and grows upwards, so Stephen stays put */
+  .bubble-slot { width: 100%; height: 192px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .guide.loose .bubble-slot { width: 270px; }
+
   /* Something Stephen is talking about gets a sunny glow */
   .speaking { outline: 4px solid color-mix(in srgb, var(--sun) 80%, transparent); outline-offset: 5px; border-radius: 22px; }
   .btn.speaking { border-radius: 14px; }
@@ -628,7 +655,6 @@
   .bubble::after { border-color: var(--wood); border-width: 3px; }
   .bubble .who { color: var(--earth); }
   .nameplate { background: var(--wood); border: 2px solid var(--wood-dark); font-family: "Lilita One", sans-serif; font-weight: 400; letter-spacing: .03em; }
-  .outfits button { border-width: 2px; border-color: var(--wood-dark); }
 
   @media (max-width: 1080px) {
     .steps, .good { grid-template-columns: 1fr; }
@@ -653,7 +679,10 @@
     .uluru { left: 22%; width: 60vw; } .ute { width: 104px; }
     .branch { width: 220px; right: -16px; top: -54px; } .branch .koala-hang { width: 86px; right: 46px; }
     .cards { grid-template-columns: 1fr; }
-    .creek { margin: 50px -16px 0; }
+    .creek { margin: 50px 0 0 -16px; height: 290px; }
+    .creek .jetty { width: 150px; top: 136px; } .creek .pelican { width: 76px; } .creek .croc { width: 140px; left: 44%; }
+    .reed.r2, .gum-far.g2, .lily.l3, .fish.f3, .splash.s3, .dragonfly.d2 { display: none; }
+    .billabong-sign { left: 60%; width: 96px; } .rocks { left: 30%; width: 90px; }
     .kooka-perch { display: none; }
     .foot-in { padding-bottom: 230px; }
     .stephen-loose .foot-in { padding-bottom: 60px; }
@@ -662,9 +691,11 @@
     .guide { position: static; flex-direction: row; align-items: flex-end; gap: 8px; padding: 0; pointer-events: auto; }
     .avatar { margin: 0 6px 0 4px; flex: none; }
     .avatar svg { height: 168px; min-height: 0; }
-    .nameplate, .outfits { display: none; }
+    .nameplate { display: none; }
     .bubble { min-height: 0; font-size: 13.5px; line-height: 1.45; padding: 10px 14px; margin-bottom: 18px; cursor: pointer; }
     .bubble.hush { display: none; }
+    .bubble-slot { display: contents; }
+    .guide.loose .bubble-slot { display: flex; width: 240px; height: 168px; }
     .bubble::after { left: auto; right: -12px; bottom: 22px; transform: rotate(-45deg); }
     .bubble .who { display: none; }
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; }
@@ -964,17 +995,71 @@
     </div>
   </section>
 
-  <div class="creek" aria-hidden="false">
-    <svg class="bank" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 40 C200 20 400 50 600 34 C800 18 900 40 1000 30 L1000 120 L0 120 Z" fill="#E7C48C"/>
-      <path d="M0 96 C250 84 500 104 750 92 C870 86 940 96 1000 92 L1000 120 L0 120 Z" fill="#D6AE72"/>
+  <div class="creek" aria-label="The billabong">
+    <svg class="far-bank" viewBox="0 0 1000 110" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 0 H1000 V60 C860 76 720 54 560 70 C420 84 280 60 140 74 C80 80 30 74 0 70 Z" fill="#A9C97A"/>
+      <path d="M0 52 C150 64 300 46 460 60 C620 74 780 52 1000 58 V110 H0 Z" fill="#E7C48C"/>
+      <path d="M0 86 C200 96 420 82 620 92 C800 100 900 88 1000 92 V110 H0 Z" fill="#D9B27A"/>
     </svg>
+    <div class="gum-far g1" data-animal="gum"></div><div class="gum-far g2" data-animal="gum"></div><div class="gum-far g3" data-animal="gum"></div>
     <div class="water">
-      <svg class="waves back" viewBox="0 0 2000 54" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q50 0 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14 T900 14 T1000 14 T1100 14 T1200 14 T1300 14 T1400 14 T1500 14 T1600 14 T1700 14 T1800 14 T1900 14 T2000 14 V54 H0 Z" fill="#7FCBE6"/></svg>
-      <svg class="waves" viewBox="0 0 2000 54" preserveAspectRatio="none" aria-hidden="true"><path d="M0 20 Q60 6 120 20 T240 20 T360 20 T480 20 T600 20 T720 20 T840 20 T960 20 T1080 20 T1200 20 T1320 20 T1440 20 T1560 20 T1680 20 T1800 20 T1920 20 T2040 20 V54 H0 Z" fill="var(--water)"/></svg>
+      <svg class="waves back" viewBox="0 0 2000 54" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q50 0 100 14 T200 14 T300 14 T400 14 T500 14 T600 14 T700 14 T800 14 T900 14 T1000 14 T1100 14 T1200 14 T1300 14 T1400 14 T1500 14 T1600 14 T1700 14 T1800 14 T1900 14 T2000 14 V54 H0 Z" fill="#9FDBEF"/></svg>
+      <svg class="waves" viewBox="0 0 2000 54" preserveAspectRatio="none" aria-hidden="true"><path d="M0 20 Q60 6 120 20 T240 20 T360 20 T480 20 T600 20 T720 20 T840 20 T960 20 T1080 20 T1200 20 T1320 20 T1440 20 T1560 20 T1680 20 T1800 20 T1920 20 T2040 20 V54 H0 Z" fill="#6CC3E4"/></svg>
+      <div class="shimmer"></div>
     </div>
-    <div class="bubbles" aria-hidden="true"><span style="left:18%; animation-delay:0s"></span><span style="left:46%; animation-delay:1.1s"></span><span style="left:73%; animation-delay:2.2s"></span></div>
+    <div class="reed r1"><svg viewBox="0 0 66 70" aria-hidden="true"><path d="M7.3 70 Q8.1 35.0 8.8 7.8" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="6.4" y="9.8" width="4.8" height="15.4" rx="2.4" fill="#7A4A26"/><path d="M15.3 70 Q14.6 35.0 13.9 15.9" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M24.2 70 Q21.9 35.0 19.6 15.3" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="17.2" y="17.3" width="4.8" height="15.4" rx="2.4" fill="#7A4A26"/><path d="M34.7 70 Q32.7 35.0 30.6 6.1" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M43.7 70 Q41.8 35.0 39.9 22.0" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="37.5" y="24.0" width="4.8" height="15.4" rx="2.4" fill="#7A4A26"/><path d="M51.9 70 Q54.1 35.0 56.4 17.8" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M4 70 Q10 38.5 16 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M12 70 Q18 38.5 24 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M20 70 Q26 38.5 32 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M28 70 Q34 38.5 40 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M36 70 Q42 38.5 48 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M44 70 Q50 38.5 56 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M52 70 Q58 38.5 64 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M60 70 Q66 38.5 72 21.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/></svg></div><div class="reed r2"><svg viewBox="0 0 48 56" aria-hidden="true"><path d="M8.3 56 Q10.7 28.0 13.1 10.4" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="10.7" y="12.4" width="4.8" height="12.3" rx="2.4" fill="#7A4A26"/><path d="M15.2 56 Q14.1 28.0 13.1 18.2" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M24.6 56 Q23.6 28.0 22.7 5.7" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="20.3" y="7.7" width="4.8" height="12.3" rx="2.4" fill="#7A4A26"/><path d="M36.3 56 Q36.7 28.0 37.1 6.8" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M4 56 Q10 30.8 16 16.8" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M12 56 Q18 30.8 24 16.8" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M20 56 Q26 30.8 32 16.8" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M28 56 Q34 30.8 40 16.8" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M36 56 Q42 30.8 48 16.8" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M44 56 Q50 30.8 56 16.8" stroke="#6E9A4C" stroke-width="1.6" fill="none"/></svg></div>
+    <div class="lily l1" data-say="Lily pads. The frogs are on smoko."><svg viewBox="0 0 60 26" aria-hidden="true"><path d="M30 13 L58 9 C56 22 42 26 30 26 C14 26 2 21 2 13 C2 5 14 0 30 0 C40 0 50 3 55 7 Z" fill="#4E9A4A"/><path d="M30 13 L12 6 M30 13 L14 20 M30 13 L44 22" stroke="#3E7E3A" stroke-width="1"/></svg></div>
+    <div class="lily l2"><svg viewBox="0 0 60 26" aria-hidden="true"><path d="M30 13 L58 9 C56 22 42 26 30 26 C14 26 2 21 2 13 C2 5 14 0 30 0 C40 0 50 3 55 7 Z" fill="#5BAA54"/><g transform="translate(30 9)"><path d="M0 0 C-7 -2 -9 -9 -4 -10 C-2 -6 0 -3 0 0 Z M0 0 C7 -2 9 -9 4 -10 C2 -6 0 -3 0 0 Z M0 0 C-3 -6 -2 -13 0 -14 C2 -13 3 -6 0 0 Z" fill="#F28CB8" stroke="#D96A9E" stroke-width=".6"/><circle r="2" cy="-3" fill="#FFD54A"/></g></svg></div>
+    <div class="lily l3"><svg viewBox="0 0 60 26" aria-hidden="true"><path d="M30 13 L58 9 C56 22 42 26 30 26 C14 26 2 21 2 13 C2 5 14 0 30 0 C40 0 50 3 55 7 Z" fill="#4E9A4A"/></svg></div>
+    <div class="jetty" data-say="Gone fishing. Back in five minutes. Or two weeks, if you're FIFO.">
+      <svg viewBox="0 0 220 150" aria-hidden="true">
+        <g fill="#6B4426"><rect x="22" y="70" width="9" height="80"/><rect x="92" y="70" width="9" height="80"/><rect x="160" y="70" width="9" height="80"/></g>
+        <rect x="0" y="62" width="182" height="14" rx="2" fill="#9A6236"/>
+        <g stroke="#7A4A26" stroke-width="1.4"><path d="M26 63 V75 M52 63 V75 M78 63 V75 M104 63 V75 M130 63 V75 M156 63 V75"/></g>
+        <rect x="120" y="44" width="24" height="18" rx="3" fill="#FFFFFF" stroke="#1E6FD9" stroke-width="2"/><rect x="118" y="40" width="28" height="6" rx="3" fill="#1E6FD9"/>
+        <g class="rod"><path d="M150 60 L212 4" stroke="#2E2E2E" stroke-width="2.6" stroke-linecap="round"/><circle cx="160" cy="52" r="3.6" fill="#888"/>
+          <path class="line" d="M212 4 Q218 60 214 112" stroke="#EEE" stroke-width=".9" fill="none"/></g>
+      </svg>
+      <div class="float"><svg viewBox="0 0 12 20" aria-hidden="true"><path d="M6 0 C10 3 10 9 6 10 C2 9 2 3 6 0 Z" fill="#E53935"/><path d="M6 10 C10 11 10 17 6 20 C2 17 2 11 6 10 Z" fill="#FFFFFF"/></svg></div>
+    </div>
+    <div class="pelican" data-say="A pelican. Looks majestic, eats like a FIFO crew after a twelve-hour shift.">
+      <svg viewBox="0 0 120 80" aria-hidden="true">
+        <ellipse cx="54" cy="52" rx="34" ry="18" fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.5"/>
+        <path d="M30 44 C44 30 74 34 82 50 C66 46 46 48 30 52 Z" fill="#1E1E1E"/>
+        <path d="M24 50 L6 44 L20 56 Z" fill="#1E1E1E"/>
+        <path d="M80 46 C82 30 84 18 92 12" stroke="#FFFFFF" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <circle cx="94" cy="12" r="9" fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1"/>
+        <circle cx="96" cy="10" r="2.4" fill="#1E1E1E"/><circle cx="96" cy="10" r="3.6" fill="none" stroke="#F2C230" stroke-width="1.2"/>
+        <path d="M100 10 L120 26 L100 18 Z" fill="#F2A65A"/>
+        <path d="M100 18 C110 26 116 32 114 34 C106 32 100 26 98 20 Z" fill="#F7C48A"/>
+      </svg>
+    </div>
+    <div class="croc" data-say="Crikey! A big saltie! Isn't she a beauty? Look at those eyes. Don't put your hand in, mate.">
+      <div class="croc-clip"><svg viewBox="0 0 200 40" aria-hidden="true">
+        <path d="M10 40 C20 30 40 27 60 28 L170 30 C182 31 196 34 200 40 Z" fill="#4E6B3A"/>
+        <g fill="#3E5A2E"><path d="M64 30 l4 -7 l4 7 Z"/><path d="M75 30 l4 -7 l4 7 Z"/><path d="M86 30 l4 -7 l4 7 Z"/><path d="M97 30 l4 -7 l4 7 Z"/><path d="M108 30 l4 -7 l4 7 Z"/><path d="M119 30 l4 -7 l4 7 Z"/><path d="M130 30 l4 -7 l4 7 Z"/><path d="M141 30 l4 -7 l4 7 Z"/></g>
+        <path d="M150 31 C162 28 186 30 198 36 L198 40 L150 40 Z" fill="#5B7A44"/>
+        <circle cx="186" cy="31" r="2.2" fill="#2E3E22"/><circle cx="192" cy="32" r="2" fill="#2E3E22"/>
+        <ellipse cx="146" cy="28" rx="8" ry="6" fill="#5B7A44"/><ellipse cx="128" cy="28" rx="8" ry="6" fill="#5B7A44"/>
+        <ellipse cx="146" cy="26.5" rx="4" ry="3.6" fill="#F2D24A"/><ellipse cx="128" cy="26.5" rx="4" ry="3.6" fill="#F2D24A"/>
+        <rect x="145.2" y="23.4" width="1.6" height="6.4" rx=".8" fill="#1E1E1E"/><rect x="127.2" y="23.4" width="1.6" height="6.4" rx=".8" fill="#1E1E1E"/>
+      </svg></div>
+      <div class="ripple"></div>
+    </div>
+    <div class="fish f1"><svg viewBox="0 0 40 18" aria-hidden="true"><path d="M2 9 C8 1 24 1 32 9 C24 17 8 17 2 9 Z" fill="#E8A13A"/><path d="M30 9 L40 2 L38 9 L40 16 Z" fill="#D07F22"/><path d="M14 4 Q18 9 14 14" stroke="#B9661A" fill="none" stroke-width="1.2"/><circle cx="7" cy="7.5" r="1.4" fill="#1E1E1E"/></svg></div><div class="splash s1"><svg viewBox="0 0 40 16" aria-hidden="true"><ellipse cx="20" cy="10" rx="16" ry="4" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M12 8 L9 1 M20 7 L20 0 M28 8 L31 1" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="fish f2"><svg viewBox="0 0 40 18" aria-hidden="true"><path d="M2 9 C8 1 24 1 32 9 C24 17 8 17 2 9 Z" fill="#E8A13A"/><path d="M30 9 L40 2 L38 9 L40 16 Z" fill="#D07F22"/><path d="M14 4 Q18 9 14 14" stroke="#B9661A" fill="none" stroke-width="1.2"/><circle cx="7" cy="7.5" r="1.4" fill="#1E1E1E"/></svg></div><div class="splash s2"><svg viewBox="0 0 40 16" aria-hidden="true"><ellipse cx="20" cy="10" rx="16" ry="4" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M12 8 L9 1 M20 7 L20 0 M28 8 L31 1" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="fish f3"><svg viewBox="0 0 40 18" aria-hidden="true"><path d="M2 9 C8 1 24 1 32 9 C24 17 8 17 2 9 Z" fill="#E8A13A"/><path d="M30 9 L40 2 L38 9 L40 16 Z" fill="#D07F22"/><path d="M14 4 Q18 9 14 14" stroke="#B9661A" fill="none" stroke-width="1.2"/><circle cx="7" cy="7.5" r="1.4" fill="#1E1E1E"/></svg></div><div class="splash s3"><svg viewBox="0 0 40 16" aria-hidden="true"><ellipse cx="20" cy="10" rx="16" ry="4" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M12 8 L9 1 M20 7 L20 0 M28 8 L31 1" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="dragonfly d1" data-say="A dragonfly. Faster than our Wi-Fi."><svg viewBox="0 0 44 30" aria-hidden="true"><g class="df-wing" fill="rgba(210, 240, 255, .75)" stroke="#8CC6E6" stroke-width=".6"><ellipse cx="16" cy="9" rx="11" ry="3.6" transform="rotate(-18 16 9)"/><ellipse cx="28" cy="9" rx="11" ry="3.6" transform="rotate(18 28 9)"/></g><rect x="20" y="8" width="4" height="22" rx="2" fill="#1F74C9"/><circle cx="22" cy="8" r="3.4" fill="#0F4F96"/><g class="df-wing b" fill="rgba(210, 240, 255, .75)" stroke="#8CC6E6" stroke-width=".6"><ellipse cx="15" cy="14" rx="10" ry="3.2" transform="rotate(14 15 14)"/><ellipse cx="29" cy="14" rx="10" ry="3.2" transform="rotate(-14 29 14)"/></g></svg></div>
+    <div class="dragonfly d2"><svg viewBox="0 0 44 30" aria-hidden="true"><g class="df-wing" fill="rgba(210, 240, 255, .75)" stroke="#8CC6E6" stroke-width=".6"><ellipse cx="16" cy="9" rx="11" ry="3.6" transform="rotate(-18 16 9)"/><ellipse cx="28" cy="9" rx="11" ry="3.6" transform="rotate(18 28 9)"/></g><rect x="20" y="8" width="4" height="22" rx="2" fill="#1F74C9"/><circle cx="22" cy="8" r="3.4" fill="#0F4F96"/><g class="df-wing b" fill="rgba(210, 240, 255, .75)" stroke="#8CC6E6" stroke-width=".6"><ellipse cx="15" cy="14" rx="10" ry="3.2" transform="rotate(14 15 14)"/><ellipse cx="29" cy="14" rx="10" ry="3.2" transform="rotate(-14 29 14)"/></g></svg></div>
+    <div class="bubbles" aria-hidden="true"><span style="left:18%; animation-delay:0s"></span><span style="left:46%; animation-delay:1.1s"></span><span style="left:73%; animation-delay:2.2s"></span><span style="left:88%; animation-delay:.6s"></span></div>
     <div class="platy" data-animal="platy" data-eats="grubs" data-name="the platypus" data-say="Part duck, part beaver, part Adyen and WPay. Nature's own Payments badge."></div>
+    <svg class="near-bank" viewBox="0 0 1000 80" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 18 C160 6 320 26 500 14 C680 2 840 22 1000 10 V80 H0 Z" fill="#E7C48C"/>
+      <path d="M0 48 C220 38 420 56 640 46 C820 38 920 50 1000 46 V80 H0 Z" fill="#D6AE72"/>
+    </svg>
+    <div class="rocks"><svg viewBox="0 0 120 40" aria-hidden="true"><ellipse cx="34" cy="30" rx="30" ry="14" fill="#8C7B6A"/><ellipse cx="30" cy="24" rx="20" ry="8" fill="#A39280"/><ellipse cx="82" cy="32" rx="22" ry="10" fill="#7A6A5A"/><ellipse cx="80" cy="28" rx="13" ry="5" fill="#968574"/></svg></div>
+    <div class="reed r3"><svg viewBox="0 0 75 80" aria-hidden="true"><path d="M8.6 80 Q8.8 40.0 9.0 14.3" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="6.6" y="16.3" width="4.8" height="17.6" rx="2.4" fill="#7A4A26"/><path d="M15.3 80 Q13.8 40.0 12.3 6.8" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M26.7 80 Q25.8 40.0 24.9 15.6" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="22.5" y="17.6" width="4.8" height="17.6" rx="2.4" fill="#7A4A26"/><path d="M35.3 80 Q34.3 40.0 33.3 16.2" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M45.2 80 Q43.9 40.0 42.6 22.1" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="40.2" y="24.1" width="4.8" height="17.6" rx="2.4" fill="#7A4A26"/><path d="M53.3 80 Q55.2 40.0 57.0 17.9" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M62.9 80 Q65.3 40.0 67.7 12.2" stroke="#4E7A3A" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="65.3" y="14.2" width="4.8" height="17.6" rx="2.4" fill="#7A4A26"/><path d="M4 80 Q10 44.0 16 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M12 80 Q18 44.0 24 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M20 80 Q26 44.0 32 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M28 80 Q34 44.0 40 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M36 80 Q42 44.0 48 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M44 80 Q50 44.0 56 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M52 80 Q58 44.0 64 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M60 80 Q66 44.0 72 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/><path d="M68 80 Q74 44.0 80 24.0" stroke="#6E9A4C" stroke-width="1.6" fill="none"/></svg></div>
+    <div class="billabong-sign" data-say="Welcome to the billabong. No swimming. Mostly because of the croc."><svg viewBox="0 0 120 70" aria-hidden="true"><rect x="56" y="34" width="8" height="36" fill="#64391C"/><rect x="2" y="4" width="116" height="34" rx="7" fill="#C98C55" stroke="#64391C" stroke-width="3"/><text x="60" y="27" text-anchor="middle" font-family="Lilita One, sans-serif" font-size="17" fill="#FFF4DE">BILLABONG</text></svg></div>
     <div class="emu-dash" data-animal="emu"></div>
   </div>
 
@@ -1113,73 +1198,43 @@
     <span>Stephen's spot. Click to bring him back.</span>
   </button>
   <div class="guide">
-    <div class="bubble" id="bubble" aria-live="polite"><span class="who">Stephen says</span><span id="say"></span><span class="caret"></span></div>
+    <div class="bubble-slot"><div class="bubble" id="bubble" aria-live="polite"><span class="who">Stephen says</span><span id="say"></span><span class="caret"></span></div></div>
     <div class="avatar-wrap">
-      <button class="avatar" type="button" id="avatar" aria-label="Stephen. Click to say hello, swipe or use the arrow keys to change his outfit">
-        <svg class="me" id="me" data-outfit="croc" viewBox="0 -4 220 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a Steve Irwin-style khaki outfit">
+      <button class="avatar" type="button" id="avatar" aria-label="Stephen. Click to say hello, or drag him anywhere on the page">
+        <svg class="me" id="me" viewBox="0 -4 220 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a Steve Irwin-style khaki outfit">
           <g class="fig">
             <!-- legs: thighs and shins coloured separately, so shorts, socks and stockings work -->
             <g class="leg-l">
               <path class="thigh" d="M86 296 L110 296 L108.6 349 L88.4 349 Z"/>
-              <path class="kit kit-guard" d="M89 298 L90.6 349" stroke="#C8102E" stroke-width="2.5"/>
               <g class="low-l">
               <path class="shin" d="M88.3 347 L108.7 347 L107 404 L90 404 Z"/>
-              <path class="kit kit-guard" d="M90.6 347 L92 402" stroke="#C8102E" stroke-width="2.5"/>
-              <rect class="kit kit-hols" x="89.6" y="370" width="17.6" height="35" fill="#FFFFFF" stroke="#E2E4EA" stroke-width="1"/>
               <rect class="kit kit-croc" x="89.8" y="388" width="17.4" height="16" fill="#8C8C86"/>
-              <g class="kit kit-morris"><rect x="88.6" y="356" width="19.6" height="13" rx="3" fill="#1E7A3B"/><g fill="#E3B23C"><circle cx="92" cy="371" r="2"/><circle cx="98.4" cy="372" r="2"/><circle cx="104.8" cy="371" r="2"/></g></g>
               <g class="foot-l">
                 <path class="shoe" d="M88 402 C96 399 104 400 108 403 L109 414 L78 414 C76 409 80 404 88 402 Z" stroke-width="1.5"/>
                 <rect class="sole" x="77" y="413" width="33" height="5" rx="2.5"/>
-                <path class="kit kit-cork" d="M94 403 L98 410 L103 403" fill="none" stroke="#1E88E5" stroke-width="2.2" stroke-linejoin="round"/>
-                <path class="kit kit-hols" d="M82 409 L107 406 M86 404 L104 412" fill="none" stroke="#7A5230" stroke-width="2.6" stroke-linecap="round"/>
               </g>
               </g>
             </g>
             <g class="leg-r">
               <path class="thigh" d="M110 296 L134 296 L131.9 349 L111.6 349 Z"/>
-              <path class="kit kit-guard" d="M131 298 L129.5 349" stroke="#C8102E" stroke-width="2.5"/>
               <g class="low-r">
               <path class="shin" d="M111.5 347 L132 347 L130 404 L113 404 Z"/>
-              <path class="kit kit-guard" d="M129.5 347 L128 402" stroke="#C8102E" stroke-width="2.5"/>
-              <rect class="kit kit-hols" x="112.8" y="370" width="17.6" height="35" fill="#FFFFFF" stroke="#E2E4EA" stroke-width="1"/>
               <rect class="kit kit-croc" x="112.8" y="388" width="17.4" height="16" fill="#8C8C86"/>
-              <g class="kit kit-morris"><rect x="111.8" y="356" width="19.6" height="13" rx="3" fill="#1E7A3B"/><g fill="#E3B23C"><circle cx="115.2" cy="371" r="2"/><circle cx="121.6" cy="372" r="2"/><circle cx="128" cy="371" r="2"/></g></g>
               <g class="foot-r">
                 <path class="shoe" d="M132 402 C124 399 116 400 112 403 L111 414 L142 414 C144 409 140 404 132 402 Z" stroke-width="1.5"/>
                 <rect class="sole" x="110" y="413" width="33" height="5" rx="2.5"/>
-                <path class="kit kit-cork" d="M117 403 L122 410 L126 403" fill="none" stroke="#1E88E5" stroke-width="2.2" stroke-linejoin="round"/>
-                <path class="kit kit-hols" d="M113 406 L138 409 M116 412 L134 404" fill="none" stroke="#7A5230" stroke-width="2.6" stroke-linecap="round"/>
               </g>
               </g>
             </g>
-            <!-- body: the same shirt shape, recoloured per outfit -->
+            <!-- body: khaki shirt -->
             <path class="top" d="M60 204 C62 190 82 184 110 182 C138 184 158 190 160 204 L164 304 C146 310 128 312 110 312 C92 312 74 310 56 304 Z"/>
-            <g class="kit kit-guard">
-              <rect x="58" y="270" width="104" height="9" fill="#FFFFFF"/><rect x="104" y="268.5" width="12" height="12" rx="1.5" fill="#D9A93A"/>
-              <g fill="#D9A93A"><circle cx="110" cy="214" r="2.6"/><circle cx="110" cy="230" r="2.6"/><circle cx="110" cy="246" r="2.6"/><circle cx="110" cy="262" r="2.6"/><circle cx="110" cy="290" r="2.6"/></g>
-            </g>
-            <g class="kit kit-beef">
-              <g stroke="#D9A93A" stroke-width="2.6" fill="none"><path d="M90 196 V306"/><path d="M130 196 V306"/><path d="M58 298 C80 304 140 304 162 298"/></g>
-              <path d="M100 242 L102 230 L106 236 L110 228 L114 236 L118 230 L120 242 Z" fill="#D9A93A"/>
-              <text x="110" y="258" text-anchor="middle" font-family="Inter, sans-serif" font-weight="900" font-size="11" fill="#D9A93A">ER</text>
-            </g>
-            <g class="kit kit-morris">
-              <path d="M70 198 L150 304" stroke="#C8102E" stroke-width="9"/>
-              <path d="M150 198 L70 304" stroke="#1E7A3B" stroke-width="9"/>
-              <circle cx="110" cy="251" r="7" fill="#FFEB3B" stroke="#E3B23C" stroke-width="2"/>
-            </g>
             <path d="M96 168 L124 168 L127 190 L110 208 L93 190 Z" fill="#EBC6AF"/>
-            <path class="vneck-scoop" d="M84 186 Q110 230 136 186 Z" fill="#EBC6AF"/>
             <path class="vneck-polo" d="M97 186 L110 213 L123 186 Z" fill="#EBC6AF"/>
             <path class="collar" d="M90 180 L110 206 L101 214 L82 192 Z" stroke-width="1.5" stroke-linejoin="round"/>
             <path class="collar" d="M130 180 L110 206 L119 214 L138 192 Z" stroke-width="1.5" stroke-linejoin="round"/>
             <g class="placket"><path d="M110 213 V308" fill="none" stroke-width="1.4"/><circle cx="110" cy="226" r="1.9"/><circle cx="110" cy="248" r="1.9"/><circle cx="110" cy="270" r="1.9"/><circle cx="110" cy="292" r="1.9"/></g>
-            <g class="placket-short"><path d="M110 206 V240" fill="none" stroke-width="1.4"/><circle cx="110" cy="218" r="1.9"/><circle cx="110" cy="232" r="1.9"/></g>
             <path class="pocket" d="M127 226 H148 V245 Q137.5 249 127 245 Z" fill="none" stroke-width="1.6" stroke-linejoin="round"/>
             <g class="kit kit-croc" fill="none" stroke="#8C7A47" stroke-width="1.6" stroke-linejoin="round"><path d="M72 226 H93 V245 Q82.5 249 72 245 Z"/><path d="M72 226 H93 V232 H72 Z"/><path d="M127 226 H148 V232 H127 Z"/><path d="M64 196 L82 190"/><path d="M156 196 L138 190"/></g>
-            <path class="kit kit-guard" d="M92 180 L128 180 L130 194 L90 194 Z" fill="#1B2445" stroke="#D9A93A" stroke-width="1.6"/>
-            <g class="kit kit-beef"><ellipse cx="110" cy="188" rx="31" ry="9" fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.5"/><g stroke="#D5D9E2" stroke-width="1.2"><path d="M86 183 L88 194"/><path d="M96 180 L97 196"/><path d="M106 179 L106 197"/><path d="M116 179 L115 197"/><path d="M126 180 L124 196"/><path d="M134 183 L132 194"/></g></g>
             <g class="head">
             <!-- ears: they stick out a bit -->
             <g fill="#EFC9B2"><ellipse cx="63" cy="114" rx="10" ry="15" transform="rotate(-10 63 114)"/><ellipse cx="157" cy="114" rx="10" ry="15" transform="rotate(10 157 114)"/></g>
@@ -1257,48 +1312,6 @@
             <g fill="none" stroke="#8A6446" stroke-width="2.4" stroke-linecap="round">
               <path d="M84 56 Q90 50 97 52"/><path d="M100 46 Q107 41 114 44"/><path d="M118 47 Q126 43 132 49"/><path d="M92 63 Q100 58 108 61"/><path d="M114 60 Q122 56 129 61"/><path d="M134 58 Q141 57 145 64"/>
             </g>
-            <!-- hats and face extras, one per outfit -->
-            <g class="kit kit-cork">
-              <path d="M78 70 C78 46 90 38 110 38 C130 38 142 46 142 70 Z" fill="#9A7A4E"/>
-              <rect x="78" y="62" width="64" height="7" fill="#5A4128"/>
-              <ellipse cx="110" cy="71" rx="58" ry="9" fill="#9A7A4E"/>
-              <g stroke="#3A2A1A" stroke-width="1"><path d="M58 73 V92"/><path d="M74 78 V97"/><path d="M92 79 V93"/><path d="M128 79 V93"/><path d="M146 78 V97"/><path d="M162 73 V92"/></g>
-              <g fill="#C79D6B" stroke="#8A6A44" stroke-width=".8"><rect x="55.5" y="91" width="5" height="9" rx="1.5"/><rect x="71.5" y="96" width="5" height="9" rx="1.5"/><rect x="89.5" y="92" width="5" height="8" rx="1.5"/><rect x="125.5" y="92" width="5" height="8" rx="1.5"/><rect x="143.5" y="96" width="5" height="9" rx="1.5"/><rect x="159.5" y="91" width="5" height="9" rx="1.5"/></g>
-            </g>
-            <g class="kit kit-guard">
-              <path d="M64 100 C56 50 66 4 110 0 C154 4 164 50 156 100 C146 94 130 91 110 91 C90 91 74 94 64 100 Z" fill="#151517"/>
-              <g fill="none" stroke="#2E2E33" stroke-width="2" stroke-linecap="round"><path d="M80 30 q4 -6 9 -4"/><path d="M104 16 q5 -5 10 -2"/><path d="M128 28 q5 -4 9 0"/><path d="M76 62 q5 -5 10 -2"/><path d="M100 48 q5 -5 10 -2"/><path d="M126 58 q5 -5 10 -1"/><path d="M90 80 q5 -4 10 -1"/><path d="M118 80 q5 -4 10 -1"/></g>
-              <path d="M66 100 Q72 166 110 165.5 Q148 166 154 100" fill="none" stroke="#D9A93A" stroke-width="2.4"/>
-            </g>
-            <g class="kit kit-surf">
-              <path d="M69 86 C67 56 86 44 110 44 C134 44 153 56 151 86 C140 80 126 78 110 78 C94 78 80 80 69 86 Z" fill="#D3202A"/>
-              <path d="M110 44 C86 44 67 56 69 86 C80 80 94 78 110 78 Z" fill="#F7C600"/>
-              <path d="M110 44 V78" stroke="#B5171F" stroke-width="1.2"/>
-              <g fill="none" stroke="#D3202A" stroke-width="2"><path d="M70 88 Q76 150 104 174"/><path d="M150 88 Q144 150 116 174"/></g>
-            </g>
-            <g class="kit kit-beef">
-              <path d="M70 68 C70 50 88 42 110 42 C132 42 150 50 150 68 Z" fill="#14183A"/>
-              <rect x="70" y="61" width="80" height="7" fill="#B3121F"/>
-              <ellipse cx="110" cy="69" rx="52" ry="7" fill="#14183A"/>
-              <circle cx="140" cy="60" r="4.5" fill="#B3121F" stroke="#FFFFFF" stroke-width="1.6"/>
-            </g>
-            <g class="kit kit-hols">
-              <path d="M66 84 C64 52 84 40 110 40 C136 40 156 52 154 84 C140 77 126 75 110 75 C94 75 80 77 66 84 Z" fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.5"/>
-              <g fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.2"><circle cx="65" cy="86" r="4"/><circle cx="155" cy="86" r="4"/><path d="M60 88 l-6 4 l7 1 Z"/><path d="M160 88 l6 4 l-7 1 Z"/></g>
-              <ellipse cx="112" cy="124" rx="5" ry="3.5" fill="#F09A8A" opacity=".45"/>
-            </g>
-            <g class="kit kit-cricket">
-              <path d="M70 82 C68 54 86 44 110 44 C134 44 152 54 150 82 C138 77 124 75 110 75 C96 75 82 77 70 82 Z" fill="#0B4D2B"/>
-              <path d="M82 81 Q110 95 138 81 Q110 87 82 81 Z" fill="#083C21"/>
-              <circle cx="110" cy="62" r="4" fill="#E3B23C"/>
-              <g stroke="#FFFFFF" stroke-linecap="round" opacity=".95"><path d="M110.5 103 L107 121" stroke-width="4.5"/><path d="M83 117 H94" stroke-width="3.5"/><path d="M126 117 H137" stroke-width="3.5"/></g>
-            </g>
-            <g class="kit kit-morris">
-              <rect x="80" y="50" width="60" height="19" rx="3" fill="#E6C873"/>
-              <rect x="80" y="60" width="60" height="5" fill="#C8102E"/>
-              <ellipse cx="110" cy="70" rx="46" ry="6" fill="#E6C873" stroke="#C9A851" stroke-width="1"/>
-              <g><circle cx="86" cy="58" r="3.5" fill="#E91E63"/><circle cx="93" cy="55" r="3" fill="#FFEB3B"/><circle cx="99" cy="58" r="3.5" fill="#03A9F4"/><circle cx="92" cy="61" r="2.4" fill="#4CAF50"/></g>
-            </g>
           </g>
             <!-- Zookeeper of the Month medal (an easter egg) -->
             <g class="medal">
@@ -1345,11 +1358,6 @@
         </svg>
       </button>
       <div class="nameplate">Stephen Shaw</div>
-      <div class="outfits" data-say="Use these arrows, or double-click me, to change my outfit. Very British or very Aussie, nothing in between.">
-        <button type="button" data-step="-1" aria-label="Previous outfit"><svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
-        <span class="oname" id="oname" aria-live="polite">Croc hunter</span>
-        <button type="button" data-step="1" aria-label="Next outfit"><svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
-      </div>
     </div>
   </div>
 </aside>
@@ -1596,10 +1604,10 @@
 
   const touch = window.matchMedia('(hover: none)').matches;
   const HELLO = touch
-    ? "G'day! Tap anything and I'll explain it. Drag me about, double-tap me for a new outfit, and grab food from the bucket to feed the animals."
-    : "G'day! I'm Stephen. Hover over anything and I'll explain it. Grab me and drag me anywhere, double-click me for a new outfit, and use the bucket to feed the animals.";
+    ? "G'day! Tap anything and I'll explain it. Drag me about, and grab food from the bucket to feed the animals."
+    : "G'day! I'm Stephen. Hover over anything and I'll explain it. Grab me and drag me anywhere, and use the bucket to feed the animals.";
   const HELLO_AGAIN = [
-    "Yes, that's really me. The outfits are an upgrade. Mostly.",
+    "Yes, that's really me. Khakis on, croc on the shoulder. Crikey.",
     `Still here! ${touch ? 'Tap' : 'Hover over'} a script to hear what it does.`,
     "Stop poking me, I'm working. Kidding. What do you need?",
   ];
@@ -1663,43 +1671,7 @@
     if (lit && !lit.contains(e.relatedTarget)) { lit.classList.remove('speaking'); lit = null; }
   });
 
-  // Outfits: swipe or drag Stephen sideways, or use the arrows under him
-  const OUTFITS = [
-    { id: 'croc', name: 'Croc hunter', label: 'a Steve Irwin-style khaki shirt, shorts and boots, holding a baby croc', line: "Crikey! Look at this little beauty. Khakis on, boots laced, ready for the ticket queue." },
-    { id: 'cork', name: 'Cork hat', label: 'a cork hat, singlet, stubbies and thongs, holding a snag in bread', line: "Corks keep the flies off. Mostly. Snag in bread, anyone?" },
-    { id: 'guard', name: 'Royal guard', label: 'a royal guard uniform and bearskin hat', line: "I'm not meant to smile in this. Clearly failing." },
-    { id: 'surf', name: 'Lifesaver', label: 'red and yellow lifesaver gear', line: "Swim between the flags. Install between the steps." },
-    { id: 'beef', name: 'Beefeater', label: 'a Beefeater tunic and ruff', line: "Guarding the Crown Jewels. And your HubSpot records." },
-    { id: 'hols', name: 'Brit abroad', label: 'a knotted hanky, vest, shorts, and socks with sandals', line: "Socks and sandals, factor 2 sunscreen. Living my best life." },
-    { id: 'cricket', name: 'Baggy green', label: 'cricket whites, a baggy green cap and zinc', line: "Zinc on, cap on. Ready to bat for the support team." },
-    { id: 'morris', name: 'Morris dancer', label: 'Morris dancer kit with bells and a hanky', line: "Bells on my shins, hanky in hand. Don't ask." },
-  ];
-  const oname = document.getElementById('oname');
-  let outfit = 0;
-  try { outfit = Math.max(0, OUTFITS.findIndex((o) => o.id === localStorage.getItem('zoo-outfit'))); } catch (e) { /* private window */ }
-  function wear(i, speak) {
-    outfit = (i + OUTFITS.length) % OUTFITS.length;
-    const o = OUTFITS[outfit];
-    me.dataset.outfit = o.id;
-    me.setAttribute('aria-label', `Cartoon of Stephen in ${o.label}`);
-    oname.textContent = o.name;
-    try { localStorage.setItem('zoo-outfit', o.id); } catch (e) { /* fine without */ }
-    if (!speak) return;
-    me.classList.remove('swap'); void me.getBoundingClientRect(); me.classList.add('swap');
-    setTimeout(() => me.classList.remove('swap'), 420);
-    current = null;
-    say(o.line, 'wink');
-  }
-  wear(outfit, false);
-  window.stephenWear = (id) => { const i = OUTFITS.findIndex((o) => o.id === id); if (i >= 0 && OUTFITS[outfit].id !== id) wear(i, false); };
-  document.querySelectorAll('.outfits button').forEach((b) => b.addEventListener('click', () => wear(outfit + Number(b.dataset.step), true)));
-
   const avatar = document.getElementById('avatar');
-  // Dragging him about lives in the zoo script; double-click (or double-tap) for the next outfit
-  avatar.addEventListener('dblclick', (e) => { e.preventDefault(); wear(outfit + 1, true); });
-  avatar.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); wear(outfit + (e.key === 'ArrowRight' ? 1 : -1), true); }
-  });
   avatar.addEventListener('click', () => {
     if (avatar.dataset.dragged === '1') { avatar.dataset.dragged = ''; return; }
     current = null;
@@ -2229,7 +2201,6 @@
 
   function stampede() {
     egg('crikey');
-    if (window.stephenWear) window.stephenWear('croc');
     setTimeout(() => talk("Crikey! It's a stampede! Look at 'em go!", 'wave'), 400);
     if (still) return;
     KINDS.filter((k) => !k.air).forEach((k, i) => { for (let j = 0; j < 2; j++) setTimeout(() => launch({ ...k, speed: k.speed * 1.8 + 140 }, 1, 0), i * 230 + j * 900); });
