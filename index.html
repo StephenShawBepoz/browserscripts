@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HubSpot Add-ons</title>
+<meta name="description" content="Four small Chrome add-ons that take the extra clicks out of HubSpot: Company filters, Unlinked contacts, Payments badge and Quick actions.">
+<link rel="icon" href="assets/oolio-logomark-purple.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #673AB6;
+    --purple-deep: #5E35B1;
+    --indigo: #4050B5;
+    --blue: #03A9F4;
+    --yellow: #FFEB3B;
+    --tint: #F3EEF9;
+    --bg: #FAF8FD;
+    --surface: #FFFFFF;
+    --text: #222222;
+    --muted: #5F6470;
+    --line: #E6E1EF;
+    --shadow: 0 1px 2px rgba(34, 34, 34, .06), 0 8px 24px rgba(103, 58, 182, .08);
+    --bubble: #FFFFFF;
+    --bubble-text: #222222;
+    --link: #673AB6;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141218;
+      --surface: #1E1B24;
+      --text: #F2F0F6;
+      --muted: #ABA5B8;
+      --line: #322D3B;
+      --tint: #2A2236;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+      --bubble: #2A2533;
+      --bubble-text: #F2F0F6;
+      --link: #B79CE8;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141218;
+    --surface: #1E1B24;
+    --text: #F2F0F6;
+    --muted: #ABA5B8;
+    --line: #322D3B;
+    --tint: #2A2236;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+    --bubble: #2A2533;
+    --bubble-text: #F2F0F6;
+    --link: #B79CE8;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--link); }
+  img { max-width: 100%; display: block; }
+  .icon { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- Top bar ---------- */
+  .top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .top-in { max-width: 1240px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
+  .top img { width: 38px; }
+  .top b { font-weight: 700; }
+  .top .chip { font-size: 12px; font-weight: 600; color: var(--link); background: var(--tint); padding: 2px 10px; border-radius: 999px; }
+  .top .sp { flex: 1; }
+  .gh-short { display: none; }
+  .top a.gh { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; text-decoration: none; }
+
+  /* ---------- Layout: page + Stephen's column ---------- */
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; }
+  main { min-width: 0; padding-bottom: 80px; }
+  .rail { position: relative; }
+  .guide { position: sticky; top: 92px; display: flex; flex-direction: column; align-items: center; padding-top: 32px; }
+
+  /* ---------- Hero ---------- */
+  .hero { margin-top: 32px; border-radius: 24px; padding: 48px 44px; color: #fff;
+    background: linear-gradient(-135deg, var(--purple) 0%, var(--purple-deep) 55%, var(--indigo) 100%); position: relative; overflow: hidden; }
+  .hero::after { content: ""; position: absolute; right: -60px; top: -60px; width: 260px; height: 260px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(3, 169, 244, .45), rgba(3, 169, 244, 0) 70%); }
+  .hero > * { position: relative; z-index: 1; }
+  .hero .kicker { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+  .hero h1 { font-weight: 900; font-size: clamp(34px, 5vw, 54px); line-height: 1.05; margin: 10px 0 14px; letter-spacing: -.02em; }
+  .hero h1 em { font-style: normal; color: var(--yellow); }
+  .hero p { font-size: 18px; max-width: 560px; margin: 0 0 26px; opacity: .95; }
+  .hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; position: relative; z-index: 1; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 28px; font-size: 14px; position: relative; z-index: 1; }
+  .facts span { display: inline-flex; align-items: center; gap: 7px; }
+  .facts .icon { width: 17px; height: 17px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; font: 600 15px/1.2 Inter, sans-serif;
+    text-decoration: none; cursor: pointer; border: 2px solid transparent; transition: transform .12s ease, background .12s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:focus-visible, a:focus-visible, button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .btn-light { background: #fff; color: var(--purple); }
+  .btn-ghost { border-color: rgba(255, 255, 255, .6); color: #fff; background: transparent; }
+  .btn-ghost:hover { background: rgba(255, 255, 255, .12); }
+  .btn-primary { background: var(--purple); color: #fff; }
+  .btn-primary:hover { background: var(--purple-deep); }
+  .btn-outline { border-color: var(--purple); color: var(--link); background: transparent; }
+  .btn-outline:hover { background: var(--tint); }
+
+  /* ---------- Sections ---------- */
+  section.block { margin-top: 56px; scroll-margin-top: 90px; }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--link); }
+  .step-label .n { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--purple); color: #fff; letter-spacing: 0; }
+  h2 { font-weight: 900; font-size: clamp(26px, 3.4vw, 34px); line-height: 1.15; margin: 10px 0 8px; letter-spacing: -.01em; }
+  .lead { color: var(--muted); margin: 0 0 24px; max-width: 640px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+  .step .num { font-weight: 900; font-size: 34px; line-height: 1; color: var(--link); }
+  .step h3 { margin: 0; font-size: 18px; font-weight: 700; }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+  .step .btn { align-self: flex-start; margin-top: auto; }
+  .step.key { border: 2px solid var(--purple); }
+  .flag { align-self: flex-start; font-size: 12px; font-weight: 700; color: #222; background: var(--yellow); padding: 2px 10px; border-radius: 999px; }
+  code.kbd { font-family: Consolas, ui-monospace, Menlo, monospace; font-size: 14px; background: var(--tint); padding: 1px 6px; border-radius: 6px; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; transition: transform .15s ease, box-shadow .15s ease; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(34, 34, 34, .06), 0 16px 36px rgba(103, 58, 182, .16); }
+  .shot { display: block; aspect-ratio: 16 / 10; overflow: hidden; background: var(--tint); border-bottom: 1px solid var(--line); }
+  .shot img { width: 100%; height: 100%; object-fit: cover; }
+  .card .body { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .card h3 { margin: 0; font-size: 21px; font-weight: 900; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .beta { font-size: 11px; font-weight: 700; color: #222; background: var(--yellow); padding: 1px 8px; border-radius: 999px; letter-spacing: .03em; }
+  .card .why { margin: 0; font-weight: 700; }
+  .card p, .card li { color: var(--muted); font-size: 15px; margin: 0; }
+  .card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  .card .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 6px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border: 1px solid; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .pill.adyen { border-color: #0ABF53; background: #E6F8EE; color: #06612A; }
+  .pill.wpay { border-color: #1E6FD9; background: #E8F1FC; color: #0E4A99; }
+  .pill.amber { border-color: #E8A33D; background: #FFF4E0; color: #7A4B00; }
+
+  .howto { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; padding: 14px 18px; border-radius: 14px; background: var(--tint);
+    border-left: 4px solid var(--purple); font-size: 15px; }
+  .howto .icon { color: var(--link); }
+
+  .good { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .good div { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .good h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .good h3 .icon { color: var(--link); }
+  .good p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 24px; }
+  .foot-in { max-width: 1240px; margin: 0 auto; padding: 22px 24px 30px; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
+  .foot-in img { width: 30px; }
+
+  /* ---------- Stephen and his speech bubble ---------- */
+  .bubble { position: relative; width: 100%; background: var(--bubble); color: var(--bubble-text); border: 2px solid var(--purple);
+    border-radius: 20px; padding: 16px 18px; font-size: 15px; line-height: 1.5; min-height: 112px; box-shadow: var(--shadow); }
+  .bubble::after { content: ""; position: absolute; bottom: -12px; left: 50%; width: 20px; height: 20px; background: var(--bubble);
+    border-right: 2px solid var(--purple); border-bottom: 2px solid var(--purple); transform: translateX(-50%) rotate(45deg); border-radius: 0 0 5px 0; }
+  .bubble .who { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--link); margin-bottom: 4px; }
+  .bubble .caret { display: inline-block; width: 2px; height: 1em; background: currentColor; vertical-align: -2px; margin-left: 1px; animation: caret 1s steps(1) infinite; }
+  .bubble.done .caret { display: none; }
+  @keyframes caret { 50% { opacity: 0; } }
+  .avatar { width: auto; margin-top: 22px; cursor: pointer; background: none; border: 0; padding: 0; }
+  .avatar svg { height: min(400px, calc(100vh - 330px)); min-height: 240px; width: auto; display: block; filter: drop-shadow(0 10px 18px rgba(103, 58, 182, .18)); }
+  .nameplate { margin-top: -6px; font-size: 13px; font-weight: 700; background: var(--purple); color: #fff; padding: 3px 14px; border-radius: 999px; position: relative; }
+  .me .m-open, .me .wink-r { display: none; }
+  .me.mouth-open .m-smile { display: none; }
+  .me.mouth-open .m-open { display: inline; }
+  .me.wink .eye-r { display: none; }
+  .me.wink .wink-r { display: inline; }
+  .me.wave .eye-r { display: inline; }
+  /* Joints: shoulders, elbows, hips and heels turn on their own points */
+  .me { overflow: visible; }
+  .me .arm-l, .me .arm-r, .me .fore-l, .me .fore-r, .me .leg-l, .me .leg-r, .me .foot-l, .me .foot-r, .me .fig {
+    transform-box: view-box; transition: transform .35s cubic-bezier(.3, 1.4, .5, 1); }
+  .me .arm-l { transform-origin: 64px 202px; animation: sway-l 3.2s ease-in-out infinite alternate; }
+  .me .arm-r { transform-origin: 156px 202px; animation: sway-r 3.6s ease-in-out infinite alternate; }
+  .me .fore-l { transform-origin: 60px 262px; }
+  .me .fore-r { transform-origin: 160px 262px; }
+  .me .leg-l { transform-origin: 98px 298px; }
+  .me .leg-r { transform-origin: 122px 298px; }
+  .me .foot-r { transform-origin: 112px 416px; }
+  .me .fig { transform-origin: 110px 418px; }
+  @keyframes sway-l { from { transform: rotate(2deg); } to { transform: rotate(-3deg); } }
+  @keyframes sway-r { from { transform: rotate(-2deg); } to { transform: rotate(3deg); } }
+
+  /* Talking: point at the page with one arm, gesture with the other, tap a foot */
+  .me.talking .arm-l { animation: none; transform: rotate(62deg); }
+  .me.talking .fore-l { transform: rotate(32deg); }
+  .me.talking .arm-r { animation: none; transform: rotate(-14deg); }
+  .me.talking .fore-r { animation: gesture .5s ease-in-out infinite alternate; }
+  .me.talking .foot-r { animation: tap .32s ease-in-out infinite alternate; }
+  @keyframes gesture { from { transform: rotate(-40deg); } to { transform: rotate(-70deg); } }
+  @keyframes tap { from { transform: rotate(0); } to { transform: rotate(-10deg); } }
+
+  /* Hello: big wave and a little hop */
+  .me.wave .arm-r { animation: none; transform: rotate(-150deg); }
+  .me.wave .fore-r { animation: wave .32s ease-in-out infinite alternate; }
+  .me.wave .fig { animation: hop .45s ease-out 2; }
+  .me.wave .leg-l { transform: rotate(4deg); }
+  .me.wave .leg-r { transform: rotate(-4deg); }
+  @keyframes wave { from { transform: rotate(-28deg); } to { transform: rotate(18deg); } }
+  @keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } }
+  .me .eyes { transform-box: fill-box; transform-origin: 50% 50%; animation: blink 5s infinite; }
+  @keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+  .me .head { transform-box: view-box; transform-origin: 110px 180px; transition: transform .2s ease; }
+  .me.talking .head { animation: nod .6s ease-in-out infinite alternate; }
+  @keyframes nod { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+
+  /* Something Stephen is talking about gets a soft purple glow */
+  .speaking { outline: 3px solid color-mix(in srgb, var(--purple) 45%, transparent); outline-offset: 4px; border-radius: 16px; }
+  .btn.speaking { border-radius: 999px; }
+
+  @media (max-width: 1080px) {
+    .steps, .good { grid-template-columns: 1fr; }
+  }
+  /* Narrow screens: Stephen moves to a bar at the bottom */
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 16px; }
+    .top-in { padding: 10px 16px; }
+    .top .chip, .gh-long { display: none; }
+    .gh-short { display: inline; }
+    .top b { white-space: nowrap; }
+    main { padding-bottom: 170px; }
+    .hero { padding: 36px 24px; border-radius: 20px; }
+    .cards { grid-template-columns: 1fr; }
+    .rail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 36px 12px 10px; pointer-events: none;
+      background: linear-gradient(to top, var(--bg) 62%, color-mix(in srgb, var(--bg) 0%, transparent)); }
+    .guide { position: static; flex-direction: row; align-items: flex-end; gap: 8px; padding: 0; pointer-events: auto; }
+    .avatar { margin: 0 6px 0 4px; flex: none; }
+    .avatar svg { height: 168px; min-height: 0; }
+    .nameplate { display: none; }
+    .bubble { min-height: 0; font-size: 13.5px; line-height: 1.45; padding: 10px 14px; margin-bottom: 18px; cursor: pointer; }
+    .bubble.hush { display: none; }
+    .bubble::after { left: auto; right: -11px; bottom: 22px; transform: rotate(-45deg); }
+    .bubble .who { display: none; }
+    .avatar-wrap { display: flex; flex-direction: column; align-items: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .me *, .me .fig { animation: none !important; transition: none !important; }
+    .card, .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <img src="assets/oolio-logomark-purple.svg" alt="Oolio">
+    <b>Browser scripts</b><span class="chip">for HubSpot</span>
+    <span class="sp"></span>
+    <a class="gh" href="https://github.com/StephenShawBepoz/browserscripts" data-say="Everything lives on GitHub, including scripts for Oolio Office and myTNT. You don't need an account to install anything.">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+      <span class="gh-long">All scripts on GitHub</span><span class="gh-short">GitHub</span>
+    </a>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+
+  <section class="hero" data-say="Every one of these started as a job I was sick of doing by hand. They run in Chrome, use your own HubSpot login, and you can switch each one off any time.">
+    <div class="kicker">HubSpot add-ons</div>
+    <h1>Fewer clicks.<br>More <em>sorted</em>.</h1>
+    <p>Four small add-ons that take the busywork out of HubSpot. Set up once in about five minutes, and they keep themselves up to date.</p>
+    <div class="ctas">
+      <a class="btn btn-light" href="#setup" data-say="Start here if you've never used Tampermonkey. It's three steps and you only do it once.">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>Step 1: Set up Tampermonkey
+      </a>
+      <a class="btn btn-ghost" href="#scripts" data-say="Already got Tampermonkey? Skip straight to the scripts.">Step 2: Pick your scripts</a>
+    </div>
+    <div class="facts">
+      <span data-say="No passwords, no API keys. The scripts only do what you could do yourself in HubSpot."><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Uses your own login</span>
+      <span data-say="New versions turn up on their own, once a day. You never need to come back here to update."><svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Updates itself</span>
+      <span data-say="Five minutes, tops. Probably less than it takes to make a coffee."><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>About 5 minutes</span>
+    </div>
+  </section>
+
+  <section class="block" id="setup">
+    <div class="step-label"><span class="n">1</span>Once only</div>
+    <h2>Set up Tampermonkey</h2>
+    <p class="lead">Tampermonkey is the Chrome extension that runs the scripts. Do these three steps once and you're set for good.</p>
+    <div class="steps">
+      <div class="step" data-say="Click the button, then Add to Chrome, then Add extension. Chrome will ask you to confirm. That's fine, it's the official Tampermonkey.">
+        <div class="num">1</div>
+        <h3>Add it to Chrome</h3>
+        <p>Open the Chrome Web Store, click <b>Add to Chrome</b>, then <b>Add extension</b>.</p>
+        <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>Get Tampermonkey
+        </a>
+      </div>
+      <div class="step" data-say="Click the puzzle piece at the top right of Chrome and pin Tampermonkey. It's the black square with two circles. You'll use it to switch scripts on and off.">
+        <div class="num">2</div>
+        <h3>Pin it</h3>
+        <p>Click the <b>puzzle piece</b> in Chrome's toolbar, then the <b>pin</b> next to Tampermonkey.</p>
+      </div>
+      <div class="step key" data-say="This is the one everyone forgets! Without Allow User Scripts, nothing runs, and you'll think it's broken. Ask me how I know." data-mood="wink">
+        <span class="flag">Don't skip this</span>
+        <div class="num">3</div>
+        <h3>Allow user scripts</h3>
+        <p>Go to <code class="kbd">chrome://extensions</code>, click <b>Details</b> on Tampermonkey and turn on <b>Allow User Scripts</b>. Not there? Turn on <b>Developer mode</b> (top right) instead.</p>
+        <button class="btn btn-outline" type="button" id="copy-ext" data-say="Chrome won't let a web page link straight to its settings, so copy this and paste it into the address bar.">
+          <svg class="icon" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy the address</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="scripts">
+    <div class="step-label"><span class="n">2</span>Pick and choose</div>
+    <h2>Install the scripts you want</h2>
+    <p class="lead">Install one, or all four. They work together, and each one can be switched off from the Tampermonkey icon.</p>
+    <div class="howto" data-say="Same three clicks for every script. Install here, Install again on Tampermonkey's screen, then refresh HubSpot.">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <span>Click <b>Install</b>, click <b>Install</b> again on Tampermonkey's screen, then refresh HubSpot.</span>
+    </div>
+
+    <div class="cards">
+      <article class="card" data-say="Adding someone to a ticket? This only lists people at that customer's companies and their head office. No more scrolling past twenty Sams from other venues.">
+        <a class="shot" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/company-filters.md" aria-label="Company filters guide"><img src="assets/screenshots/company-filters-contact-panel.png" alt="Add existing Contact showing only contacts at the ticket's companies" loading="lazy" style="object-position: left top"></a>
+        <div class="body">
+          <h3>Company filters</h3>
+          <p class="why">Sensible lists when you add contacts or companies.</p>
+          <ul>
+            <li><b>Add existing Contact</b> only lists people at that customer's companies and head office. <b>Show all</b> is one click away.</li>
+            <li><b>Add existing Company</b> shows each company's products, owner, contacts and tickets, and hides the stages you don't deal with.</li>
+          </ul>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js" data-say="Click Install, then Install again on Tampermonkey's screen, then refresh HubSpot. Had the old Company contacts script? This replaces it.">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Install
+            </a>
+            <a class="btn btn-outline" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/company-filters.md" data-say="The full guide, with pictures. Worth a skim for the chips and settings.">How to use</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" data-say="See an amber chip by the ticket title? Someone on the ticket isn't linked to the company. Click Link and it's fixed. Picked the wrong company? Undo.">
+        <a class="shot" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/unlinked-contacts.md" aria-label="Unlinked contacts guide"><img src="assets/screenshots/unlinked-contacts.png" alt="An amber chip by a Help Desk ticket title and the list of contacts with Link buttons" loading="lazy" style="object-position: center top"></a>
+        <div class="body">
+          <h3>Unlinked contacts</h3>
+          <p class="why">Spot contacts who aren't on the customer's company.</p>
+          <p>On a Help Desk ticket, an <span class="pill amber">amber chip</span> by the title says how many contacts aren't linked to the ticket's company. Click <b>Link</b> to fix it, with <b>Undo</b> if you pick the wrong one.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/unlinked-contacts.user.js" data-say="Click Install, then Install again on Tampermonkey's screen, then refresh Help Desk.">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Install
+            </a>
+            <a class="btn btn-outline" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/unlinked-contacts.md" data-say="The guide explains head offices too. Staff at the parent company don't get flagged.">How to use</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" data-say="Green for Adyen, blue for WPay. Hover the badge in HubSpot for the merchant ID. A dashed outline means the Acquirer field is blank, so it's worth filling in.">
+        <a class="shot" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/payments-badge.md" aria-label="Payments badge guide"><img src="assets/screenshots/payments-badge.png" alt="An Adyen Balance badge by a Help Desk ticket title and a Payments line on each company card" loading="lazy" style="object-position: right top"></a>
+        <div class="body">
+          <h3>Payments badge</h3>
+          <p class="why">Adyen or WPay, at a glance.</p>
+          <p>A <span class="pill adyen">Adyen</span> or <span class="pill wpay">WPay</span> badge under the company's name, next to the Help Desk ticket title and on company cards. Hover it for the merchant ID.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/payments-badge.user.js" data-say="Click Install, then Install again on Tampermonkey's screen, then refresh HubSpot. It only reads HubSpot, it never changes anything.">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Install
+            </a>
+            <a class="btn btn-outline" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/payments-badge.md" data-say="The guide has the full list: Adyen Balance, Adyen Manage, WPay, and venues with both.">How to use</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" data-say="Book a meeting, add a task or check the drive time, straight from the record. It's in beta, so tell me what breaks!" data-mood="wink">
+        <a class="shot" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/quick-actions.md" aria-label="Quick actions guide"><img src="assets/screenshots/quick-actions-bar.png" alt="The purple Quick actions bar bottom right of a ticket, with the drive time underneath" loading="lazy" style="object-position: right bottom"></a>
+        <div class="body">
+          <h3>Quick actions <span class="beta">BETA</span></h3>
+          <p class="why">Meetings, tasks and travel from any record.</p>
+          <ul>
+            <li>Book a meeting with the title and a link back to the record filled in.</li>
+            <li>Create a follow-up task linked to the record.</li>
+            <li>See the drive time from the nearest Oolio office, or plan a trip to several customers.</li>
+          </ul>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js" data-say="Click Install, then Install again on Tampermonkey's screen, then refresh HubSpot. Using the old Prefill meeting script? Delete that one, this does it all.">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Install
+            </a>
+            <a class="btn btn-outline" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/quick-actions.md" data-say="The guide covers trip planning too. Handy for site visit days.">How to use</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="block" id="good-to-know">
+    <h2>Good to know</h2>
+    <div class="good">
+      <div data-say="Tampermonkey checks once a day. Want a new version straight away? Click the Tampermonkey icon, then Utilities, then Check for userscript updates.">
+        <h3><svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>They update themselves</h3>
+        <p>New versions arrive within a day. Tampermonkey &gt; <b>Utilities</b> &gt; <b>Check for userscript updates</b> gets them now.</p>
+      </div>
+      <div data-say="Click the Tampermonkey icon while you're in HubSpot and you'll see an on and off switch for each script.">
+        <h3><svg class="icon" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="6"/><circle cx="16" cy="12" r="2"/></svg>Easy to switch off</h3>
+        <p>Click the Tampermonkey icon in HubSpot to turn any script off or on.</p>
+      </div>
+      <div data-say="Something not right? Message me on Teams. A screenshot helps heaps." data-mood="wave">
+        <h3><svg class="icon" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>Something not right?</h3>
+        <p>Message <b>Stephen Shaw</b> on Teams, with a screenshot if you can.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<aside class="rail" aria-label="Stephen's tips">
+  <div class="guide">
+    <div class="bubble" id="bubble" aria-live="polite"><span class="who">Stephen says</span><span id="say"></span><span class="caret"></span></div>
+    <div class="avatar-wrap">
+      <button class="avatar" type="button" id="avatar" aria-label="Say hello to Stephen">
+        <svg class="me" id="me" viewBox="0 26 220 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a navy suit jacket">
+          <g class="fig">
+            <!-- legs: dark trousers, white sneakers -->
+            <g class="leg-l">
+              <path d="M86 296 L110 296 L107 404 L90 404 Z" fill="#2A3040"/>
+              <g class="foot-l">
+                <path d="M88 402 C96 399 104 400 108 403 L109 414 L78 414 C76 409 80 404 88 402 Z" fill="#F4F4F6" stroke="#CDD1DA" stroke-width="1.5"/>
+                <rect x="77" y="413" width="33" height="5" rx="2.5" fill="#D9DCE3"/>
+              </g>
+            </g>
+            <g class="leg-r">
+              <path d="M110 296 L134 296 L130 404 L113 404 Z" fill="#2A3040"/>
+              <g class="foot-r">
+                <path d="M132 402 C124 399 116 400 112 403 L111 414 L142 414 C144 409 140 404 132 402 Z" fill="#F4F4F6" stroke="#CDD1DA" stroke-width="1.5"/>
+                <rect x="110" y="413" width="33" height="5" rx="2.5" fill="#D9DCE3"/>
+              </g>
+            </g>
+            <!-- suit jacket over a white shirt -->
+            <path d="M60 204 C62 190 82 184 110 182 C138 184 158 190 160 204 L164 304 C146 310 128 312 110 312 C92 312 74 310 56 304 Z" fill="#24324F"/>
+            <path d="M110 262 L98 311 L122 311 Z" fill="#F4F4F6"/>
+            <rect x="99" y="298" width="22" height="6" fill="#2B2420"/>
+            <path d="M85 186 L110 252 L135 186 Z" fill="#FFFFFF"/>
+            <path d="M96 168 L124 168 L127 190 L110 208 L93 190 Z" fill="#EBC6AF"/>
+            <path d="M90 180 L110 206 L101 214 L82 192 Z" fill="#F4F4F6" stroke="#D5D9E2" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M130 180 L110 206 L119 214 L138 192 Z" fill="#F4F4F6" stroke="#D5D9E2" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M82 188 L110 258 L100 264 L68 210 L76 196 Z" fill="#1B2742"/>
+            <path d="M138 188 L110 258 L120 264 L152 210 L144 196 Z" fill="#1B2742"/>
+            <path d="M138 222 L156 218 L155 228 L139 230 Z" fill="#673AB6"/>
+            <path d="M140 222 L147 213 L151 220 Z" fill="#8E63D4"/>
+            <circle cx="110" cy="266" r="2.6" fill="#0F172A"/>
+            <circle cx="110" cy="284" r="2.6" fill="#0F172A"/>
+            <g class="head">
+            <!-- ears: they stick out a bit -->
+            <g fill="#EFC9B2"><ellipse cx="63" cy="114" rx="10" ry="15" transform="rotate(-10 63 114)"/><ellipse cx="157" cy="114" rx="10" ry="15" transform="rotate(10 157 114)"/></g>
+            <g fill="none" stroke="#DDAA90" stroke-width="2" stroke-linecap="round"><path d="M60 106 Q56 114 61 122"/><path d="M160 106 Q164 114 159 122"/></g>
+            <!-- longer face, squarer jaw, fair skin -->
+            <path d="M67 100 C67 70 84 54 110 54 C136 54 153 70 153 100 L152 134 C150 160 132 178 110 178 C88 178 70 160 68 134 Z" fill="#F5D8C5"/>
+            <circle cx="84" cy="124" r="7" fill="#EFA898" opacity=".14"/>
+            <circle cx="136" cy="124" r="7" fill="#EFA898" opacity=".14"/>
+            <!-- ginger beard and moustache, kept short -->
+            <path d="M67 108 C63 154 86 188 110 188 C134 188 157 154 153 108 C149 128 142 141 132 147 C124 142 116 141 110 142 C104 141 96 142 88 147 C78 141 71 128 68 110 Z" fill="#B5693D"/>
+            <path d="M74 132 C80 160 94 176 110 178 C126 176 140 160 146 132 C142 150 128 166 110 168 C92 166 78 150 74 132 Z" fill="#A65D34" opacity=".55"/>
+            <path d="M89 148 C95 139 125 139 131 148 C124 152 116 149 110 150 C104 149 96 152 89 148 Z" fill="#A65A32"/>
+            <g class="m-smile">
+              <path d="M98 153 Q110 165 122 153 Q110 158 98 153 Z" fill="#FFFFFF" stroke="#6B3522" stroke-width="2.2" stroke-linejoin="round"/>
+            </g>
+            <g class="m-open">
+              <ellipse cx="110" cy="156" rx="8.5" ry="6.5" fill="#5A2318"/>
+              <path d="M103 159 Q110 155 117 159 Q110 163 103 159 Z" fill="#DD7F70"/>
+              <path d="M102.5 151.5 Q110 150 117.5 151.5 L117 154 Q110 152.5 103 154 Z" fill="#FFFFFF"/>
+            </g>
+            <!-- straight nose -->
+            <path d="M111 101 L106.5 124 Q109 128.5 115 126.5" fill="none" stroke="#D8A68D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- light blue eyes -->
+            <g class="eyes">
+              <g class="eye-l">
+                <ellipse cx="92" cy="106" rx="7" ry="4.6" fill="#FFFFFF"/>
+                <circle cx="92.5" cy="106" r="3.6" fill="#7FA2BE"/><circle cx="92.5" cy="106" r="1.7" fill="#24303A"/><circle cx="93.8" cy="104.8" r="1" fill="#fff"/>
+                <path d="M84.5 104.5 Q92 99.5 99.5 104.5" fill="none" stroke="#5A3A26" stroke-width="2" stroke-linecap="round"/>
+              </g>
+              <g class="eye-r">
+                <ellipse cx="128" cy="106" rx="7" ry="4.6" fill="#FFFFFF"/>
+                <circle cx="128.5" cy="106" r="3.6" fill="#7FA2BE"/><circle cx="128.5" cy="106" r="1.7" fill="#24303A"/><circle cx="129.8" cy="104.8" r="1" fill="#fff"/>
+                <path d="M120.5 104.5 Q128 99.5 135.5 104.5" fill="none" stroke="#5A3A26" stroke-width="2" stroke-linecap="round"/>
+              </g>
+              <path class="wink-r" d="M121 106 Q128 101 135 106" fill="none" stroke="#5A3A26" stroke-width="2.6" stroke-linecap="round"/>
+            </g>
+            <!-- straighter, lighter brows -->
+            <g fill="none" stroke="#94603E" stroke-width="3.6" stroke-linecap="round">
+              <path d="M83 95 Q92 91.5 101 93.5"/>
+              <path d="M119 93.5 Q128 91.5 137 95"/>
+            </g>
+            <!-- dark brown hair: short faded sides, textured top -->
+            <path d="M67 104 C66 92 67 84 70 78 L75 80 C72 86 70 94 69 104 Z" fill="#6B4A33" opacity=".4"/>
+            <path d="M153 104 C154 92 153 84 150 78 L145 80 C148 86 150 94 151 104 Z" fill="#6B4A33" opacity=".4"/>
+            <path d="M70 86 C64 66 74 50 88 45 C92 37 104 34 112 39 C121 33 134 37 139 45 C152 50 158 66 150 86 C147 80 142 76 136 74 C128 70 120 70 113 73 C105 69 96 70 89 73 C81 73 75 78 70 86 Z" fill="#6B4A33"/>
+            <g fill="none" stroke="#8A6446" stroke-width="2.4" stroke-linecap="round">
+              <path d="M84 56 Q90 50 97 52"/><path d="M100 46 Q107 41 114 44"/><path d="M118 47 Q126 43 132 49"/><path d="M92 63 Q100 58 108 61"/><path d="M114 60 Q122 56 129 61"/><path d="M134 58 Q141 57 145 64"/>
+            </g>
+          </g>
+            <!-- arms: shoulder and elbow joints -->
+            <g class="arm-l">
+              <circle cx="65" cy="207" r="10.5" fill="#202D48"/>
+              <path d="M62 198 C55 222 52 244 52 262 L69 264 C70 246 72 226 76 204 Z" fill="#202D48"/>
+              <g class="fore-l">
+                <circle cx="60.5" cy="262" r="8.6" fill="#202D48"/>
+                <path d="M52 260 L50 300 L67 302 L69 262 Z" fill="#202D48"/>
+                <rect x="49" y="298" width="19" height="7" rx="2" fill="#F4F4F6"/>
+                <ellipse cx="58.5" cy="314" rx="8" ry="10" fill="#F5D8C5"/>
+                <path d="M51.5 312 Q52 318 56 321" fill="none" stroke="#E2B49C" stroke-width="1.4" stroke-linecap="round"/>
+              </g>
+            </g>
+            <g class="arm-r">
+              <circle cx="155" cy="207" r="10.5" fill="#202D48"/>
+              <path d="M158 198 C165 222 168 244 168 262 L151 264 C150 246 148 226 144 204 Z" fill="#202D48"/>
+              <g class="fore-r">
+                <circle cx="159.5" cy="262" r="8.6" fill="#202D48"/>
+                <path d="M168 260 L170 300 L153 302 L151 262 Z" fill="#202D48"/>
+                <rect x="152" y="298" width="19" height="7" rx="2" fill="#F4F4F6"/>
+                <rect x="153" y="304" width="17" height="4" rx="2" fill="#3A4A3C"/>
+                <ellipse cx="161.5" cy="316" rx="8" ry="10" fill="#F5D8C5"/>
+                <path d="M168.5 314 Q168 320 164 323" fill="none" stroke="#E2B49C" stroke-width="1.4" stroke-linecap="round"/>
+              </g>
+            </g>
+          </g>
+        </svg>
+      </button>
+      <div class="nameplate">Stephen Shaw</div>
+    </div>
+  </div>
+</aside>
+</div>
+
+<footer>
+  <div class="foot-in">
+    <img src="assets/oolio-logomark-purple.svg" alt="">
+    <span>Made by Stephen Shaw for the Oolio team. Scripts and guides are on <a href="https://github.com/StephenShawBepoz/browserscripts">GitHub</a>.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const me = document.getElementById('me');
+  const bubble = document.getElementById('bubble');
+  const out = document.getElementById('say');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const touch = window.matchMedia('(hover: none)').matches;
+  const HELLO = touch
+    ? "G'day! I'm Stephen. Tap anything on this page and I'll tell you what it does. Tap this bubble to tuck it away."
+    : "G'day! I'm Stephen. Hover over anything on this page and I'll tell you what it does.";
+  const HELLO_AGAIN = [
+    "Yes, that's really me. The jacket's an upgrade.",
+    `Still here! ${touch ? 'Tap' : 'Hover over'} a script to hear what it does.`,
+    "Stop poking me, I'm working. Kidding. What do you need?",
+  ];
+
+  let typing = null;
+  let mouth = null;
+  let moodTimer = null;
+  let current = null;
+  let lit = null;
+  let pokes = 0;
+
+  function mood(name) {
+    clearTimeout(moodTimer);
+    me.classList.remove('wink', 'wave');
+    if (!name) return;
+    me.classList.add(name);
+    moodTimer = setTimeout(() => me.classList.remove(name), name === 'wave' ? 2600 : 1400);
+  }
+
+  function say(text, how) {
+    if (text === current) return;
+    current = text;
+    clearInterval(typing);
+    clearInterval(mouth);
+    mood(how);
+    bubble.classList.remove('done', 'hush');
+    if (still) {
+      out.textContent = text;
+      bubble.classList.add('done');
+      return;
+    }
+    out.textContent = '';
+    let i = 0;
+    me.classList.add('talking', 'mouth-open');
+    mouth = setInterval(() => me.classList.toggle('mouth-open'), 120);
+    typing = setInterval(() => {
+      i += 2;
+      out.textContent = text.slice(0, i);
+      if (i >= text.length) {
+        clearInterval(typing);
+        clearInterval(mouth);
+        me.classList.remove('talking', 'mouth-open');
+        bubble.classList.add('done');
+      }
+    }, 22);
+  }
+
+  // The innermost element with something to say wins, so a button inside a card speaks for itself
+  function onPoint(e) {
+    const el = e.target.closest('[data-say]');
+    if (!el || el === lit) return;
+    if (lit) lit.classList.remove('speaking');
+    lit = el;
+    if (!el.classList.contains('hero')) el.classList.add('speaking');
+    say(el.dataset.say, el.dataset.mood);
+  }
+  document.addEventListener('pointerover', onPoint);
+  document.addEventListener('focusin', onPoint);
+  document.addEventListener('pointerout', (e) => {
+    if (lit && !lit.contains(e.relatedTarget)) { lit.classList.remove('speaking'); lit = null; }
+  });
+
+  document.getElementById('avatar').addEventListener('click', () => {
+    current = null;
+    say(HELLO_AGAIN[pokes++ % HELLO_AGAIN.length], pokes % 2 ? 'wink' : 'wave');
+  });
+
+  const copy = document.getElementById('copy-ext');
+  copy.addEventListener('click', async () => {
+    const label = copy.querySelector('span');
+    try {
+      await navigator.clipboard.writeText('chrome://extensions');
+      label.textContent = 'Copied!';
+      current = null;
+      say('Copied! Now click the address bar, paste, and press Enter.', 'wink');
+    } catch (e) {
+      label.textContent = 'Type chrome://extensions in the address bar';
+    }
+    setTimeout(() => { label.textContent = 'Copy the address'; }, 3500);
+  });
+
+  // On a phone the bubble sits over the page, so a tap tucks it away until Stephen next speaks
+  bubble.addEventListener('click', () => { if (window.matchMedia('(max-width: 900px)').matches) bubble.classList.add('hush'); });
+
+  setTimeout(() => say(HELLO, 'wave'), 400);
+})();
+</script>
+</body>
+</html>
