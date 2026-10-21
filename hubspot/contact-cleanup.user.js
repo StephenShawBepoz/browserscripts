@@ -215,6 +215,9 @@
   const fullName = (c) => clean(`${c.first} ${c.last}`);
   const label = (c) => fullName(c) || c.email || c.mobile || c.phone || `Contact ${c.id}`;
   const isStub = (c) => !c.email && !c.last && !c.tickets;
+  // enquiries@, accounts@ and the like: a venue's mailbox, not a person
+  const SHARED_MAILBOX = /^(enquiries|enquiry|info|accounts?|admin|reception|functions?|bookings?|events|manager|managers|gm|venue|office|hello|contact|bistro|kitchen|bar|gaming|dutymanager|duty\.manager|it|support|sales|marketing|payroll|finance)@/;
+  const isShared = (c) => SHARED_MAILBOX.test(c.email);
   const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
   const notSame = () => gmGet('notSame', {});
 
@@ -273,7 +276,7 @@
     const inStrong = new Map();
     join(strong).forEach((g) => {
       const kind = allFit(g.ids) ? 'likely' : 'maybe';
-      groups.push({ ...g, kind });
+      groups.push({ ...g, kind, clash: kind === 'maybe' });
       if (kind === 'likely') g.ids.forEach((id) => inStrong.set(id, g));
     });
     join(weak).forEach((g) => {
@@ -286,7 +289,7 @@
     ctx.groups = groups.map((g, i) => {
       const ids = g.ids.slice().sort((a, b) => score(ctx.contacts.get(b)) - score(ctx.contacts.get(a)));
       return {
-        key: `g${i}`, kind: g.kind, ids, why: [...g.why], keeper: ids[0], include: new Set(ids), picks: {}, status: 'open',
+        key: `g${i}`, kind: g.kind, clash: !!g.clash, ids, why: [...g.why], keeper: ids[0], include: new Set(ids), picks: {}, status: 'open',
       };
     }).sort((a, b) => (a.kind === b.kind ? b.ids.length - a.ids.length : a.kind === 'likely' ? -1 : 1));
     ctx.groups.forEach(defaultPicks.bind(null, ctx));
@@ -297,7 +300,7 @@
 
   // The contact to keep: a working email first, then the one with the most tickets and history
   function score(c) {
-    return (c.email && !c.bounced ? 1e6 : 0) + (c.email ? 5e5 : 0) + c.tickets * 1e4 + (c.last ? 5e3 : 0) + (c.first ? 1e3 : 0) +
+    return (c.email && !c.bounced ? 1e6 : 0) + (c.email ? 5e5 : 0) - (isShared(c) ? 3e5 : 0) + c.tickets * 1e4 + (c.last ? 5e3 : 0) + (c.first ? 1e3 : 0) +
       c.companies.length * 100 + (c.lastActivity ? 50 : 0) - (c.created ? c.created / 1e11 : 0);
   }
 
@@ -321,9 +324,13 @@
   function changes(ctx, g) {
     const keep = ctx.contacts.get(g.keeper);
     const out = {};
+    const keptNumbers = [keep.phone, keep.mobile].map(phoneKey).filter(Boolean);
     PICK_FIELDS.forEach(([f]) => {
       const v = fieldValue(ctx.contacts.get(g.picks[f]), f);
-      if (v && v !== fieldValue(keep, f)) out[f] = v;
+      if (!v || v === fieldValue(keep, f)) return;
+      // The same number already on the kept contact, in either phone field, isn't worth copying
+      if ((f === 'phone' || f === 'mobilephone') && keptNumbers.includes(phoneKey(v))) return;
+      out[f] = v;
     });
     return out;
   }
@@ -555,8 +562,14 @@
 
   const groupsOf = (kind) => (ui.ctx ? ui.ctx.groups.filter((g) => g.kind === kind) : []);
   const selected = () => (ui.ctx ? ui.ctx.groups.find((g) => g.key === ui.sel) : null);
-  const matches = (c, q) => !q || [label(c), c.email, c.phone, c.mobile, ...c.extraEmails].some((v) => (v || '').toLowerCase().includes(q) ||
-    (phoneKey(q) && phoneKey(v) === phoneKey(q)));
+  // Numbers match however they're typed: 0450, 450 or +61 450
+  const localDigits = (v) => { const d = (v || '').replace(/\D/g, ''); return d.startsWith('61') ? '0' + d.slice(2) : d; };
+  const matches = (c, q) => {
+    if (!q) return true;
+    const qd = localDigits(q).replace(/^0/, '');
+    return [label(c), c.email, ...c.extraEmails].some((v) => (v || '').toLowerCase().includes(q)) ||
+      (qd.length >= 3 && [c.phone, c.mobile].some((v) => localDigits(v).includes(qd)));
+  };
 
   function render() {
     if (!ui.open) return;
@@ -632,6 +645,7 @@
         c.source ? `<span class="tag">${esc(c.source)}</span>` : '',
         isStub(c) ? '<span class="tag warn">Stub</span>' : '',
         c.bounced ? '<span class="tag warn">Email bounced</span>' : '',
+        isShared(c) ? '<span class="tag warn" title="A venue mailbox rather than a person. Merging a person into it makes this their email.">Shared mailbox</span>' : '',
       ].join('');
       const ctl = g.status === 'open' ? `<div class="ctl">
           <label class="${c.id === g.keeper ? 'keep' : ''}"><input type="radio" name="keep" data-keep="${c.id}" ${c.id === g.keeper ? 'checked' : ''} ${ins(c) ? '' : 'disabled'}> Keep this one</label>
@@ -671,7 +685,9 @@
     } else if (g.status === 'dismissed') {
       note = `<div class="note info">${lucide(CHECK)}<div>Marked as not the same people, so they won't be grouped again. <button class="btn ghost" type="button" data-act="unmark">Undo</button></div></div>`;
     } else if (g.kind === 'maybe') {
-      note = `<div class="note info">${lucide(ALERT)}<div>These only might be the same person (${esc(g.why.map((w) => REASONS[w].toLowerCase()).join(', '))}). Check before merging.</div></div>`;
+      note = `<div class="note info">${lucide(ALERT)}<div>${g.clash
+        ? 'Some of these first names can\'t be the same person, so it may be two or more people. Use <b>Leave out of the merge</b> for anyone who isn\'t.'
+        : `These only might be the same person (${esc(g.why.map((w) => REASONS[w].toLowerCase()).join(', '))}). Check before merging.`}</div></div>`;
     }
 
     setHTML(main, `<h3>${esc(label(people[0]))} <span class="muted">and ${plural(people.length - 1, 'other', 'others')}</span></h3>

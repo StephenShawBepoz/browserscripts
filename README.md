@@ -40,6 +40,11 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/unlinked-contacts.user.js)** · [How to use](docs/unlinked-contacts.md)
 
+#### Contact clean-up
+**Tidy up a customer's contacts, venues and all.** A **Clean up contacts** button on company records finds people who are probably in HubSpot twice (an Aircall "Sam" next to Sam Rivers, say), shows them side by side and merges them one group at a time. It also lists stub contacts and bounced emails.
+
+**[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/contact-cleanup.user.js)** · [How to use](docs/contact-cleanup.md)
+
 #### Cmd/Ctrl + Enter to send
 **Send without reaching for the mouse.** Press **Cmd + Enter** (Mac) or **Ctrl + Enter** (Windows) in a comment, note, email or task to send, save or create it.
 

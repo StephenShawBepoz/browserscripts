@@ -1,5 +1,10 @@
 # Changelog
 
+## HubSpot: Contact clean-up
+
+### 0.1.0 (22/10/2026)
+- New. A **Clean up contacts** button on company records: likely duplicates across the company or its whole group, a side-by-side compare, and merging one group at a time. Also lists stubs and bounced emails.
+
 ## HubSpot: Payments badge
 
 ### 1.0.0 (21/10/2026)
