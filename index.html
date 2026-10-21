@@ -323,7 +323,7 @@
     --thigh: #D3202A; --sole: #E9BFA6; --detail: #C79F00; --btn: #D3202A; }
   .me[data-outfit="beef"] { --top: #A3121C; --sleeve: #94101A; --fore: #94101A; --cuff: #D9A93A; --thigh: #A3121C; --shin: #A3121C;
     --shoe: #111114; --shoe-line: #000000; --sole: #000000; }
-  .me[data-outfit="croc"] { --top: #B09A62; --sleeve: #A68F57; --collar: #B8A36B; --collar-line: #8C7A47; --thigh: #9C8752;
+  .me[data-outfit="croc"] { --top: #C2A46A; --sleeve: #B39558; --collar: #C9AC72; --collar-line: #8C7A47; --thigh: #A88E58;
     --shoe: #5B3A21; --shoe-line: #3E2716; --sole: #2E1D10; --detail: #8C7A47; --btn: #6E5B30; }
   .me[data-outfit="hols"] { --top: #F6F6F2; --sleeve: #F3BFA6; --fore: #F3BFA6; --cuff: #F3BFA6; --thigh: #C9B48A;
     --shoe: #FFFFFF; --shoe-line: #D5D9E2; --sole: #7A5230; }
@@ -346,7 +346,7 @@
   .me[data-outfit="cricket"] .placket-short, .me[data-outfit="surf"] .placket-short { display: inline; }
   .me.swap .fig { animation: swap .38s ease-in-out; }
   @keyframes swap { 50% { transform: scaleX(.8) translateY(-6px); } }
-  .avatar { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .avatar { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 
   /* Outfit picker under the nameplate */
   .outfits { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
@@ -365,11 +365,63 @@
   .me .fore-l { transform-origin: 60px 262px; }
   .me .fore-r { transform-origin: 160px 262px; }
   .me .leg-l { transform-origin: 98px 298px; }
+  .me .low-l, .me .low-r { transform-box: view-box; transition: transform .35s cubic-bezier(.3, 1.4, .5, 1); }
+  .me .low-l { transform-origin: 98.5px 348px; } .me .low-r { transform-origin: 121.8px 348px; }
   .me .leg-r { transform-origin: 122px 298px; }
   .me .foot-r { transform-origin: 112px 416px; }
-  .me .fig { transform-origin: 110px 418px; }
-  @keyframes sway-l { from { transform: rotate(2deg); } to { transform: rotate(-3deg); } }
-  @keyframes sway-r { from { transform: rotate(-2deg); } to { transform: rotate(3deg); } }
+  .me .fig { transform-origin: 110px 418px; animation: breathe 3.2s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: translateY(-3px) scale(1.012, .992); } }
+  @keyframes sway-l { from { transform: rotate(9deg); } to { transform: rotate(-7deg); } }
+  @keyframes sway-r { from { transform: rotate(-9deg); } to { transform: rotate(7deg); } }
+
+  /* Routines Stephen breaks into every few seconds (class mv-* on the svg) */
+  .me.mv-dance .arm-l { animation: dl .5s ease-in-out infinite alternate; } @keyframes dl { from { transform: rotate(20deg); } to { transform: rotate(125deg); } }
+  .me.mv-dance .fore-l { animation: dfl .5s ease-in-out infinite alternate; } @keyframes dfl { from { transform: rotate(10deg); } to { transform: rotate(75deg); } }
+  .me.mv-dance .arm-r { animation: dr .5s ease-in-out infinite alternate-reverse; } @keyframes dr { from { transform: rotate(-20deg); } to { transform: rotate(-125deg); } }
+  .me.mv-dance .fore-r { animation: dfr .5s ease-in-out infinite alternate-reverse; } @keyframes dfr { from { transform: rotate(-10deg); } to { transform: rotate(-75deg); } }
+  .me.mv-dance .leg-l { animation: dll .5s ease-in-out infinite alternate; } @keyframes dll { from { transform: rotate(-4deg); } to { transform: rotate(12deg); } }
+  .me.mv-dance .low-l { animation: dkl .5s ease-in-out infinite alternate; } @keyframes dkl { from { transform: rotate(0); } to { transform: rotate(22deg); } }
+  .me.mv-dance .leg-r { animation: dlr .5s ease-in-out infinite alternate-reverse; } @keyframes dlr { from { transform: rotate(4deg); } to { transform: rotate(-12deg); } }
+  .me.mv-dance .low-r { animation: dkr .5s ease-in-out infinite alternate-reverse; } @keyframes dkr { from { transform: rotate(0); } to { transform: rotate(-22deg); } }
+  .me.mv-dance .fig { animation: bounce .25s ease-in-out infinite alternate; } @keyframes bounce { to { transform: translateY(-7px); } }
+  .me.mv-dance .head { animation: headbob .5s ease-in-out infinite alternate; } @keyframes headbob { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+
+  .me.mv-march .leg-l { animation: ml .42s ease-in-out infinite alternate; } @keyframes ml { from { transform: translateY(0); } to { transform: translateY(-18px) rotate(4deg); } }
+  .me.mv-march .low-l { animation: mkl .42s ease-in-out infinite alternate; } @keyframes mkl { to { transform: rotate(18deg); } }
+  .me.mv-march .leg-r { animation: ml .42s ease-in-out infinite alternate-reverse; }
+  .me.mv-march .low-r { animation: mkr .42s ease-in-out infinite alternate-reverse; } @keyframes mkr { to { transform: rotate(-18deg); } }
+  .me.mv-march .arm-l { animation: mal .42s ease-in-out infinite alternate; } @keyframes mal { from { transform: rotate(-28deg); } to { transform: rotate(32deg); } }
+  .me.mv-march .arm-r { animation: mal .42s ease-in-out infinite alternate; }
+  .me.mv-march .fore-l, .me.mv-march .fore-r { transform: rotate(-12deg); }
+  .me.mv-march .fig { animation: bounce .21s ease-in-out infinite alternate; }
+
+  .me.mv-jacks .arm-l { animation: jl .42s ease-in-out infinite alternate; } @keyframes jl { from { transform: rotate(6deg); } to { transform: rotate(165deg); } }
+  .me.mv-jacks .arm-r { animation: jr .42s ease-in-out infinite alternate; } @keyframes jr { from { transform: rotate(-6deg); } to { transform: rotate(-165deg); } }
+  .me.mv-jacks .leg-l { animation: jll .42s ease-in-out infinite alternate; } @keyframes jll { to { transform: rotate(15deg); } }
+  .me.mv-jacks .leg-r { animation: jlr .42s ease-in-out infinite alternate; } @keyframes jlr { to { transform: rotate(-15deg); } }
+  .me.mv-jacks .fig { animation: jackhop .42s ease-in-out infinite alternate; } @keyframes jackhop { to { transform: translateY(-20px); } }
+
+  .me.mv-flex .arm-l { animation: none; transform: rotate(84deg); } .me.mv-flex .fore-l { transform: rotate(98deg); }
+  .me.mv-flex .arm-r { animation: none; transform: rotate(-84deg); } .me.mv-flex .fore-r { transform: rotate(-98deg); }
+  .me.mv-flex .fig { animation: flex .35s ease-in-out infinite alternate; } @keyframes flex { to { transform: scale(1.04, .98); } }
+  .me.mv-flex .leg-l { transform: rotate(6deg); } .me.mv-flex .leg-r { transform: rotate(-6deg); }
+
+  .me.mv-look .arm-r { animation: none; transform: rotate(-150deg); } .me.mv-look .fore-r { transform: rotate(-86deg); }
+  .me.mv-look .arm-l { animation: none; transform: rotate(32deg); } .me.mv-look .fore-l { transform: rotate(-64deg); }
+  .me.mv-look .head { animation: lookabout 1.4s ease-in-out infinite alternate; } @keyframes lookabout { from { transform: rotate(-9deg) translateX(-3px); } to { transform: rotate(9deg) translateX(3px); } }
+  .me.mv-look .leg-r { transform: rotate(-8deg); } .me.mv-look .low-r { transform: rotate(10deg); }
+
+  .me.mv-shrug .arm-l { animation: none; transform: rotate(36deg) translateY(-5px); } .me.mv-shrug .fore-l { transform: rotate(52deg); }
+  .me.mv-shrug .arm-r { animation: none; transform: rotate(-36deg) translateY(-5px); } .me.mv-shrug .fore-r { transform: rotate(-52deg); }
+  .me.mv-shrug .head { animation: shrughead .7s ease-in-out infinite alternate; } @keyframes shrughead { from { transform: rotate(-10deg); } to { transform: rotate(4deg); } }
+
+  .me.mv-kick .leg-r { animation: kickhi .55s ease-in-out infinite alternate; } @keyframes kickhi { from { transform: rotate(0); } to { transform: rotate(-58deg); } }
+  .me.mv-kick .low-r { animation: kicklow .55s ease-in-out infinite alternate; } @keyframes kicklow { from { transform: rotate(-30deg); } to { transform: rotate(10deg); } }
+  .me.mv-kick .arm-l { animation: none; transform: rotate(78deg); } .me.mv-kick .arm-r { animation: none; transform: rotate(-60deg); }
+  .me.mv-kick .leg-l { transform: rotate(5deg); }
+
+  .me.mv-spin .fig { animation: spinme .9s ease-in-out 2; } @keyframes spinme { 25% { transform: scaleX(.08) translateY(-10px); } 50% { transform: scaleX(-1) translateY(-16px); } 75% { transform: scaleX(-.08) translateY(-10px); } }
+  .me.mv-spin .arm-l { animation: none; transform: rotate(70deg); } .me.mv-spin .arm-r { animation: none; transform: rotate(-70deg); }
 
   /* Talking: point at the page with one arm, gesture with the other, tap a foot */
   .me.talking .arm-l { animation: none; transform: rotate(62deg); }
@@ -383,16 +435,98 @@
   /* Hello: big wave and a little hop */
   .me.wave .arm-r { animation: none; transform: rotate(-150deg); }
   .me.wave .fore-r { animation: wave .32s ease-in-out infinite alternate; }
-  .me.wave .fig { animation: hop .45s ease-out 2; }
+  .me.wave .fig { animation: stephop .45s ease-out 2; }
   .me.wave .leg-l { transform: rotate(4deg); }
   .me.wave .leg-r { transform: rotate(-4deg); }
   @keyframes wave { from { transform: rotate(-28deg); } to { transform: rotate(18deg); } }
-  @keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } }
+  @keyframes stephop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } }
+
+  /* Picked up: dangling from the collar, arms and legs going everywhere */
+  .me.dangle .arm-l { animation: flail-l .16s ease-in-out infinite alternate; } @keyframes flail-l { from { transform: rotate(115deg); } to { transform: rotate(165deg); } }
+  .me.dangle .arm-r { animation: flail-r .16s ease-in-out infinite alternate-reverse; } @keyframes flail-r { from { transform: rotate(-115deg); } to { transform: rotate(-165deg); } }
+  .me.dangle .fore-l, .me.dangle .fore-r { animation: flail-f .13s ease-in-out infinite alternate; } @keyframes flail-f { from { transform: rotate(-35deg); } to { transform: rotate(35deg); } }
+  .me.dangle .leg-l { animation: pedal-l .2s ease-in-out infinite alternate; } @keyframes pedal-l { from { transform: rotate(-16deg); } to { transform: rotate(22deg); } }
+  .me.dangle .leg-r { animation: pedal-r .2s ease-in-out infinite alternate-reverse; } @keyframes pedal-r { from { transform: rotate(16deg); } to { transform: rotate(-22deg); } }
+  .me.dangle .low-l { animation: pedal-k .2s ease-in-out infinite alternate; } @keyframes pedal-k { from { transform: rotate(0); } to { transform: rotate(40deg); } }
+  .me.dangle .low-r { animation: pedal-kr .2s ease-in-out infinite alternate-reverse; } @keyframes pedal-kr { from { transform: rotate(0); } to { transform: rotate(-40deg); } }
+  .me.dangle .fig { animation: none; }
+  .me.dangle .head { animation: headbob .2s ease-in-out infinite alternate; }
+  .me.dangle .m-smile { display: none; } .me.dangle .m-open { display: inline; }
+  /* Put down: squash, then spring back */
+  .me.land .fig { animation: landing .55s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes landing { 0% { transform: scale(1.14, .8); } 55% { transform: scale(.94, 1.07) translateY(-12px); } 100% { transform: none; } }
   .me .eyes { transform-box: fill-box; transform-origin: 50% 50%; animation: blink 5s infinite; }
   @keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
   .me .head { transform-box: view-box; transform-origin: 110px 180px; transition: transform .2s ease; }
   .me.talking .head { animation: nod .6s ease-in-out infinite alternate; }
   @keyframes nod { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+
+
+  /* ---------- Stephen off the leash: dragged anywhere on the page ---------- */
+  .guide.loose { position: fixed !important; z-index: 90; width: 270px; padding: 0; margin: 0; flex-direction: column; align-items: center; }
+  .guide.loose .avatar svg { height: min(300px, 42vh); min-height: 0; }
+  .guide.loose .me { transform-origin: 50% 12%; }
+  .guide.dragging .avatar { cursor: grabbing; }
+  .guide.dragging .bubble { transform: rotate(-2deg); }
+  .home-spot { position: sticky; top: 24px; display: none; width: 100%; min-height: 380px; margin-top: 24px; border: 3px dashed var(--wood-light); border-radius: 26px;
+    background: repeating-linear-gradient(45deg, #FFF3DC 0 14px, #FFEFD1 14px 28px); color: var(--wood-dark); font: 800 15px Nunito, sans-serif;
+    flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; cursor: pointer; text-align: center; }
+  .stephen-loose .home-spot:not([hidden]) { display: flex; }
+  .home-spot .icon { width: 34px; height: 34px; color: var(--earth); animation: wobble 2.4s ease-in-out infinite; }
+  .home-spot:hover { background: #FFE9C2; }
+
+  /* ---------- Roaming animals ---------- */
+  .roam { position: fixed; inset: 0; pointer-events: none; z-index: 26; overflow: hidden; }
+  .roamer { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; }
+  .roamer.speaking { outline: none; }
+  .roamer .jump, .roamer .gait-in { transform-origin: 50% 100%; }
+  .roamer.hopper .gait-in { animation: hop .66s ease-in-out infinite; }
+  .roamer.run .emu .e-leg.a { animation: stride .3s ease-in-out infinite alternate; }
+  .roamer.run .emu .e-leg.b { animation: stride .3s ease-in-out infinite alternate-reverse; }
+  .roamer.run .emu .e-body { animation: emubob .3s ease-in-out infinite alternate; }
+  .roamer .wing { transform-box: fill-box; transform-origin: 50% 100%; animation: flap .2s ease-in-out infinite alternate; }
+  .echidna .ec-leg { transform-box: fill-box; transform-origin: 50% 0; animation: step .45s ease-in-out infinite alternate; }
+  .echidna .ec-leg.b { animation-direction: alternate-reverse; }
+  .echidna .ec-body { transform-box: view-box; transform-origin: 50px 50px; animation: rock .45s ease-in-out infinite alternate; }
+  .lizard .lz-leg { transform-box: fill-box; transform-origin: 50% 0; animation: step .16s linear infinite alternate; }
+  .lizard .lz-leg.b { animation-direction: alternate-reverse; }
+  .lizard .frill { transform-box: fill-box; transform-origin: 50% 50%; animation: frill 1.8s ease-in-out infinite; }
+  @keyframes frill { 0%, 30%, 100% { transform: scale(.25); } 45%, 80% { transform: scale(1.05); } }
+
+  /* ---------- Feeding ---------- */
+  .bucket { position: fixed; left: 18px; bottom: 18px; z-index: 85; background: linear-gradient(180deg, var(--wood-light), var(--wood)); border: 3px solid var(--wood-dark);
+    border-radius: 18px; padding: 8px 10px 10px; box-shadow: 0 5px 0 var(--wood-dark), 0 14px 28px rgba(100, 57, 28, .3); color: #FFF4DE; }
+  .bucket.bump { animation: bump .45s cubic-bezier(.3, 1.8, .5, 1); }
+  @keyframes bump { 40% { transform: scale(1.12) rotate(-3deg); } }
+  .b-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 400 15px "Lilita One", sans-serif; letter-spacing: .03em; margin: 0 2px 6px; text-shadow: 0 2px 0 var(--wood-dark); }
+  .b-count { font: 900 12px Nunito, sans-serif; background: var(--sun); color: var(--ink); border-radius: 999px; padding: 2px 8px; text-shadow: none; }
+  .b-foods { display: flex; gap: 6px; }
+  .b-foods button { width: 46px; height: 46px; border-radius: 14px; border: 2px solid var(--wood-dark); background: #FFF6E2; font-size: 24px; line-height: 1; cursor: pointer;
+    box-shadow: 0 3px 0 var(--wood-dark); transition: transform .15s cubic-bezier(.3, 1.8, .5, 1); }
+  .b-foods button:hover { transform: translateY(-3px) rotate(-6deg); }
+  .b-foods button.on { background: var(--sun); transform: translateY(-4px) scale(1.08); box-shadow: 0 5px 0 var(--wood-dark); }
+  .held { position: fixed; left: 0; top: 0; z-index: 95; font-size: 30px; pointer-events: none; opacity: 0; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .25)); }
+  .held.show { opacity: 1; animation: dangleFood .6s ease-in-out infinite alternate; }
+  @keyframes dangleFood { from { rotate: -12deg; } to { rotate: 12deg; } }
+  .feeding [data-eats] { cursor: copy; }
+  .feeding [data-eats]:hover { filter: drop-shadow(0 0 10px #FFD54A); }
+  .burst { position: fixed; z-index: 96; pointer-events: none; font-size: 22px; }
+
+  @media (max-width: 900px) {
+    .guide.loose { width: 240px; }
+    .guide.loose .avatar svg { height: 200px; }
+    .guide.loose .bubble { width: 240px; margin-bottom: 16px; }
+    .guide.loose .bubble::after { left: 50%; right: auto; bottom: -12px; transform: translateX(-50%) rotate(45deg); }
+    .stephen-loose .rail { background: none; }
+    .home-spot { position: fixed; top: auto; right: 12px; bottom: 12px; width: auto; min-height: 0; margin: 0; padding: 10px 14px; flex-direction: row; border-radius: 999px;
+      z-index: 31; pointer-events: auto; font-size: 13px; }
+    .home-spot .icon { width: 20px; height: 20px; }
+    .bucket { left: auto; right: 8px; bottom: 214px; padding: 6px; border-radius: 16px; }
+    .b-title { display: none; }
+    .b-foods { flex-direction: column; gap: 5px; }
+    .b-foods button { width: 40px; height: 40px; font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .roam { display: none; } }
 
   /* Something Stephen is talking about gets a sunny glow */
   .speaking { outline: 4px solid color-mix(in srgb, var(--sun) 80%, transparent); outline-offset: 5px; border-radius: 22px; }
@@ -451,7 +585,7 @@
     <div class="sign" data-say="G'day and welcome to the HubSpot Zoo. Four handy little creatures live here, and they all save you clicks.">
       <svg class="paw" viewBox="0 0 64 64" aria-hidden="true"><g fill="#FFF4DE"><ellipse cx="32" cy="42" rx="14" ry="12"/><ellipse cx="14" cy="26" rx="6" ry="8"/><ellipse cx="26" cy="14" rx="6" ry="8"/><ellipse cx="38" cy="14" rx="6" ry="8"/><ellipse cx="50" cy="26" rx="6" ry="8"/></g></svg>
       <b>The HubSpot Zoo</b>
-      <div class="cocky-perch" data-animal="cocky" data-say="Don't feed the cocky. He'll scream at you like a ticket landing at 4:59 on a Friday." data-mood="wink"></div>
+      <div class="cocky-perch" data-animal="cocky" data-eats="seeds" data-name="the cocky" data-say="Don't feed the cocky. He'll scream at you like a ticket landing at 4:59 on a Friday." data-mood="wink"></div>
     </div>
   </div>
 </header>
@@ -473,7 +607,7 @@
       <svg class="cloud c1" viewBox="0 0 150 60" aria-hidden="true"><path d="M20 54 C2 54 2 30 22 32 C22 12 52 8 60 26 C68 6 104 8 104 32 C126 28 140 54 118 54 Z"/></svg>
       <svg class="cloud c2" viewBox="0 0 150 60" aria-hidden="true"><path d="M20 54 C2 54 2 30 22 32 C22 12 52 8 60 26 C68 6 104 8 104 32 C126 28 140 54 118 54 Z"/></svg>
       <svg class="cloud c3" viewBox="0 0 150 60" aria-hidden="true"><path d="M20 54 C2 54 2 30 22 32 C22 12 52 8 60 26 C68 6 104 8 104 32 C126 28 140 54 118 54 Z"/></svg>
-      <div class="lori" data-animal="lori" style="pointer-events: auto" data-say="Rainbow lorikeets. Loud, colourful and always on time. Unlike some of us."></div>
+      <div class="lori" data-animal="lori" style="pointer-events: auto" data-eats="seeds" data-name="the lorikeet" data-say="Rainbow lorikeets. Loud, colourful and always on time. Unlike some of us."></div>
       <div class="lori l2" data-animal="lori"></div>
     </div>
     <div class="layer hills">
@@ -486,7 +620,7 @@
       <div class="tree t1" data-animal="gum"></div>
       <div class="tree t2" data-animal="gum"></div>
     </div>
-    <div class="roo-run" data-say="That's Skippy. He's here because Quick actions are, well, quick." style="pointer-events: auto; cursor: pointer"><div class="hopper" data-animal="roo"></div></div>
+    <div class="roo-run" data-eats="grass" data-name="Skippy" data-say="That's Skippy. He's here because Quick actions are, well, quick." style="pointer-events: auto; cursor: pointer"><div class="hopper" data-animal="roo"></div></div>
 
     <div class="hero-copy">
       <span class="kicker">HubSpot add-ons</span>
@@ -512,7 +646,7 @@
         <path d="M0 30 C80 20 160 34 240 26 C280 22 310 26 330 22 L330 34 C300 38 270 34 240 38 C160 46 80 32 0 42 Z" fill="#8C6A4A"/>
         <g fill="#6FA86A"><ellipse cx="40" cy="22" rx="16" ry="6" transform="rotate(-20 40 22)"/><ellipse cx="300" cy="18" rx="16" ry="6" transform="rotate(25 300 18)"/><ellipse cx="260" cy="44" rx="14" ry="5" transform="rotate(-30 260 44)"/></g>
       </svg>
-      <div class="koala-hang" data-animal="koala" data-say="That's Kev. He's been hanging there since step one. Honestly, relatable." data-mood="wink"></div>
+      <div class="koala-hang" data-animal="koala" data-eats="leaves" data-name="Kev the koala" data-say="That's Kev. He's been hanging there since step one. Honestly, relatable." data-mood="wink"></div>
     </div>
     <div class="post"><div class="board"><span class="trail">Trail 1</span><h2>Set up Tampermonkey</h2></div></div>
     <p class="lead">Tampermonkey is the Chrome extension that runs the scripts. Three steps, once, and you're set for good.</p>
@@ -552,14 +686,14 @@
       <svg class="waves" viewBox="0 0 2000 54" preserveAspectRatio="none" aria-hidden="true"><path d="M0 20 Q60 6 120 20 T240 20 T360 20 T480 20 T600 20 T720 20 T840 20 T960 20 T1080 20 T1200 20 T1320 20 T1440 20 T1560 20 T1680 20 T1800 20 T1920 20 T2040 20 V54 H0 Z" fill="var(--water)"/></svg>
     </div>
     <div class="bubbles" aria-hidden="true"><span style="left:18%; animation-delay:0s"></span><span style="left:46%; animation-delay:1.1s"></span><span style="left:73%; animation-delay:2.2s"></span></div>
-    <div class="platy" data-animal="platy" data-say="Part duck, part beaver, part Adyen and WPay. Nature's own Payments badge."></div>
+    <div class="platy" data-animal="platy" data-eats="grubs" data-name="the platypus" data-say="Part duck, part beaver, part Adyen and WPay. Nature's own Payments badge."></div>
     <div class="emu-dash" data-animal="emu"></div>
   </div>
 
   <section class="block" id="scripts" style="margin-top: 40px">
     <div class="post">
       <div class="board"><span class="trail">Trail 2</span><h2>Meet the residents</h2></div>
-      <div class="kooka-perch" data-animal="kooka" data-say="That's the kookaburra. He's laughing at how many clicks you used to do. Rude, but fair."></div>
+      <div class="kooka-perch" data-animal="kooka" data-eats="grubs" data-name="the kookaburra" data-say="That's the kookaburra. He's laughing at how many clicks you used to do. Rude, but fair."></div>
     </div>
     <p class="lead">Install one, or all four. They get on well together, and each one can be switched off from the Tampermonkey icon.</p>
     <div class="howto reveal" data-say="Same three clicks for every script. Install here, Install again on Tampermonkey's screen, then refresh HubSpot.">
@@ -573,7 +707,7 @@
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/company-filters.md" aria-label="Company filters guide">
             <img src="assets/screenshots/company-filters-contact-panel.png" alt="Add existing Contact showing only contacts at the ticket's companies" loading="lazy" style="object-position: left top">
             <span class="tag">Emu enclosure</span>
-            <div class="resident" data-animal="emu"></div>
+            <div class="resident" data-animal="emu" data-eats="seeds" data-name="the emu"></div>
             <span class="fence"></span>
           </a>
           <div class="body">
@@ -598,7 +732,7 @@
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/unlinked-contacts.md" aria-label="Unlinked contacts guide">
             <img src="assets/screenshots/unlinked-contacts.png" alt="An amber chip by a Help Desk ticket title and the list of contacts with Link buttons" loading="lazy" style="object-position: center top">
             <span class="tag">Koala enclosure</span>
-            <div class="resident" data-animal="koala-sit"></div>
+            <div class="resident" data-animal="koala-sit" data-eats="leaves" data-name="the koala"></div>
             <span class="fence"></span>
           </a>
           <div class="body">
@@ -620,7 +754,7 @@
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/payments-badge.md" aria-label="Payments badge guide">
             <img src="assets/screenshots/payments-badge.png" alt="An Adyen Balance badge by a Help Desk ticket title and a Payments line on each company card" loading="lazy" style="object-position: right top">
             <span class="tag">Platypus pond</span>
-            <div class="resident" data-animal="platy" style="width: 120px; right: 16px"></div>
+            <div class="resident" data-animal="platy" data-eats="grubs" data-name="the platypus" style="width: 120px; right: 16px"></div>
             <span class="fence"></span>
           </a>
           <div class="body">
@@ -642,7 +776,7 @@
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/quick-actions.md" aria-label="Quick actions guide">
             <img src="assets/screenshots/quick-actions-bar.png" alt="The Quick actions bar bottom right of a ticket, with the drive time underneath" loading="lazy" style="object-position: right bottom">
             <span class="tag">Roo paddock</span>
-            <div class="resident" data-animal="roo" style="width: 112px"></div>
+            <div class="resident" data-animal="roo" data-eats="grass" data-name="the roo" style="width: 112px"></div>
             <span class="fence"></span>
           </a>
           <div class="body">
@@ -686,17 +820,23 @@
 </main>
 
 <aside class="rail" aria-label="Stephen's tips">
+  <button class="home-spot" type="button" hidden data-say="This is my spot. Click it and I'll come back.">
+    <svg class="icon" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+    <span>Stephen's spot. Click to bring him back.</span>
+  </button>
   <div class="guide">
     <div class="bubble" id="bubble" aria-live="polite"><span class="who">Stephen says</span><span id="say"></span><span class="caret"></span></div>
     <div class="avatar-wrap">
       <button class="avatar" type="button" id="avatar" aria-label="Stephen. Click to say hello, swipe or use the arrow keys to change his outfit">
-        <svg class="me" id="me" data-outfit="cork" viewBox="0 -4 220 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a cork hat">
+        <svg class="me" id="me" data-outfit="croc" viewBox="0 -4 220 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a Steve Irwin-style khaki outfit">
           <g class="fig">
             <!-- legs: thighs and shins coloured separately, so shorts, socks and stockings work -->
             <g class="leg-l">
               <path class="thigh" d="M86 296 L110 296 L108.6 349 L88.4 349 Z"/>
+              <path class="kit kit-guard" d="M89 298 L90.6 349" stroke="#C8102E" stroke-width="2.5"/>
+              <g class="low-l">
               <path class="shin" d="M88.3 347 L108.7 347 L107 404 L90 404 Z"/>
-              <path class="kit kit-guard" d="M89 298 L92 402" stroke="#C8102E" stroke-width="2.5"/>
+              <path class="kit kit-guard" d="M90.6 347 L92 402" stroke="#C8102E" stroke-width="2.5"/>
               <rect class="kit kit-hols" x="89.6" y="370" width="17.6" height="35" fill="#FFFFFF" stroke="#E2E4EA" stroke-width="1"/>
               <rect class="kit kit-croc" x="89.8" y="388" width="17.4" height="16" fill="#8C8C86"/>
               <g class="kit kit-morris"><rect x="88.6" y="356" width="19.6" height="13" rx="3" fill="#1E7A3B"/><g fill="#E3B23C"><circle cx="92" cy="371" r="2"/><circle cx="98.4" cy="372" r="2"/><circle cx="104.8" cy="371" r="2"/></g></g>
@@ -706,11 +846,14 @@
                 <path class="kit kit-cork" d="M94 403 L98 410 L103 403" fill="none" stroke="#1E88E5" stroke-width="2.2" stroke-linejoin="round"/>
                 <path class="kit kit-hols" d="M82 409 L107 406 M86 404 L104 412" fill="none" stroke="#7A5230" stroke-width="2.6" stroke-linecap="round"/>
               </g>
+              </g>
             </g>
             <g class="leg-r">
               <path class="thigh" d="M110 296 L134 296 L131.9 349 L111.6 349 Z"/>
+              <path class="kit kit-guard" d="M131 298 L129.5 349" stroke="#C8102E" stroke-width="2.5"/>
+              <g class="low-r">
               <path class="shin" d="M111.5 347 L132 347 L130 404 L113 404 Z"/>
-              <path class="kit kit-guard" d="M131 298 L128 402" stroke="#C8102E" stroke-width="2.5"/>
+              <path class="kit kit-guard" d="M129.5 347 L128 402" stroke="#C8102E" stroke-width="2.5"/>
               <rect class="kit kit-hols" x="112.8" y="370" width="17.6" height="35" fill="#FFFFFF" stroke="#E2E4EA" stroke-width="1"/>
               <rect class="kit kit-croc" x="112.8" y="388" width="17.4" height="16" fill="#8C8C86"/>
               <g class="kit kit-morris"><rect x="111.8" y="356" width="19.6" height="13" rx="3" fill="#1E7A3B"/><g fill="#E3B23C"><circle cx="115.2" cy="371" r="2"/><circle cx="121.6" cy="372" r="2"/><circle cx="128" cy="371" r="2"/></g></g>
@@ -719,6 +862,7 @@
                 <rect class="sole" x="110" y="413" width="33" height="5" rx="2.5"/>
                 <path class="kit kit-cork" d="M117 403 L122 410 L126 403" fill="none" stroke="#1E88E5" stroke-width="2.2" stroke-linejoin="round"/>
                 <path class="kit kit-hols" d="M113 406 L138 409 M116 412 L134 404" fill="none" stroke="#7A5230" stroke-width="2.6" stroke-linecap="round"/>
+              </g>
               </g>
             </g>
             <!-- body: the same shirt shape, recoloured per outfit -->
@@ -745,6 +889,7 @@
             <g class="placket"><path d="M110 213 V308" fill="none" stroke-width="1.4"/><circle cx="110" cy="226" r="1.9"/><circle cx="110" cy="248" r="1.9"/><circle cx="110" cy="270" r="1.9"/><circle cx="110" cy="292" r="1.9"/></g>
             <g class="placket-short"><path d="M110 206 V240" fill="none" stroke-width="1.4"/><circle cx="110" cy="218" r="1.9"/><circle cx="110" cy="232" r="1.9"/></g>
             <path class="pocket" d="M127 226 H148 V245 Q137.5 249 127 245 Z" fill="none" stroke-width="1.6" stroke-linejoin="round"/>
+            <g class="kit kit-croc" fill="none" stroke="#8C7A47" stroke-width="1.6" stroke-linejoin="round"><path d="M72 226 H93 V245 Q82.5 249 72 245 Z"/><path d="M72 226 H93 V232 H72 Z"/><path d="M127 226 H148 V232 H127 Z"/><path d="M64 196 L82 190"/><path d="M156 196 L138 190"/></g>
             <path class="kit kit-guard" d="M92 180 L128 180 L130 194 L90 194 Z" fill="#1B2445" stroke="#D9A93A" stroke-width="1.6"/>
             <g class="kit kit-beef"><ellipse cx="110" cy="188" rx="31" ry="9" fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.5"/><g stroke="#D5D9E2" stroke-width="1.2"><path d="M86 183 L88 194"/><path d="M96 180 L97 196"/><path d="M106 179 L106 197"/><path d="M116 179 L115 197"/><path d="M126 180 L124 196"/><path d="M134 183 L132 194"/></g></g>
             <g class="head">
@@ -848,12 +993,6 @@
               <ellipse cx="110" cy="69" rx="52" ry="7" fill="#14183A"/>
               <circle cx="140" cy="60" r="4.5" fill="#B3121F" stroke="#FFFFFF" stroke-width="1.6"/>
             </g>
-            <g class="kit kit-croc">
-              <path d="M80 72 C80 46 92 38 110 38 C128 38 140 46 140 72 Z" fill="#6E4B2A"/>
-              <path d="M104 39 Q110 48 116 39" fill="none" stroke="#4E3319" stroke-width="2"/>
-              <rect x="80" y="63" width="60" height="7" fill="#3E2A17"/>
-              <path d="M48 74 Q110 58 172 74 Q110 86 48 74 Z" fill="#6E4B2A"/>
-            </g>
             <g class="kit kit-hols">
               <path d="M66 84 C64 52 84 40 110 40 C136 40 156 52 154 84 C140 77 126 75 110 75 C94 75 80 77 66 84 Z" fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.5"/>
               <g fill="#FFFFFF" stroke="#D5D9E2" stroke-width="1.2"><circle cx="65" cy="86" r="4"/><circle cx="155" cy="86" r="4"/><path d="M60 88 l-6 4 l7 1 Z"/><path d="M160 88 l6 4 l-7 1 Z"/></g>
@@ -876,10 +1015,20 @@
             <g class="arm-l">
               <circle class="slv" cx="65" cy="207" r="10.5"/>
               <path class="slv" d="M62 198 C55 222 52 244 52 262 L69 264 C70 246 72 226 76 204 Z"/>
+              <rect class="kit kit-croc" x="50.5" y="244" width="21" height="10" rx="3" fill="#B39558" stroke="#8C7A47" stroke-width="1"/>
               <g class="fore-l">
                 <circle class="frm" cx="60.5" cy="262" r="8.6"/>
                 <path class="frm" d="M52 260 L50 300 L67 302 L69 262 Z"/>
                 <rect class="cuff" x="49" y="298" width="19" height="7" rx="2"/>
+                <g class="kit kit-croc baby-croc">
+                  <path d="M30 320 L46 314 L46 323 Z" fill="#4E7A3A"/>
+                  <ellipse cx="57" cy="318.5" rx="13" ry="6.5" fill="#5C8A44"/>
+                  <path d="M66 314 C76 312 88 314 91 317.5 C88 321 76 323 66 323 Z" fill="#5C8A44"/>
+                  <g fill="#3E6A2E"><circle cx="48" cy="313.5" r="1.6"/><circle cx="53" cy="312.6" r="1.6"/><circle cx="58" cy="312.4" r="1.6"/><circle cx="63" cy="313" r="1.6"/></g>
+                  <circle cx="70" cy="313.4" r="2.6" fill="#5C8A44"/><circle cx="70.6" cy="313" r="1.1" fill="#F2D24A"/>
+                  <path d="M73 319.5 l2 2 l2 -2 l2 2 l2 -2 l2 2 l2 -2" fill="none" stroke="#FFFFFF" stroke-width=".9"/>
+                  <path d="M50 323 l-2 4 M62 323 l2 4" stroke="#3E6A2E" stroke-width="2" stroke-linecap="round"/>
+                </g>
                 <ellipse cx="58.5" cy="314" rx="8" ry="10" fill="#F5D8C5"/>
                 <path d="M51.5 312 Q52 318 56 321" fill="none" stroke="#E2B49C" stroke-width="1.4" stroke-linecap="round"/>
                 <g class="kit kit-cork">
@@ -892,6 +1041,7 @@
             <g class="arm-r">
               <circle class="slv" cx="155" cy="207" r="10.5"/>
               <path class="slv" d="M158 198 C165 222 168 244 168 262 L151 264 C150 246 148 226 144 204 Z"/>
+              <rect class="kit kit-croc" x="148.5" y="244" width="21" height="10" rx="3" fill="#B39558" stroke="#8C7A47" stroke-width="1"/>
               <g class="fore-r">
                 <circle class="frm" cx="159.5" cy="262" r="8.6"/>
                 <path class="frm" d="M168 260 L170 300 L153 302 L151 262 Z"/>
@@ -906,9 +1056,9 @@
         </svg>
       </button>
       <div class="nameplate">Stephen Shaw</div>
-      <div class="outfits" data-say="Swipe me left or right, or use these arrows, to change my outfit. Very British or very Aussie, nothing in between.">
+      <div class="outfits" data-say="Use these arrows, or double-click me, to change my outfit. Very British or very Aussie, nothing in between.">
         <button type="button" data-step="-1" aria-label="Previous outfit"><svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
-        <span class="oname" id="oname" aria-live="polite">Cork hat</span>
+        <span class="oname" id="oname" aria-live="polite">Croc hunter</span>
         <button type="button" data-step="1" aria-label="Next outfit"><svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
       </div>
     </div>
@@ -917,9 +1067,19 @@
 </div>
 
 <footer>
-  <div class="wombat-walk" data-animal="wombat" data-say="Wombats are built like tanks. So are these scripts. Mostly."></div>
-  <div class="foot-in">Made by Stephen Shaw. Please don't feed the animals.</div>
+  <div class="wombat-walk" data-animal="wombat" data-eats="grass" data-name="the wombat" data-say="Wombats are built like tanks. So are these scripts. Mostly."></div>
+  <div class="foot-in">Made by Stephen Shaw. Please DO feed the animals.</div>
 </footer>
+
+<div class="bucket" role="group" aria-label="Feed the animals">
+  <div class="b-title">Feed the animals <span class="b-count">Fed <b class="fed">0</b></span></div>
+  <div class="b-foods">
+    <button type="button" data-food="leaves" aria-label="Gum leaves, for koalas" data-say="Gum leaves. Koalas eat basically nothing else. Pick some up, then click a koala.">🌿</button>
+    <button type="button" data-food="grass" aria-label="Grass, for roos and wombats" data-say="Grass, for the roos and the wombats.">🌾</button>
+    <button type="button" data-food="grubs" aria-label="Grubs, for the kookaburra, echidna, lizard and platypus" data-say="Grubs! The kookaburra, the echidna, the frill-neck and the platypus go mad for these.">🐛</button>
+    <button type="button" data-food="seeds" aria-label="Seeds, for the birds and emus" data-say="Seeds, for the cocky, the galahs, the lorikeets and the emus.">🌻</button>
+  </div>
+</div>
 
 <!-- The residents. Each one is drawn once here and copied wherever data-animal asks for it. -->
 <template id="animal-roo">
@@ -1062,6 +1222,61 @@
     <g class="w-leg"><rect x="86" y="52" width="13" height="16" rx="5" fill="#5A4538"/></g>
   </svg>
 </template>
+<template id="animal-echidna">
+  <svg class="animal echidna" viewBox="0 0 110 64" aria-hidden="true">
+    <g class="ec-leg"><rect x="24" y="48" width="9" height="12" rx="4" fill="#3E2C20"/></g>
+    <g class="ec-leg b"><rect x="62" y="48" width="9" height="12" rx="4" fill="#3E2C20"/></g>
+    <g class="ec-body">
+      <ellipse cx="48" cy="40" rx="36" ry="18" fill="#5A4030"/>
+      <path d="M15.6 36.6 L-2.2 31.3 L16.9 34.3 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M17.1 34.1 L0.7 26.7 L19.0 32.0 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M19.3 31.7 L4.7 22.4 L21.9 29.8 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M22.3 29.6 L9.8 18.5 L25.4 27.9 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M25.8 27.7 L15.9 15.2 L29.5 26.3 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M30.0 26.1 L22.7 12.4 L34.0 25.0 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M34.5 24.9 L30.1 10.4 L38.9 24.1 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M39.4 24.0 L38.0 9.1 L44.0 23.6 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M44.5 23.5 L46.2 8.5 L49.2 23.5 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M49.7 23.5 L54.4 8.7 L54.3 23.7 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M54.9 23.8 L62.4 9.7 L59.3 24.4 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M59.9 24.5 L70.1 11.5 L64.1 25.5 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M64.6 25.7 L77.2 13.9 L68.4 27.0 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M68.8 27.1 L83.6 17.0 L72.2 28.7 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M72.6 28.9 L89.1 20.6 L75.5 30.7 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M75.8 31.0 L93.7 24.7 L78.0 33.0 Z" fill="#EFE3C8" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M78.3 33.3 L97.1 29.2 L79.8 35.4 Z" fill="#D8C59E" stroke="#7A6448" stroke-width=".6"/>
+      <path d="M80 36 C92 36 104 39 108 42 C100 45 90 45 80 44 Z" fill="#3A2A20"/>
+      <circle cx="80" cy="35" r="2" fill="#1A120C"/>
+    </g>
+    <g class="ec-leg b"><rect x="32" y="48" width="9" height="12" rx="4" fill="#4A3628"/></g>
+    <g class="ec-leg"><rect x="70" y="48" width="9" height="12" rx="4" fill="#4A3628"/></g>
+  </svg>
+</template>
+<template id="animal-galah">
+  <svg class="animal galah" viewBox="0 0 70 40" aria-hidden="true">
+    <path d="M8 20 L-6 15 L-4 25 Z" fill="#9C9CA8"/>
+    <ellipse cx="28" cy="22" rx="18" ry="9" fill="#A9A9B4"/>
+    <path d="M30 24 C36 31 46 31 51 22 C47 33 36 35 28 29 Z" fill="#E5698C"/>
+    <circle cx="50" cy="17" r="8.5" fill="#E5698C"/>
+    <ellipse cx="47" cy="11" rx="6" ry="3.4" fill="#F7C9D7"/>
+    <path d="M57.5 16 L63 18 L57.5 20.5 Z" fill="#EDE3D3"/>
+    <circle cx="52.5" cy="15.5" r="2.6" fill="#F2A0B4"/><circle cx="52.5" cy="15.5" r="1.4" fill="#222"/>
+    <path class="wing" d="M18 18 C22 3 36 1 40 16 Z" fill="#8F8F9C"/>
+  </svg>
+</template>
+<template id="animal-lizard">
+  <svg class="animal lizard" viewBox="0 0 130 64" aria-hidden="true">
+    <path d="M2 42 C20 37 40 38 52 40 C40 43 20 46 2 42 Z" fill="#9C7444"/>
+    <g class="lz-leg b"><path d="M56 42 l-7 13 M80 42 l-7 13" stroke="#8A6438" stroke-width="4" stroke-linecap="round"/></g>
+    <ellipse cx="68" cy="39" rx="22" ry="8.5" fill="#B88A50"/>
+    <path d="M52 36 q8 -4 16 -2 q8 -2 14 2" stroke="#9C7444" stroke-width="1.6" fill="none"/>
+    <g class="frill"><circle cx="97" cy="34" r="17" fill="#E8762F"/><circle cx="97" cy="34" r="11.5" fill="#F5B54A"/><g stroke="#C55A1E" stroke-width="1.4"><path d="M97 17 V24"/><path d="M83 26 L89 29"/><path d="M111 26 L105 29"/><path d="M82 42 L89 40"/><path d="M112 42 L105 40"/></g></g>
+    <ellipse cx="102" cy="34" rx="11" ry="6.5" fill="#B88A50"/>
+    <circle cx="106" cy="31.5" r="1.8" fill="#1E1A14"/>
+    <path d="M108 37 q4 1 5 -1" stroke="#7A5530" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <g class="lz-leg"><path d="M60 43 l6 13 M84 43 l6 13" stroke="#A47A44" stroke-width="4" stroke-linecap="round"/></g>
+  </svg>
+</template>
 <template id="animal-lori">
   <svg class="animal lori-svg" viewBox="0 0 60 34" aria-hidden="true">
     <path d="M8 18 L-6 14 L-4 22 Z" fill="#3BAA48"/>
@@ -1091,8 +1306,8 @@
 
   const touch = window.matchMedia('(hover: none)').matches;
   const HELLO = touch
-    ? "G'day! I'm Stephen. Tap anything and I'll tell you what it does. Swipe me to change my outfit, or tap this bubble to tuck it away."
-    : "G'day! I'm Stephen. Hover over anything and I'll tell you what it does. Swipe or drag me to change my outfit.";
+    ? "G'day! Tap anything and I'll explain it. Drag me about, double-tap me for a new outfit, and grab food from the bucket to feed the animals."
+    : "G'day! I'm Stephen. Hover over anything and I'll explain it. Grab me and drag me anywhere, double-click me for a new outfit, and use the bucket to feed the animals.";
   const HELLO_AGAIN = [
     "Yes, that's really me. The outfits are an upgrade. Mostly.",
     `Still here! ${touch ? 'Tap' : 'Hover over'} a script to hear what it does.`,
@@ -1114,6 +1329,7 @@
     moodTimer = setTimeout(() => me.classList.remove(name), name === 'wave' ? 2600 : 1400);
   }
 
+  window.stephenSay = (text, how) => { current = null; say(text, how); };
   function say(text, how) {
     if (text === current) return;
     current = text;
@@ -1159,25 +1375,25 @@
 
   // Outfits: swipe or drag Stephen sideways, or use the arrows under him
   const OUTFITS = [
+    { id: 'croc', name: 'Croc hunter', label: 'a Steve Irwin-style khaki shirt, shorts and boots, holding a baby croc', line: "Crikey! Look at this little beauty. Khakis on, boots laced, ready for the ticket queue." },
     { id: 'cork', name: 'Cork hat', label: 'a cork hat, singlet, stubbies and thongs, holding a snag in bread', line: "Corks keep the flies off. Mostly. Snag in bread, anyone?" },
     { id: 'guard', name: 'Royal guard', label: 'a royal guard uniform and bearskin hat', line: "I'm not meant to smile in this. Clearly failing." },
     { id: 'surf', name: 'Lifesaver', label: 'red and yellow lifesaver gear', line: "Swim between the flags. Install between the steps." },
     { id: 'beef', name: 'Beefeater', label: 'a Beefeater tunic and ruff', line: "Guarding the Crown Jewels. And your HubSpot records." },
-    { id: 'croc', name: 'Croc hunter', label: 'khakis, boots and an Akubra', line: "Crikey! Look at the size of that ticket queue." },
     { id: 'hols', name: 'Brit abroad', label: 'a knotted hanky, vest, shorts, and socks with sandals', line: "Socks and sandals, factor 2 sunscreen. Living my best life." },
     { id: 'cricket', name: 'Baggy green', label: 'cricket whites, a baggy green cap and zinc', line: "Zinc on, cap on. Ready to bat for the support team." },
     { id: 'morris', name: 'Morris dancer', label: 'Morris dancer kit with bells and a hanky', line: "Bells on my shins, hanky in hand. Don't ask." },
   ];
   const oname = document.getElementById('oname');
   let outfit = 0;
-  try { outfit = Math.max(0, OUTFITS.findIndex((o) => o.id === localStorage.getItem('oolio-addons-outfit'))); } catch (e) { /* private window */ }
+  try { outfit = Math.max(0, OUTFITS.findIndex((o) => o.id === localStorage.getItem('zoo-outfit'))); } catch (e) { /* private window */ }
   function wear(i, speak) {
     outfit = (i + OUTFITS.length) % OUTFITS.length;
     const o = OUTFITS[outfit];
     me.dataset.outfit = o.id;
     me.setAttribute('aria-label', `Cartoon of Stephen in ${o.label}`);
     oname.textContent = o.name;
-    try { localStorage.setItem('oolio-addons-outfit', o.id); } catch (e) { /* fine without */ }
+    try { localStorage.setItem('zoo-outfit', o.id); } catch (e) { /* fine without */ }
     if (!speak) return;
     me.classList.remove('swap'); void me.getBoundingClientRect(); me.classList.add('swap');
     setTimeout(() => me.classList.remove('swap'), 420);
@@ -1188,21 +1404,13 @@
   document.querySelectorAll('.outfits button').forEach((b) => b.addEventListener('click', () => wear(outfit + Number(b.dataset.step), true)));
 
   const avatar = document.getElementById('avatar');
-  let startX = null;
-  let swiped = false;
-  avatar.addEventListener('pointerdown', (e) => { startX = e.clientX; swiped = false; });
-  avatar.addEventListener('pointerup', (e) => {
-    if (startX === null) return;
-    const dx = e.clientX - startX;
-    startX = null;
-    if (Math.abs(dx) > 30) { swiped = true; wear(outfit + (dx < 0 ? 1 : -1), true); }
-  });
-  avatar.addEventListener('pointercancel', () => { startX = null; });
+  // Dragging him about lives in the zoo script; double-click (or double-tap) for the next outfit
+  avatar.addEventListener('dblclick', (e) => { e.preventDefault(); wear(outfit + 1, true); });
   avatar.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); wear(outfit + (e.key === 'ArrowRight' ? 1 : -1), true); }
   });
   avatar.addEventListener('click', () => {
-    if (swiped) { swiped = false; return; }
+    if (avatar.dataset.dragged === '1') { avatar.dataset.dragged = ''; return; }
     current = null;
     say(HELLO_AGAIN[pokes++ % HELLO_AGAIN.length], pokes % 2 ? 'wink' : 'wave');
   });
@@ -1380,6 +1588,252 @@
     function dash() { emu.classList.remove('go'); void emu.offsetWidth; emu.classList.add('go'); }
     setTimeout(dash, 2500);
     setInterval(dash, 14000);
+  }
+})();
+</script>
+<script>
+/* ---------- Stephen's routines, dragging him about, and a roaming, hungry zoo ---------- */
+(function () {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const me = document.getElementById('me');
+  const guide = document.querySelector('.guide');
+  const avatar = document.getElementById('avatar');
+  const home = document.querySelector('.home-spot');
+  const talk = (t, m) => window.stephenSay && window.stephenSay(t, m);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const narrow = () => innerWidth <= 900;
+
+  /* Every few seconds Stephen breaks into a routine */
+  const MOVES = ['mv-dance', 'mv-march', 'mv-jacks', 'mv-flex', 'mv-look', 'mv-shrug', 'mv-kick', 'mv-spin', 'mv-dance', 'mv-march', 'mv-jacks'];
+  let dragging = false;
+  function routine() {
+    if (!dragging && !document.hidden) {
+      const mv = pick(MOVES);
+      me.classList.add(mv);
+      setTimeout(() => me.classList.remove(mv), mv === 'mv-spin' ? 1850 : rnd(2600, 3700));
+    }
+    setTimeout(routine, rnd(4300, 6400));
+  }
+  if (!still) setTimeout(routine, 2200);
+
+  /* Drag him anywhere: he dangles from the collar, swings with the motion, glides and lands */
+  const PICKUP = ["Whoa! Put me down!", "Wheee!", "Careful, I've just had lunch.", "Is this a fireman's carry?", "Steady on, mate!", "Crikey, I'm flying!"];
+  const DROP = ["Ta for the lift.", "Nice spot. Great view of the Install buttons.", "Right here? Bonza.", "Oof. Stuck the landing.", "I'll just hang about here then."];
+  let start = null, offX = 0, offY = 0, last = null, vx = 0, vy = 0, tilt = 0, raf = 0;
+
+  avatar.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    avatar.dataset.dragged = '';
+    start = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  });
+  addEventListener('pointermove', (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    if (!dragging) {
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < 8) return;
+      pickUp(e);
+    }
+    const now = performance.now();
+    if (last) { const dt = Math.max(8, now - last.t); vx = (e.clientX - last.x) / dt * 16; vy = (e.clientY - last.y) / dt * 16; }
+    last = { x: e.clientX, y: e.clientY, t: now };
+    moveTo(e.clientX - offX, e.clientY - offY);
+  });
+  addEventListener('pointerup', putDown);
+  addEventListener('pointercancel', putDown);
+
+  function pickUp(e) {
+    dragging = true;
+    avatar.dataset.dragged = '1';
+    const r = guide.getBoundingClientRect();
+    guide.style.left = r.left + 'px';
+    guide.style.top = r.top + 'px';
+    guide.classList.add('loose', 'dragging');
+    document.body.classList.add('stephen-loose');
+    home.hidden = false;
+    const g = guide.getBoundingClientRect(), a = avatar.getBoundingClientRect();
+    offX = a.left + a.width / 2 - g.left;
+    offY = a.top + a.height * .2 - g.top;
+    me.classList.add('dangle');
+    try { avatar.setPointerCapture(e.pointerId); } catch (_) { /* fine */ }
+    talk(pick(PICKUP), 'wink');
+    if (!still) swing();
+  }
+  function moveTo(x, y) {
+    const g = guide.getBoundingClientRect();
+    guide.style.left = Math.min(Math.max(x, 0), innerWidth - g.width) + 'px';
+    guide.style.top = Math.min(Math.max(y, 0), innerHeight - g.height) + 'px';
+  }
+  function swing() {
+    cancelAnimationFrame(raf);
+    const step = () => {
+      tilt += (Math.max(-38, Math.min(38, vx * 2.4)) - tilt) * .16;
+      vx *= .9;
+      me.style.transform = `rotate(${tilt.toFixed(2)}deg)`;
+      if (dragging || Math.abs(tilt) > .3) raf = requestAnimationFrame(step); else me.style.transform = '';
+    };
+    raf = requestAnimationFrame(step);
+  }
+  function putDown(e) {
+    if (!start || (e && e.pointerId !== start.id)) return;
+    start = null;
+    if (!dragging) return;
+    dragging = false;
+    guide.classList.remove('dragging');
+    me.classList.remove('dangle');
+    last = null;
+    if (still) { land(); return; }
+    let gx = parseFloat(guide.style.left), gy = parseFloat(guide.style.top), mx = vx, my = vy;
+    const glide = () => {
+      mx *= .9; my *= .9; gx += mx; gy += my;
+      moveTo(gx, gy);
+      gx = parseFloat(guide.style.left); gy = parseFloat(guide.style.top);
+      if (Math.hypot(mx, my) > .6) requestAnimationFrame(glide); else land();
+    };
+    requestAnimationFrame(glide);
+  }
+  function land() {
+    me.classList.remove('land'); void me.getBoundingClientRect(); me.classList.add('land');
+    setTimeout(() => me.classList.remove('land'), 600);
+    talk(pick(DROP), 'wave');
+  }
+  home.addEventListener('click', () => {
+    const a = guide.getBoundingClientRect();
+    guide.classList.remove('loose');
+    guide.style.left = guide.style.top = '';
+    document.body.classList.remove('stephen-loose');
+    home.hidden = true;
+    const b = guide.getBoundingClientRect();
+    if (!still) guide.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: 'none' }], { duration: 650, easing: 'cubic-bezier(.3, 1.4, .5, 1)' });
+    talk('Back in my spot. Cheers for that.', 'wave');
+  });
+  addEventListener('resize', () => { if (guide.classList.contains('loose')) moveTo(parseFloat(guide.style.left), parseFloat(guide.style.top)); });
+
+  /* Animals roaming the page */
+  const layer = document.createElement('div');
+  layer.className = 'roam';
+  document.body.appendChild(layer);
+  const KINDS = [
+    { a: 'roo', name: 'the roo', eats: 'grass', w: 96, speed: 240, gait: 'hopper', say: "Oi, Skippy! Off the page!" },
+    { a: 'emu', name: 'the emu', eats: 'seeds', w: 72, speed: 330, gait: 'run', say: "That emu's quicker than our ticket SLA." },
+    { a: 'wombat', name: 'the wombat', eats: 'grass', w: 88, speed: 60, say: "Wombats can hit 40 km/h. This one's choosing not to." },
+    { a: 'echidna', name: 'the echidna', eats: 'grubs', w: 80, speed: 46, say: "An echidna. Spiky outside, lovely inside. Like the support queue." },
+    { a: 'lizard', name: 'the frill-neck', eats: 'grubs', w: 96, speed: 300, say: "A frill-necked lizard, showing off his frill. Like me with these scripts." },
+    { a: 'galah', name: 'the galah', eats: 'seeds', w: 58, speed: 170, air: true, say: "Galah! Absolute galah. Lovely pink though." },
+    { a: 'lori', name: 'the lorikeet', eats: 'seeds', w: 42, speed: 210, air: true, flock: 3, say: "The lorikeets again. They never stop." },
+  ];
+  let alive = 0;
+  function spawn() {
+    if (!document.hidden && alive < (narrow() ? 2 : 4)) {
+      const k = pick(KINDS);
+      const dir = Math.random() < .5 ? 1 : -1;
+      for (let i = 0; i < (k.flock || 1); i++) launch(k, dir, i);
+    }
+    setTimeout(spawn, narrow() ? rnd(9000, 14000) : rnd(4500, 8500));
+  }
+  function launch(k, dir, i) {
+    const el = document.createElement('div');
+    el.className = 'roamer' + (k.gait ? ' ' + k.gait : '');
+    el.style.width = k.w + 'px';
+    el.dataset.eats = k.eats;
+    el.dataset.name = k.name;
+    el.dataset.say = k.say;
+    el.innerHTML = '<div class="flip"><div class="jump"><div class="gait-in"></div></div></div>';
+    el.querySelector('.gait-in').appendChild(document.getElementById('animal-' + k.a).content.cloneNode(true));
+    if (dir < 0) el.querySelector('.flip').style.transform = 'scaleX(-1)';
+    layer.appendChild(el);
+    alive++;
+    const h = el.getBoundingClientRect().height || k.w;
+    const y = k.air ? rnd(80, innerHeight * .42) + i * 26 : innerHeight - h - (narrow() ? 196 : 6);
+    const x0 = dir > 0 ? -k.w - i * 60 : innerWidth + i * 60;
+    const x1 = dir > 0 ? innerWidth + 60 : -k.w - 60;
+    const dur = Math.abs(x1 - x0) / k.speed * 1000;
+    const frames = k.air
+      ? [0, .2, .4, .6, .8, 1].map((t) => ({ transform: `translate(${x0 + (x1 - x0) * t}px, ${y + Math.sin(t * Math.PI * 5 + i) * 24}px)` }))
+      : [{ transform: `translate(${x0}px, ${y}px)` }, { transform: `translate(${x1}px, ${y}px)` }];
+    el.animate(frames, { duration: dur, easing: 'linear' }).onfinish = () => { el.remove(); alive--; };
+  }
+  if (!still) setTimeout(spawn, 2500);
+  document.addEventListener('click', (e) => {
+    const r = e.target.closest('.roamer');
+    if (!r || held) return;
+    if (!still) r.querySelector('.jump').animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-46px) rotate(-8deg)' }, { transform: 'translateY(0)' }], { duration: 520, easing: 'ease-out' });
+    talk(r.dataset.say, 'wink');
+  });
+
+  /* Feeding: pick food from the bucket, then click an animal */
+  const FOODS = { leaves: { icon: '🌿', label: 'gum leaves' }, grass: { icon: '🌾', label: 'grass' }, grubs: { icon: '🐛', label: 'grubs' }, seeds: { icon: '🌻', label: 'seeds' } };
+  const YUM = [
+    (n, f) => `${n} loves ${f}. Good on ya!`,
+    (n, f) => `${n} says ta for the ${f}.`,
+    (n) => `Look at ${n.toLowerCase().startsWith('the ') ? n.toLowerCase() : n} go! Nom nom nom.`,
+    (n, f, c) => `${n} is a happy camper. That's ${c} fed so far.`,
+    (n) => `Crikey, ${n.toLowerCase().startsWith('the ') ? n.toLowerCase() : n} was starving!`,
+  ];
+  const bucket = document.querySelector('.bucket');
+  const counter = bucket.querySelector('.fed');
+  const heldEl = document.createElement('div');
+  heldEl.className = 'held';
+  document.body.appendChild(heldEl);
+  let held = null, fed = 0;
+  const place = (x, y) => { heldEl.style.transform = `translate(${x}px, ${y}px)`; };
+  function drop() {
+    held = null;
+    heldEl.classList.remove('show');
+    document.body.classList.remove('feeding');
+    bucket.querySelectorAll('[data-food]').forEach((x) => x.classList.remove('on'));
+  }
+  bucket.querySelectorAll('[data-food]').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (held === b.dataset.food) { drop(); return; }
+    held = b.dataset.food;
+    bucket.querySelectorAll('[data-food]').forEach((x) => x.classList.toggle('on', x === b));
+    heldEl.textContent = FOODS[held].icon;
+    const r = b.getBoundingClientRect();
+    place(r.left + 6, r.top - 40);
+    heldEl.classList.add('show');
+    document.body.classList.add('feeding');
+    talk(`Got some ${FOODS[held].label}. Now click an animal to feed it. Esc puts it back.`, 'wink');
+  }));
+  addEventListener('pointermove', (e) => { if (held && e.pointerType === 'mouse') place(e.clientX + 12, e.clientY + 8); }, { passive: true });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && held) drop(); });
+  document.addEventListener('click', (e) => {
+    if (!held || e.target.closest('.bucket')) return;
+    const animal = e.target.closest('[data-eats]');
+    e.preventDefault();
+    e.stopPropagation();
+    if (animal) feed(animal, held); else drop();
+  }, true);
+  function burst(r, icons) {
+    icons.forEach((ic, i) => {
+      const b = document.createElement('span');
+      b.className = 'burst';
+      b.textContent = ic;
+      b.style.left = (r.left + r.width / 2 - 10 + (i - icons.length / 2) * 14) + 'px';
+      b.style.top = (r.top + r.height * .25) + 'px';
+      document.body.appendChild(b);
+      const a = b.animate([{ transform: 'translateY(0) scale(.4)', opacity: 0 }, { transform: 'translateY(-20px) scale(1.2)', opacity: 1, offset: .25 },
+        { transform: `translate(${(i - 1.5) * 14}px, -90px) scale(1)`, opacity: 0 }], { duration: still ? 600 : 1300 + i * 120, easing: 'ease-out' });
+      a.onfinish = () => b.remove();
+    });
+  }
+  function feed(animal, food) {
+    const name = cap(animal.dataset.name || 'this one');
+    const likes = animal.dataset.eats;
+    const target = animal.querySelector('svg.animal') || animal;
+    const r = animal.getBoundingClientRect();
+    if (likes === food) {
+      fed++;
+      counter.textContent = fed;
+      bucket.classList.remove('bump'); void bucket.offsetWidth; bucket.classList.add('bump');
+      if (!still) target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18, .86)' }, { transform: 'scale(.94, 1.1)' }, { transform: 'scale(1)' }], { duration: 650, easing: 'ease-out' });
+      burst(r, ['❤️', FOODS[food].icon, '❤️', '😋']);
+      talk(pick(YUM)(name, FOODS[food].label, fed), 'wink');
+    } else {
+      if (!still) target.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-9deg)' }, { transform: 'rotate(9deg)' }, { transform: 'rotate(-5deg)' }, { transform: 'rotate(0)' }], { duration: 520 });
+      burst(r, ['🙅']);
+      talk(`${name} won't eat ${FOODS[food].label}, mate. Try ${FOODS[likes].label}.`, '');
+    }
   }
 })();
 </script>
