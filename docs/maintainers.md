@@ -12,3 +12,4 @@
 - UI follows the Oolio brand: Oolio Purple `#673AB6`, Inter, Lucide line icons.
 - Never commit screenshots that show customer, venue or ticket details.
 - *Quick actions* calls free map services. Keep within their rules (linked in *Where the times come from* in [its guide](quick-actions.md)): calls only on a click, at most one a second per service, cache lookups, name the script in the User-Agent, and show the attribution in the panel.
+- The [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app) is `index.html` at the root of this repo, hosted on Vercel (project *oolio-hubspot-addons*). It isn't connected to GitHub, so pushing doesn't update it. When a HubSpot script is added, renamed or retired, edit `index.html`, then deploy a folder holding just `index.html`, the images it uses from `assets/` and a `.vercel/project.json` for that project, with `npx vercel deploy --prod`.

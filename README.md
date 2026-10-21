@@ -7,6 +7,8 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 - **Nothing to sign in to.** They run inside Chrome and use your own login. There are no passwords or keys in here.
 - **They update themselves.** Install once and new versions arrive automatically.
 
+**Just here for HubSpot?** The [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app) walks you through setting up Tampermonkey and installing Company filters, Unlinked contacts, Payments badge and Quick actions, one step at a time.
+
 ## Get started
 
 **Set up Tampermonkey (once, about 3 minutes).** Tampermonkey is the Chrome extension that runs these scripts.
