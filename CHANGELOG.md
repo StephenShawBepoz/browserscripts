@@ -33,6 +33,9 @@
 
 ## HubSpot: Unlinked contacts
 
+### 1.0.1 (21/10/2026)
+- Tidier line on the contact card: it uses HubSpot's own font, sits under a thin divider with the company name in bold, and has a lighter Link button. The card is marked with an amber edge instead of a full outline.
+
 ### 1.0.0 (21/10/2026)
 - New. On Help Desk tickets, marks contacts who aren't linked to the ticket's company (or its parent) and links them with one click, with Undo.
 
