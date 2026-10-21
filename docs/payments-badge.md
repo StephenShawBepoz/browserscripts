@@ -2,6 +2,9 @@
 
 [Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/payments-badge.user.js) · [All scripts](../README.md) · [What changed](../CHANGELOG.md)
 
+<img src="../assets/screenshots/payments-badge.png" width="720" alt="A green Adyen Balance badge next to a Help Desk ticket title, and a Payments line on each company card in the sidebar, one showing Adyen and WPay together">
+<sub>Made-up example. The HubSpot page around the script is a mock-up, so the real one looks a little different.</sub>
+
 1. Open a company, a ticket, or a ticket in Help Desk.
 2. A badge says what the venue pays through:
    - On a **company** or **ticket record**, it's under the name at the top left.
