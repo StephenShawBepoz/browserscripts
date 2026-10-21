@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Unlinked contacts
 // @namespace    oolio-userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  On Help Desk tickets, marks contacts who aren't linked to the ticket's company and links them in one click, with Undo.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -264,17 +264,21 @@
     .oul-chip svg { flex: none; }
     .oul-chip.floating { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 2147483646; margin: 0;
       box-shadow: 0 4px 14px rgba(34,34,34,.18); }
-    .oul-badge { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 8px;
-      border-radius: 6px; background: #FFF4E0; border-left: 3px solid #E8A33D; color: #7A4B00;
-      font: 500 12px/16px Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-    .oul-badge.ok { background: #E8F5E9; border-left-color: #2E7D32; color: #1B5E20; }
-    .oul-badge span { flex: 1 1 120px; min-width: 0; }
-    .oul-badge button { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border: 0;
-      border-radius: 999px; background: #673AB6; color: #fff; cursor: pointer; font: inherit; font-weight: 600; }
-    .oul-badge button:hover { background: #5E35B1; }
-    .oul-badge button.plain { background: transparent; color: inherit; text-decoration: underline; padding: 3px 4px; }
+    /* A row at the foot of HubSpot's contact card, in the card's own font, under a thin divider */
+    .oul-badge { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid #EAF0F6; color: #33475B; font-family: inherit; font-size: 13px; line-height: 18px; }
+    .oul-badge .oul-text { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 6px; }
+    .oul-badge .oul-text svg { flex: none; margin-top: 2px; color: #C77700; }
+    .oul-badge.ok .oul-text svg { color: #2E7D32; }
+    .oul-badge b { font-weight: 600; }
+    .oul-badge button { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+      border: 1px solid #673AB6; border-radius: 999px; background: #fff; color: #673AB6; cursor: pointer;
+      font: inherit; font-size: 12px; font-weight: 600; line-height: 16px; }
+    .oul-badge button:hover { background: #F3EEF9; }
+    .oul-badge button.plain { border-color: transparent; background: none; padding: 3px 2px; text-decoration: underline; }
     .oul-badge button:disabled { opacity: .6; cursor: default; }
-    .oul-chicklet { box-shadow: inset 0 0 0 2px #E8A33D !important; border-radius: 8px; }`;
+    /* A soft amber edge down the card's left side */
+    .oul-chicklet { box-shadow: inset 3px 0 0 #E8A33D !important; }`;
 
   // The list of contacts, under the chip
   const host = document.createElement('div');
@@ -436,12 +440,14 @@
         const first = state.companies[0];
         let html;
         if (c.ok && c.justLinked) {
-          html = `<span>${lucide(CHECK, 12)} Linked to ${esc(c.justLinked.name)}</span><button class="plain" type="button" data-act="undo" ${c.busy ? 'disabled' : ''}>Undo</button>`;
+          html = `<span class="oul-text">${lucide(CHECK)}<span>Linked to <b>${esc(c.justLinked.name)}</b></span></span>
+            <button class="plain" type="button" data-act="undo" ${c.busy ? 'disabled' : ''}>Undo</button>`;
         } else if (state.companies.length === 1) {
-          html = `<span>Not linked to ${esc(first.name)}</span>
-            <button type="button" data-act="link" data-company="${first.id}" ${c.busy ? 'disabled' : ''}>${lucide(LINK, 12)}${c.busy ? 'Linking…' : 'Link'}</button>`;
+          html = `<span class="oul-text">${lucide(ALERT)}<span>Not linked to <b>${esc(first.name)}</b></span></span>
+            <button type="button" data-act="link" data-company="${first.id}" title="Link ${esc(c.name)} to ${esc(first.name)}" ${c.busy ? 'disabled' : ''}>${lucide(LINK, 12)}${c.busy ? 'Linking…' : 'Link'}</button>`;
         } else {
-          html = `<span>Not linked to this ticket's companies</span><button type="button" data-act="choose">${lucide(LINK, 12)}Link…</button>`;
+          html = `<span class="oul-text">${lucide(ALERT)}<span>Not linked to the ticket's ${state.companies.length} companies</span></span>
+            <button type="button" data-act="choose">${lucide(LINK, 12)}Link…</button>`;
         }
         if (b.dataset.html !== html) { setHTML(b, html); b.dataset.html = html; }
         b.classList.toggle('ok', !!c.ok);

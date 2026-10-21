@@ -6,7 +6,7 @@
 <sub>Made-up example. The HubSpot page around the script is a mock-up, so the real one looks a little different.</sub>
 
 1. Open a ticket in Help Desk (or a ticket's record page).
-2. If someone on the ticket isn't linked to the ticket's company, an amber chip appears next to the ticket title, for example **1 contact not linked to the company**. Their card in the *Contacts* card gets an amber outline and a line saying so.
+2. If someone on the ticket isn't linked to the ticket's company, an amber chip appears next to the ticket title, for example **1 contact not linked to the company**. Their card in the *Contacts* card gets an amber edge and a line at the bottom saying so.
 3. Click **Link** on the card, or click the chip and then **Link to** *company* in the list. The contact is linked to that company straight away.
 
 - **Undo** shows for a few seconds after you link someone and takes the link off again.
