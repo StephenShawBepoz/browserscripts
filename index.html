@@ -164,7 +164,7 @@
   .bubble.done .caret { display: none; }
   @keyframes caret { 50% { opacity: 0; } }
   .avatar { width: auto; margin-top: 22px; cursor: pointer; background: none; border: 0; padding: 0; }
-  .avatar svg { height: min(400px, calc(100vh - 330px)); min-height: 240px; width: auto; display: block; filter: drop-shadow(0 10px 18px rgba(103, 58, 182, .18)); }
+  .avatar svg { height: min(400px, calc(100vh - 400px)); min-height: 240px; width: auto; display: block; filter: drop-shadow(0 10px 18px rgba(103, 58, 182, .18)); }
   .nameplate { margin-top: -6px; font-size: 13px; font-weight: 700; background: var(--purple); color: #fff; padding: 3px 14px; border-radius: 999px; position: relative; }
   .me .m-open, .me .wink-r { display: none; }
   .me.mouth-open .m-smile { display: none; }
@@ -172,6 +172,38 @@
   .me.wink .eye-r { display: none; }
   .me.wink .wink-r { display: inline; }
   .me.wave .eye-r { display: inline; }
+  /* Outfits: each one recolours the same clothes and shows its own details */
+  .me { --top: #24324F; --sleeve: #202D48; --fore: #202D48; --vneck: #FFFFFF; --collar: #F4F4F6; --collar-line: #D5D9E2;
+    --cuff: #F4F4F6; --trs: #2A3040; --shoe: #F4F4F6; --shoe-line: #CDD1DA; --sole: #D9DCE3; --detail: #3E6345; --btn: #F1EBDD; }
+  .me[data-outfit="linen"] { --top: #4F7B56; --sleeve: #48714F; --fore: #48714F; --vneck: #EBC6AF; --collar: #55835C; --collar-line: #3E6345;
+    --cuff: #5D8C64; --trs: #232A3B; --detail: #3E6345; --btn: #F1EBDD; }
+  .me[data-outfit="polo"] { --top: #673AB6; --sleeve: #5E35B1; --fore: #F5D8C5; --vneck: #EBC6AF; --collar: #6F43BE; --collar-line: #4A2A8F;
+    --cuff: #F5D8C5; --trs: #2F3542; --detail: #4A2A8F; --btn: #FFFFFF; }
+  .me[data-outfit="opera"] { --top: #F7F7F9; --sleeve: #ECEEF3; --fore: #ECEEF3; --vneck: #EBC6AF; --collar: #FFFFFF; --collar-line: #D5D9E2;
+    --cuff: #F7F7F9; --trs: #17181D; --shoe: #2B211B; --shoe-line: #120E0B; --sole: #120E0B; --detail: #D5D9E2; --btn: #C9CDD6; }
+  .me .top { fill: var(--top); } .me .slv { fill: var(--sleeve); } .me .frm { fill: var(--fore); } .me .vneck { fill: var(--vneck); }
+  .me .collar { fill: var(--collar); stroke: var(--collar-line); } .me .cuff { fill: var(--cuff); } .me .trs { fill: var(--trs); }
+  .me .shoe { fill: var(--shoe); stroke: var(--shoe-line); } .me .sole { fill: var(--sole); }
+  .me .placket path, .me .placket-short path, .me .pocket { stroke: var(--detail); } .me .placket circle, .me .placket-short circle { fill: var(--btn); }
+  .me .top, .me .slv, .me .frm, .me .vneck, .me .collar, .me .cuff, .me .trs, .me .shoe, .me .sole { transition: fill .3s ease; }
+  .me .placket, .me .placket-short, .me .pocket, .me .logo, .me .vneck-polo { display: none; }
+  .me[data-outfit="polo"] .vneck { display: none; }
+  .me[data-outfit="polo"] .vneck-polo { display: inline; }
+  .me:not([data-outfit="suit"]) .suit-only { display: none; }
+  .me[data-outfit="linen"] .placket, .me[data-outfit="linen"] .pocket, .me[data-outfit="opera"] .placket,
+  .me[data-outfit="polo"] .placket-short, .me[data-outfit="polo"] .logo { display: inline; }
+  .me.swap .fig { animation: swap .38s ease-in-out; }
+  @keyframes swap { 50% { transform: scaleX(.8) translateY(-6px); } }
+  .avatar { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+
+  /* Outfit picker under the nameplate */
+  .outfits { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .outfits button { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--purple); background: var(--surface); color: var(--link);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .outfits button:hover { background: var(--tint); }
+  .outfits .oname { min-width: 104px; text-align: center; font-weight: 600; color: var(--text); }
+  .outfits .icon { width: 16px; height: 16px; }
+
   /* Joints: shoulders, elbows, hips and heels turn on their own points */
   .me { overflow: visible; }
   .me .arm-l, .me .arm-r, .me .fore-l, .me .fore-r, .me .leg-l, .me .leg-r, .me .foot-l, .me .foot-r, .me .fig {
@@ -231,7 +263,7 @@
     .guide { position: static; flex-direction: row; align-items: flex-end; gap: 8px; padding: 0; pointer-events: auto; }
     .avatar { margin: 0 6px 0 4px; flex: none; }
     .avatar svg { height: 168px; min-height: 0; }
-    .nameplate { display: none; }
+    .nameplate, .outfits { display: none; }
     .bubble { min-height: 0; font-size: 13.5px; line-height: 1.45; padding: 10px 14px; margin-bottom: 18px; cursor: pointer; }
     .bubble.hush { display: none; }
     .bubble::after { left: auto; right: -11px; bottom: 22px; transform: rotate(-45deg); }
@@ -408,38 +440,39 @@
   <div class="guide">
     <div class="bubble" id="bubble" aria-live="polite"><span class="who">Stephen says</span><span id="say"></span><span class="caret"></span></div>
     <div class="avatar-wrap">
-      <button class="avatar" type="button" id="avatar" aria-label="Say hello to Stephen">
-        <svg class="me" id="me" viewBox="0 26 220 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a navy suit jacket">
+      <button class="avatar" type="button" id="avatar" aria-label="Stephen. Click to say hello, swipe or use the arrow keys to change his outfit">
+        <svg class="me" id="me" data-outfit="suit" viewBox="0 26 220 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cartoon of Stephen in a navy suit jacket">
           <g class="fig">
             <!-- legs: dark trousers, white sneakers -->
             <g class="leg-l">
-              <path d="M86 296 L110 296 L107 404 L90 404 Z" fill="#2A3040"/>
+              <path class="trs" d="M86 296 L110 296 L107 404 L90 404 Z" fill="#2A3040"/>
               <g class="foot-l">
-                <path d="M88 402 C96 399 104 400 108 403 L109 414 L78 414 C76 409 80 404 88 402 Z" fill="#F4F4F6" stroke="#CDD1DA" stroke-width="1.5"/>
-                <rect x="77" y="413" width="33" height="5" rx="2.5" fill="#D9DCE3"/>
+                <path class="shoe" d="M88 402 C96 399 104 400 108 403 L109 414 L78 414 C76 409 80 404 88 402 Z" fill="#F4F4F6" stroke="#CDD1DA" stroke-width="1.5"/>
+                <rect class="sole" x="77" y="413" width="33" height="5" rx="2.5" fill="#D9DCE3"/>
               </g>
             </g>
             <g class="leg-r">
-              <path d="M110 296 L134 296 L130 404 L113 404 Z" fill="#2A3040"/>
+              <path class="trs" d="M110 296 L134 296 L130 404 L113 404 Z" fill="#2A3040"/>
               <g class="foot-r">
-                <path d="M132 402 C124 399 116 400 112 403 L111 414 L142 414 C144 409 140 404 132 402 Z" fill="#F4F4F6" stroke="#CDD1DA" stroke-width="1.5"/>
-                <rect x="110" y="413" width="33" height="5" rx="2.5" fill="#D9DCE3"/>
+                <path class="shoe" d="M132 402 C124 399 116 400 112 403 L111 414 L142 414 C144 409 140 404 132 402 Z" fill="#F4F4F6" stroke="#CDD1DA" stroke-width="1.5"/>
+                <rect class="sole" x="110" y="413" width="33" height="5" rx="2.5" fill="#D9DCE3"/>
               </g>
             </g>
             <!-- suit jacket over a white shirt -->
-            <path d="M60 204 C62 190 82 184 110 182 C138 184 158 190 160 204 L164 304 C146 310 128 312 110 312 C92 312 74 310 56 304 Z" fill="#24324F"/>
-            <path d="M110 262 L98 311 L122 311 Z" fill="#F4F4F6"/>
-            <rect x="99" y="298" width="22" height="6" fill="#2B2420"/>
-            <path d="M85 186 L110 252 L135 186 Z" fill="#FFFFFF"/>
+            <path class="top" d="M60 204 C62 190 82 184 110 182 C138 184 158 190 160 204 L164 304 C146 310 128 312 110 312 C92 312 74 310 56 304 Z" fill="#24324F"/>
+            <path class="suit-only" d="M110 262 L98 311 L122 311 Z" fill="#F4F4F6"/>
+            <rect class="suit-only" x="99" y="298" width="22" height="6" fill="#2B2420"/>
+            <path class="vneck-polo" d="M97 186 L110 213 L123 186 Z" fill="#EBC6AF"/>
+            <path class="vneck" d="M85 186 L110 252 L135 186 Z" fill="#FFFFFF"/>
             <path d="M96 168 L124 168 L127 190 L110 208 L93 190 Z" fill="#EBC6AF"/>
-            <path d="M90 180 L110 206 L101 214 L82 192 Z" fill="#F4F4F6" stroke="#D5D9E2" stroke-width="1.5" stroke-linejoin="round"/>
-            <path d="M130 180 L110 206 L119 214 L138 192 Z" fill="#F4F4F6" stroke="#D5D9E2" stroke-width="1.5" stroke-linejoin="round"/>
-            <path d="M82 188 L110 258 L100 264 L68 210 L76 196 Z" fill="#1B2742"/>
-            <path d="M138 188 L110 258 L120 264 L152 210 L144 196 Z" fill="#1B2742"/>
-            <path d="M138 222 L156 218 L155 228 L139 230 Z" fill="#673AB6"/>
-            <path d="M140 222 L147 213 L151 220 Z" fill="#8E63D4"/>
-            <circle cx="110" cy="266" r="2.6" fill="#0F172A"/>
-            <circle cx="110" cy="284" r="2.6" fill="#0F172A"/>
+            <path class="collar" d="M90 180 L110 206 L101 214 L82 192 Z" fill="#F4F4F6" stroke="#D5D9E2" stroke-width="1.5" stroke-linejoin="round"/>
+            <path class="collar" d="M130 180 L110 206 L119 214 L138 192 Z" fill="#F4F4F6" stroke="#D5D9E2" stroke-width="1.5" stroke-linejoin="round"/>
+            <path class="suit-only" d="M82 188 L110 258 L100 264 L68 210 L76 196 Z" fill="#1B2742"/>
+            <path class="suit-only" d="M138 188 L110 258 L120 264 L152 210 L144 196 Z" fill="#1B2742"/>
+            <path class="suit-only" d="M138 222 L156 218 L155 228 L139 230 Z" fill="#673AB6"/>
+            <path class="suit-only" d="M140 222 L147 213 L151 220 Z" fill="#8E63D4"/>
+            <circle class="suit-only" cx="110" cy="266" r="2.6" fill="#0F172A"/>
+            <circle class="suit-only" cx="110" cy="284" r="2.6" fill="#0F172A"/>
             <g class="head">
             <!-- ears: they stick out a bit -->
             <g fill="#EFC9B2"><ellipse cx="63" cy="114" rx="10" ry="15" transform="rotate(-10 63 114)"/><ellipse cx="157" cy="114" rx="10" ry="15" transform="rotate(10 157 114)"/></g>
@@ -473,6 +506,9 @@
               <path d="M73 98 C73.5 116 78 131 88 139 C92 142 96 143 100 142"/>
               <path d="M147 98 C146.5 116 142 131 132 139 C128 142 124 143 120 142"/>
             </g>
+            <!-- the bare patch under the lower lip, either side of the chin -->
+            <path d="M99.5 162.5 Q110 171.5 120.5 162.5 Q110 167 99.5 162.5 Z" fill="#E6BFA5" filter="url(#beard-soft)" opacity=".95"/>
+            <ellipse cx="110" cy="167.6" rx="1.7" ry="3" fill="#A65A31"/>
             <!-- moustache, a shade darker, curving down into the beard -->
             <path d="M110 139.5 C103 136.5 95 137.5 90.5 142.5 C88.8 145.8 89.6 149.3 92.4 149 C97.5 148.3 103.5 146.8 110 146.8 C116.5 146.8 122.5 148.3 127.6 149 C130.4 149.3 131.2 145.8 129.5 142.5 C125 137.5 117 136.5 110 139.5 Z" fill="#A65A31"/>
             <path d="M110 139.5 C103 136.5 95 137.5 90.5 142.5 C88.8 145.8 89.6 149.3 92.4 149 C97.5 148.3 103.5 146.8 110 146.8 C116.5 146.8 122.5 148.3 127.6 149 C130.4 149.3 131.2 145.8 129.5 142.5 C125 137.5 117 136.5 110 139.5 Z" fill="url(#beard-grain)"/>
@@ -514,25 +550,35 @@
               <path d="M84 56 Q90 50 97 52"/><path d="M100 46 Q107 41 114 44"/><path d="M118 47 Q126 43 132 49"/><path d="M92 63 Q100 58 108 61"/><path d="M114 60 Q122 56 129 61"/><path d="M134 58 Q141 57 145 64"/>
             </g>
           </g>
+            <g class="placket">
+              <path d="M110 253 V308" fill="none" stroke-width="1.4"/>
+              <circle cx="110" cy="262" r="1.9"/><circle cx="110" cy="279" r="1.9"/><circle cx="110" cy="296" r="1.9"/>
+            </g>
+            <g class="placket-short">
+              <path d="M110 206 V240" fill="none" stroke-width="1.4"/>
+              <circle cx="110" cy="218" r="1.9"/><circle cx="110" cy="232" r="1.9"/>
+            </g>
+            <path class="pocket" d="M127 226 H148 V245 Q137.5 249 127 245 Z" fill="none" stroke-width="1.6" stroke-linejoin="round"/>
+            <g class="logo" fill="none" stroke="#FFFFFF" stroke-width="2.4"><circle cx="135.5" cy="232" r="3.6"/><circle cx="144" cy="232" r="3.6"/></g>
             <!-- arms: shoulder and elbow joints -->
             <g class="arm-l">
-              <circle cx="65" cy="207" r="10.5" fill="#202D48"/>
-              <path d="M62 198 C55 222 52 244 52 262 L69 264 C70 246 72 226 76 204 Z" fill="#202D48"/>
+              <circle class="slv" cx="65" cy="207" r="10.5" fill="#202D48"/>
+              <path class="slv" d="M62 198 C55 222 52 244 52 262 L69 264 C70 246 72 226 76 204 Z" fill="#202D48"/>
               <g class="fore-l">
-                <circle cx="60.5" cy="262" r="8.6" fill="#202D48"/>
-                <path d="M52 260 L50 300 L67 302 L69 262 Z" fill="#202D48"/>
-                <rect x="49" y="298" width="19" height="7" rx="2" fill="#F4F4F6"/>
+                <circle class="frm" cx="60.5" cy="262" r="8.6" fill="#202D48"/>
+                <path class="frm" d="M52 260 L50 300 L67 302 L69 262 Z" fill="#202D48"/>
+                <rect class="cuff" x="49" y="298" width="19" height="7" rx="2" fill="#F4F4F6"/>
                 <ellipse cx="58.5" cy="314" rx="8" ry="10" fill="#F5D8C5"/>
                 <path d="M51.5 312 Q52 318 56 321" fill="none" stroke="#E2B49C" stroke-width="1.4" stroke-linecap="round"/>
               </g>
             </g>
             <g class="arm-r">
-              <circle cx="155" cy="207" r="10.5" fill="#202D48"/>
-              <path d="M158 198 C165 222 168 244 168 262 L151 264 C150 246 148 226 144 204 Z" fill="#202D48"/>
+              <circle class="slv" cx="155" cy="207" r="10.5" fill="#202D48"/>
+              <path class="slv" d="M158 198 C165 222 168 244 168 262 L151 264 C150 246 148 226 144 204 Z" fill="#202D48"/>
               <g class="fore-r">
-                <circle cx="159.5" cy="262" r="8.6" fill="#202D48"/>
-                <path d="M168 260 L170 300 L153 302 L151 262 Z" fill="#202D48"/>
-                <rect x="152" y="298" width="19" height="7" rx="2" fill="#F4F4F6"/>
+                <circle class="frm" cx="159.5" cy="262" r="8.6" fill="#202D48"/>
+                <path class="frm" d="M168 260 L170 300 L153 302 L151 262 Z" fill="#202D48"/>
+                <rect class="cuff" x="152" y="298" width="19" height="7" rx="2" fill="#F4F4F6"/>
                 <rect x="153" y="304" width="17" height="4" rx="2" fill="#3A4A3C"/>
                 <ellipse cx="161.5" cy="316" rx="8" ry="10" fill="#F5D8C5"/>
                 <path d="M168.5 314 Q168 320 164 323" fill="none" stroke="#E2B49C" stroke-width="1.4" stroke-linecap="round"/>
@@ -542,6 +588,11 @@
         </svg>
       </button>
       <div class="nameplate">Stephen Shaw</div>
+      <div class="outfits" data-say="Swipe me left or right, or use these arrows, to change my outfit. Go on, have a play.">
+        <button type="button" data-step="-1" aria-label="Previous outfit"><svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <span class="oname" id="oname" aria-live="polite">The suit</span>
+        <button type="button" data-step="1" aria-label="Next outfit"><svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
     </div>
   </div>
 </aside>
@@ -563,8 +614,8 @@
 
   const touch = window.matchMedia('(hover: none)').matches;
   const HELLO = touch
-    ? "G'day! I'm Stephen. Tap anything on this page and I'll tell you what it does. Tap this bubble to tuck it away."
-    : "G'day! I'm Stephen. Hover over anything on this page and I'll tell you what it does.";
+    ? "G'day! I'm Stephen. Tap anything and I'll tell you what it does. Swipe me to change my outfit, or tap this bubble to tuck it away."
+    : "G'day! I'm Stephen. Hover over anything and I'll tell you what it does. Swipe or drag me to change my outfit.";
   const HELLO_AGAIN = [
     "Yes, that's really me. The jacket's an upgrade.",
     `Still here! ${touch ? 'Tap' : 'Hover over'} a script to hear what it does.`,
@@ -629,7 +680,48 @@
     if (lit && !lit.contains(e.relatedTarget)) { lit.classList.remove('speaking'); lit = null; }
   });
 
-  document.getElementById('avatar').addEventListener('click', () => {
+  // Outfits: swipe or drag Stephen sideways, or use the arrows under him
+  const OUTFITS = [
+    { id: 'suit', name: 'The suit', label: 'a navy suit jacket', line: "The suit. For when HubSpot needs to take me seriously." },
+    { id: 'linen', name: 'Green linen', label: 'his green linen shirt', line: "My actual office shirt. The test bench knows it well." },
+    { id: 'polo', name: 'Oolio polo', label: 'an Oolio purple polo', line: "Team colours. Purple goes with everything, especially HubSpot." },
+    { id: 'opera', name: 'Opera night', label: 'a white shirt and black loafers', line: "Night at the opera. I scrub up alright, don't I?" },
+  ];
+  const oname = document.getElementById('oname');
+  let outfit = 0;
+  try { outfit = Math.max(0, OUTFITS.findIndex((o) => o.id === localStorage.getItem('oolio-addons-outfit'))); } catch (e) { /* private window */ }
+  function wear(i, speak) {
+    outfit = (i + OUTFITS.length) % OUTFITS.length;
+    const o = OUTFITS[outfit];
+    me.dataset.outfit = o.id;
+    me.setAttribute('aria-label', `Cartoon of Stephen in ${o.label}`);
+    oname.textContent = o.name;
+    try { localStorage.setItem('oolio-addons-outfit', o.id); } catch (e) { /* fine without */ }
+    if (!speak) return;
+    me.classList.remove('swap'); void me.getBoundingClientRect(); me.classList.add('swap');
+    setTimeout(() => me.classList.remove('swap'), 420);
+    current = null;
+    say(o.line, 'wink');
+  }
+  wear(outfit, false);
+  document.querySelectorAll('.outfits button').forEach((b) => b.addEventListener('click', () => wear(outfit + Number(b.dataset.step), true)));
+
+  const avatar = document.getElementById('avatar');
+  let startX = null;
+  let swiped = false;
+  avatar.addEventListener('pointerdown', (e) => { startX = e.clientX; swiped = false; });
+  avatar.addEventListener('pointerup', (e) => {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    startX = null;
+    if (Math.abs(dx) > 30) { swiped = true; wear(outfit + (dx < 0 ? 1 : -1), true); }
+  });
+  avatar.addEventListener('pointercancel', () => { startX = null; });
+  avatar.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); wear(outfit + (e.key === 'ArrowRight' ? 1 : -1), true); }
+  });
+  avatar.addEventListener('click', () => {
+    if (swiped) { swiped = false; return; }
     current = null;
     say(HELLO_AGAIN[pokes++ % HELLO_AGAIN.length], pokes % 2 ? 'wink' : 'wave');
   });
