@@ -19,7 +19,7 @@
 - When *Acquirer - POS* is blank but the company has an Adyen or WPay merchant ID, the badge goes by the merchant ID and has a **dashed** outline. Hovering it says so. It's worth filling in *Acquirer - POS* on that company.
 - No badge means the company has neither *Acquirer - POS* nor a merchant ID, which is normal for a venue that doesn't use Oolio Pay.
 - It only reads HubSpot. Nothing is ever changed.
-- If the field is updated while the page is open, the badge catches up within a minute, or straight away from the Tampermonkey menu with **Read payments again**.
+- If someone changes the field while you have the page open, the badge updates when you next open the record, or straight away from the Tampermonkey menu with **Read payments again**.
 - To turn it off, click the Tampermonkey icon, then **Turn payments badge off**.
 - If it doesn't appear when you expect, the browser console (search for *Oolio payments badge*) says what it found.
 
