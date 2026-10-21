@@ -282,7 +282,8 @@
   footer { position: relative; margin-top: 70px; min-height: 140px; background: linear-gradient(180deg, #9CCB6E, #6FA24D); overflow: hidden; }
   footer::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 22px;
     background: radial-gradient(circle at 12px 0, var(--cream) 12px, transparent 13px) 0 0 / 24px 22px repeat-x; }
-  .foot-in { position: relative; z-index: 2; max-width: 1240px; margin: 0 auto; padding: 48px 24px 30px; font-weight: 800; color: #1F3D17; }
+  .foot-in { position: relative; z-index: 2; max-width: 1240px; margin: 0 auto; padding: 46px 24px 56px; font-weight: 800; color: #1F3D17;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; text-align: center; }
   .wombat-walk { position: absolute; bottom: 10px; left: 0; width: 110px; animation: waddle-across 30s linear infinite; cursor: pointer; z-index: 1; }
   .wombat .w-rock { transform-box: view-box; transform-origin: 60px 60px; animation: rock .5s ease-in-out infinite alternate; }
   .wombat .w-leg { transform-box: fill-box; transform-origin: 50% 0; animation: step .5s ease-in-out infinite alternate; }
@@ -507,7 +508,7 @@
   @keyframes frill { 0%, 30%, 100% { transform: scale(.25); } 45%, 80% { transform: scale(1.05); } }
 
   /* ---------- Feeding ---------- */
-  .bucket { position: fixed; left: 18px; bottom: 18px; z-index: 85; background: linear-gradient(180deg, var(--wood-light), var(--wood)); border: 3px solid var(--wood-dark);
+  .bucket { position: fixed; left: 18px; bottom: 18px; z-index: 85; transition: translate .25s ease-out; background: linear-gradient(180deg, var(--wood-light), var(--wood)); border: 3px solid var(--wood-dark);
     border-radius: 18px; padding: 8px 10px 10px; box-shadow: 0 5px 0 var(--wood-dark), 0 14px 28px rgba(100, 57, 28, .3); color: #FFF4DE; }
   .bucket.bump { animation: bump .45s cubic-bezier(.3, 1.8, .5, 1); }
   @keyframes bump { 40% { transform: scale(1.12) rotate(-3deg); } }
@@ -567,7 +568,7 @@
   .bigha { position: fixed; z-index: 92; font-family: "Lilita One", sans-serif; color: var(--earth); text-shadow: 0 3px 0 #fff, 0 0 14px #fff; pointer-events: none; white-space: nowrap; }
   .toast { position: fixed; top: 22px; left: 50%; z-index: 100; max-width: 92vw; text-align: center; background: var(--ink); color: #FFF4DE; font: 800 15px Nunito, sans-serif;
     padding: 10px 18px; border-radius: 999px; border: 3px solid var(--sun); box-shadow: 0 6px 20px rgba(0, 0, 0, .25); pointer-events: none; }
-  .eggs { margin-left: 10px; font: 800 14px Nunito, sans-serif; color: var(--ink); background: #FFF6E2; border: 2px solid var(--wood-dark); border-radius: 999px;
+  .eggs { font: 800 14px Nunito, sans-serif; color: var(--ink); background: #FFF6E2; border: 2px solid var(--wood-dark); border-radius: 999px;
     padding: 5px 12px; cursor: pointer; box-shadow: 0 3px 0 var(--wood-dark); }
   .eggs:hover { transform: translateY(-2px) rotate(-2deg); }
   .eggs.all { background: var(--sun); }
@@ -600,6 +601,8 @@
     .cards { grid-template-columns: 1fr; }
     .creek { margin: 50px -16px 0; }
     .kooka-perch { display: none; }
+    .foot-in { padding-bottom: 230px; }
+    .stephen-loose .foot-in { padding-bottom: 60px; }
     .rail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 36px 12px 10px; pointer-events: none;
       background: linear-gradient(to top, var(--bg) 62%, color-mix(in srgb, var(--bg) 0%, transparent)); }
     .guide { position: static; flex-direction: row; align-items: flex-end; gap: 8px; padding: 0; pointer-events: auto; }
@@ -1847,6 +1850,18 @@
   ];
   const bucket = document.querySelector('.bucket');
   const counter = bucket.querySelector('.fed');
+  // Keep the bucket above the footer, so it never covers the footer's text
+  const footer = document.querySelector('footer');
+  function dock() {
+    const overlap = innerHeight - footer.getBoundingClientRect().top;
+    const gap = parseFloat(getComputedStyle(bucket).bottom) || 0;
+    const lift = Math.max(0, overlap - gap + 14);
+    bucket.style.translate = lift ? `0 -${lift}px` : '';
+  }
+  let docking = false;
+  addEventListener('scroll', () => { if (!docking) { docking = true; requestAnimationFrame(() => { docking = false; dock(); }); } }, { passive: true });
+  addEventListener('resize', dock);
+  dock();
   const heldEl = document.createElement('div');
   heldEl.className = 'held';
   document.body.appendChild(heldEl);
