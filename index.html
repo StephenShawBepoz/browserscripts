@@ -344,8 +344,9 @@
   .howto { display: flex; align-items: center; gap: 12px; margin: 30px 0 24px; padding: 14px 18px; border-radius: 16px; background: #fff;
     border: 3px dashed var(--ochre); font-size: 16px; font-weight: 700; }
   .howto .icon { color: var(--earth); }
-  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; perspective: 1200px; }
-  .card { position: relative; transform-style: preserve-3d; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+  /* Perspective lives on each card and the tilt stays flat inside it (no preserve-3d), so clicks still reach the buttons */
+  .card { position: relative; perspective: 1100px; }
   .card .tilt { position: relative; height: 100%; display: flex; flex-direction: column; background: #fff; border-radius: 24px; overflow: hidden;
     border: 3px solid #E9D6B4; box-shadow: var(--shadow); transition: transform .25s ease, box-shadow .25s ease;
     transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0); }
