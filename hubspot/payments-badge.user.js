@@ -41,12 +41,12 @@
   // The rest are for the OPAY details.
   const PROPS = ['name', 'acquirer', 'adyen_merchant_id___pos', 'balance___merchant_id___pos', 'adyen_account_holder_id', 'wpay___merchant_id___pos',
     'sales_last_7_days', 'pos_sales_last_7_days', 'last_sales_date'];
-  // Merchant IDs (the "store ID"), in the order the OPAY details list them
+  // Merchant IDs (the "store ID"), in the order the OPAY details list them: Advanced / Manage / WPay Merchant ID - POS, Adyen Account Holder Id
   const MIDS = [
-    ['balance___merchant_id___pos', 'Advanced Merchant ID - POS'],
-    ['adyen_merchant_id___pos', 'Manage - Merchant ID - POS'],
-    ['wpay___merchant_id___pos', 'WPay Merchant ID - POS'],
-    ['adyen_account_holder_id', 'Adyen Account Holder Id'],
+    ['balance___merchant_id___pos', 'Advanced MID'],
+    ['adyen_merchant_id___pos', 'Manage MID'],
+    ['wpay___merchant_id___pos', 'WPay MID'],
+    ['adyen_account_holder_id', 'Account holder'],
   ];
   // The MOTO fields on the company's OPAY ticket (KYC / Onboarding); the newest ticket with any of them wins
   const MOTO_COUNT = 'opay__number_of_moto_terminals';
@@ -272,7 +272,7 @@
     /* The OPAY details button and the box it opens */
     button.opb-pill.opb-opay { border-color: #673AB6; background: #F3EEFB; color: #45237F; font: inherit; cursor: pointer; }
     button.opb-pill.opb-opay:hover, button.opb-pill.opb-opay[aria-expanded="true"] { background: #E6DCF7; }
-    .opb-box { position: fixed; z-index: 2147483000; width: 340px; max-height: 70vh; overflow: auto; box-sizing: border-box;
+    .opb-box { position: fixed; z-index: 2147483000; width: 360px; max-height: 70vh; overflow: auto; box-sizing: border-box;
       padding: 12px 14px; border: 1px solid #CBD6E2; border-radius: 8px; background: #fff; color: #33475B;
       box-shadow: 0 8px 24px rgba(45, 62, 80, .2); font: 13px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
     .opb-box h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #213343; }
