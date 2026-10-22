@@ -46,7 +46,7 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js)** · [How to use](docs/send-shortcut.md)
 
 #### Payments badge
-**See at a glance whether a venue is on Adyen or WPay.** A green **Adyen** or blue **WPay** badge under the company's name, next to a Help Desk ticket's title, and on the company cards in a ticket's sidebar. Hover it for the merchant ID.
+**See at a glance whether a venue is on Adyen or WPay.** A green **Adyen** or blue **WPay** badge under the record's name (companies, contacts, deals, tickets), next to a Help Desk ticket's title, and on the company cards in a ticket's sidebar. A purple **OPAY** button beside it shows the merchant IDs, last 7 days sales and MOTO terminal serials.
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/payments-badge.user.js)** · [How to use](docs/payments-badge.md)
 

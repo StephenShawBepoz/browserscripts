@@ -5,12 +5,24 @@
 <img src="../assets/screenshots/payments-badge.png" width="720" alt="A green Adyen Balance badge next to a Help Desk ticket title, and a Payments line on each company card in the sidebar, one showing Adyen and WPay together">
 <sub>Made-up example. The HubSpot page around the script is a mock-up, so the real one looks a little different.</sub>
 
-1. Open a company, a ticket, or a ticket in Help Desk.
+1. Open a company, contact, deal or ticket, or a ticket in Help Desk.
 2. A badge says what the venue pays through:
-   - On a **company** or **ticket record**, it's under the name at the top left.
+   - On a **company**, **contact**, **deal** or **ticket record**, it's under the name at the top left. On a contact, deal or ticket it's about the primary company.
    - In **Help Desk**, it's next to the ticket title, with the company's name, for example **Maclean Fuel: WPay**.
    - Every **company card** in the sidebar gets a **Payments:** line too, so a ticket with two companies shows both.
 3. Hover the badge to see where it came from and the merchant ID.
+
+## OPAY details
+
+A purple **OPAY** button sits next to the badge, for example **OPAY · 7 days $5,425 · MOTO 1**. Click it to open a box with:
+
+- **Store / merchant IDs**: the company's Advanced MID, Manage MID, WPay MID and Adyen account holder, whichever are filled in.
+- **Sales, last 7 days**: *Pay Sales Last 7 Days* and *POS Sales Last 7 Days* from the company, and the last day it took a Pay sale.
+- **MOTO terminals**: *OPAY | Number of MOTO Terminals*, *MOTO Terminal 1–5 Serial* and *Other Serial(s)*, from the company's newest ticket that has any of them (usually its OPAY KYC or Onboarding ticket), with a link to that ticket.
+
+Each ID and serial has a **Copy** button. Click anywhere else or press Escape to close the box. The button shows even when the company has no acquirer set, as long as it has a merchant ID or sales figures.
+
+## The badge
 
 | Badge | Means (the company's *Acquirer - POS*) |
 |---|---|

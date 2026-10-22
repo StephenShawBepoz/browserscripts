@@ -2,6 +2,11 @@
 
 ## HubSpot: Payments badge
 
+### 1.2.0 (22/10/2026)
+- New **OPAY** button next to the badge, for example *OPAY · 7 days $5,425 · MOTO 1*. Click it for the venue's merchant IDs (Advanced, Manage, WPay, Account holder), Pay and POS sales for the last 7 days, the last Pay sale date, and the MOTO terminal count and serials from its newest OPAY ticket, with a Copy button on each ID and serial.
+- Now also on contact and deal records, for their primary company.
+- The Advanced Merchant ID counts as an Adyen merchant ID when *Acquirer - POS* is blank.
+
 ### 1.1.0 (21/10/2026)
 - Shows as installed on the [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app). On that page it only says it's there; it doesn't run anything.
 
