@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.4.0
-// @description  Add existing Contact and Add existing Ticket list only contacts and tickets at the record's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
+// @version      2.5.0
+// @description  Add existing Contact and Add existing Ticket list only contacts and tickets at the record's companies, and tickets can be filtered by pipeline and status. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js
@@ -81,6 +81,65 @@
       try { const v = localStorage.getItem(key); return v === null ? fallback : v === 'on'; } catch (e) { return fallback; }
     }
     function savePref(key, value) { try { localStorage.setItem(key, value ? 'on' : 'off'); } catch (e) {} }
+    function readStr(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch (e) { return fallback; } }
+    function saveStr(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+    // Ticket pipeline and status, chosen above the list and remembered.
+    // status: 'any', 'open', 'closed' or 'stage:<id>' (a status of the chosen pipeline).
+    const PIPE_KEY = 'oolio-company-tickets-pipeline';
+    const STATUS_KEY = 'oolio-company-tickets-status';
+    const tf = { pipeline: readStr(PIPE_KEY, ''), status: readStr(STATUS_KEY, 'any'), list: null, state: 'idle' };
+    let pipelinesP = null;
+    // Every ticket pipeline with its statuses: [{ id, label, active, stages: [{ id, label, closed }] }].
+    // Never rejects: on failure the pipeline and status filters are left off.
+    function loadPipelines() {
+      if (pipelinesP) return pipelinesP;
+      tf.state = 'loading';
+      const abort = new AbortController();
+      const timer = setTimeout(() => abort.abort(), LOOKUP_TIMEOUT);
+      pipelinesP = fetch('/api/crm-pipelines/v1/pipelines/0-5?portalId=' + portalId, { credentials: 'include', signal: abort.signal })
+        .then(r => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+        .then(j => {
+          const list = (Array.isArray(j) ? j : j.results || []).filter(pl => pl && pl.pipelineId != null).map(pl => ({
+            id: String(pl.pipelineId),
+            label: pl.label || 'Unnamed pipeline',
+            active: pl.active !== false,
+            stages: (pl.stages || []).filter(st => st && st.stageId != null)
+              .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+              .map(st => ({ id: String(st.stageId), label: st.label || 'Unnamed status', closed: String((st.metadata || {}).isClosed) === 'true' }))
+          }));
+          if (!list.length) throw new Error('no pipelines');
+          list.sort((a, b) => a.label.localeCompare(b.label));
+          tf.list = list;
+          tf.state = 'ok';
+          // A remembered pipeline or status that no longer exists goes back to all
+          const pl = list.find(x => x.id === tf.pipeline);
+          if (tf.pipeline && !pl) tf.pipeline = '';
+          if (tf.status.startsWith('stage:') && !(pl && pl.stages.some(st => 'stage:' + st.id === tf.status))) tf.status = 'any';
+        })
+        .catch(err => { tf.state = 'failed'; log('Could not load the ticket pipelines, so pipeline and status filters are off.', err); })
+        .finally(() => { clearTimeout(timer); safeRender(); });
+      return pipelinesP;
+    }
+
+    // The pipeline and status filters for a ticket search
+    function ticketFilters() {
+      if (!isTicket || !tf.list) return [];
+      const out = [];
+      const pl = tf.list.find(x => x.id === tf.pipeline);
+      if (pl) out.push({ property: 'hs_pipeline', operator: 'EQ', value: pl.id });
+      if (tf.status.startsWith('stage:')) {
+        const id = tf.status.slice(6);
+        if (pl && pl.stages.some(st => st.id === id)) out.push({ property: 'hs_pipeline_stage', operator: 'EQ', value: id });
+      } else if (tf.status === 'open' || tf.status === 'closed') {
+        // Closed statuses are few, so Open is "not one of them" rather than a long list
+        const closed = [].concat(...(pl ? [pl] : tf.list).map(x => x.stages)).filter(st => st.closed).map(st => st.id);
+        if (closed.length) out.push({ property: 'hs_pipeline_stage', operator: tf.status === 'open' ? 'NOT_IN' : 'IN', values: closed });
+        else if (tf.status === 'closed') out.push({ property: 'hs_object_id', operator: 'EQ', value: '0' }); // no closed status: nothing matches
+      }
+      return out;
+    }
+    if (isTicket) loadPipelines();
     function csrf() { return (document.cookie.match(/hubspotapi-csrf=([^;]+)/) || [])[1] || ''; }
 
     function searchCompanies(filters) {
@@ -174,6 +233,7 @@
         if (isTicket && search.fromType === 'ticket') extra.push({ property: 'hs_object_id', operator: 'NEQ', value: String(search.fromId) });
       }
       if (state.emailOnly && !isTicket) extra.push({ property: 'email', operator: 'HAS_PROPERTY' });
+      extra.push(...ticketFilters());
       if (!extra.length) return body;
       const v = search.v;
       const groups = v.filterGroups && v.filterGroups.length ? v.filterGroups : [{ filters: [] }];
@@ -245,7 +305,8 @@
         };
         // Belt and braces: never hold HubSpot's search longer than both lookups could take
         setTimeout(() => release(null), LOOKUP_TIMEOUT * 2 + 1000);
-        try { getCompanies(search.fromType, search.fromId).then(release, () => release(null)); }
+        // Tickets also wait for the pipelines, so the status filter can go on the first search
+        try { Promise.all([getCompanies(search.fromType, search.fromId), isTicket ? loadPipelines() : null]).then(r => release(r[0]), () => release(null)); }
         catch (e) { log('Company lookup failed, showing all contacts.', e); Promise.resolve(null).then(release); }
       };
     }
@@ -346,7 +407,18 @@
       #oolio-cc-bar button:focus-visible{outline:2px solid #673AB6;outline-offset:2px}
       #oolio-cc-bar .occ-actions{display:flex;gap:6px;flex:none}
       #oolio-cc-bar.warn .occ-text{white-space:normal}
-      #oolio-cc-bar .occ-parent{color:#5F5F5F;font-weight:400}`;
+      #oolio-cc-bar .occ-parent{color:#5F5F5F;font-weight:400}
+      #oolio-cc-tf{font-family:Inter,-apple-system,"Segoe UI",sans-serif;font-size:13px;display:flex;flex-wrap:wrap;
+        align-items:center;gap:6px 14px;margin:0 0 6px;padding:6px 12px;border-radius:6px;background:#FAF8FD;color:#222}
+      #oolio-cc-tf label{display:flex;align-items:center;gap:6px;font-weight:600;color:#5F5F5F}
+      #oolio-cc-tf select{font:13px Inter,-apple-system,"Segoe UI",sans-serif;color:#222;max-width:220px;
+        border:1px solid #CBC3D9;border-radius:4px;padding:3px 6px;background:#fff;cursor:pointer}
+      #oolio-cc-tf select.on{border-color:#673AB6;color:#673AB6;font-weight:600}
+      #oolio-cc-tf select:focus-visible{outline:2px solid #673AB6;outline-offset:1px}
+      #oolio-cc-tf .occ-note{color:#5F5F5F}
+      #oolio-cc-tf button{font:600 12px Inter,-apple-system,"Segoe UI",sans-serif;cursor:pointer;
+        border:1px solid #673AB6;color:#673AB6;background:#fff;border-radius:4px;padding:3px 8px}
+      #oolio-cc-tf button:hover{background:#E6E1EE}`;
 
     function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
 
@@ -377,6 +449,62 @@
       refetch();
     }
 
+    // The pipeline and status row under the bar, on Add existing Ticket only.
+    // Its HTML is only replaced when the choices change, so an open drop-down isn't closed under you.
+    function onFilterChange(e) {
+      const sel = e.target;
+      if (sel.name === 'pipeline') {
+        tf.pipeline = sel.value;
+        saveStr(PIPE_KEY, tf.pipeline);
+        // A status of the old pipeline doesn't fit the new one
+        if (tf.status.startsWith('stage:')) { tf.status = 'any'; saveStr(STATUS_KEY, tf.status); }
+      } else if (sel.name === 'status') {
+        tf.status = sel.value;
+        saveStr(STATUS_KEY, tf.status);
+      } else return;
+      state.stale = false;
+      changedAt = Date.now();
+      render();
+      const again = document.querySelector('#oolio-cc-tf select[name="' + sel.name + '"]');
+      if (again) again.focus();
+      refetch();
+    }
+    function onFilterClick(e) {
+      if (!(e.target.closest && e.target.closest('[data-occ-tf="retry"]'))) return;
+      pipelinesP = null;
+      loadPipelines().then(() => { if (tf.state === 'ok') { changedAt = Date.now(); refetch(); } });
+      safeRender();
+    }
+    function renderFilters(bar) {
+      let row = document.getElementById('oolio-cc-tf');
+      if (!isTicket || !bar) { if (row) row.remove(); return; }
+      if (!row) {
+        row = document.createElement('div');
+        row.id = 'oolio-cc-tf';
+        row.addEventListener('change', onFilterChange);
+        row.addEventListener('click', onFilterClick);
+      }
+      if (bar.nextElementSibling !== row) bar.insertAdjacentElement('afterend', row);
+      let html;
+      if (tf.state === 'failed') {
+        html = '<span class="occ-note">Couldn\'t load the ticket pipelines, so every pipeline and status is shown.</span><button type="button" data-occ-tf="retry">Try again</button>';
+      } else if (!tf.list) {
+        html = '<span class="occ-note">Loading pipelines…</span>';
+      } else {
+        const pl = tf.list.find(x => x.id === tf.pipeline);
+        const opt = (value, label, current) => `<option value="${esc(value)}"${value === current ? ' selected' : ''}>${esc(label)}</option>`;
+        const pipes = tf.list.filter(x => x.active || x.id === tf.pipeline);
+        const pipeHtml = opt('', 'All pipelines', tf.pipeline) + pipes.map(x => opt(x.id, x.label, tf.pipeline)).join('');
+        let statusHtml = opt('any', 'Any status', tf.status) + opt('open', 'Open', tf.status) + opt('closed', 'Closed', tf.status);
+        if (pl && pl.stages.length) {
+          statusHtml += `<optgroup label="${esc(pl.label)}">` + pl.stages.map(st => opt('stage:' + st.id, st.label, tf.status)).join('') + '</optgroup>';
+        }
+        html = `<label>Pipeline <select name="pipeline" class="${tf.pipeline ? 'on' : ''}" title="Only tickets in this pipeline">${pipeHtml}</select></label>` +
+          `<label>Status <select name="status" class="${tf.status !== 'any' ? 'on' : ''}" title="Only tickets with this status">${statusHtml}</select></label>`;
+      }
+      if (row.__occHtml !== html) { row.__occHtml = html; row.innerHTML = html; }
+    }
+
     let watching = false;
     function render() {
       const input = document.querySelector('[data-test-id="associate-panel-search"]');
@@ -388,6 +516,7 @@
       if (!state.status && !oldCopy) {
         const stray = document.getElementById('oolio-cc-bar');
         if (stray) stray.remove();
+        renderFilters(null);
         // The panel is open but its search hasn't come through here: HubSpot may have changed how it searches
         if (!watching) {
           watching = true;
@@ -463,6 +592,7 @@
       // Only touch the DOM when something changed, so the observer doesn't loop
       if (bar.className !== cls) bar.className = cls;
       if (bar.__occHtml !== html) { bar.__occHtml = html; bar.innerHTML = html; }
+      renderFilters(oldCopy || state.status === 'unseen' ? null : bar);
     }
     function safeRender() { try { render(); } catch (e) { log('Could not draw the bar.', e); } }
 

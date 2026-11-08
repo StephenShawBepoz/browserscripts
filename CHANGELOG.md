@@ -87,6 +87,9 @@
 
 ## HubSpot: Company filters
 
+### 2.5.0 (08/11/2026)
+- *Add existing Ticket* has **Pipeline** and **Status** drop-downs under the purple bar. Status can be **Open**, **Closed**, or once a pipeline is picked, one of its statuses. Your choice is remembered, and it works with **Show all** too.
+
 ### 2.4.0 (08/11/2026)
 - *Add existing Ticket* on a ticket, contact or deal now only lists tickets at the record's companies and their parent companies, with the same purple bar and **Show all** as *Add existing Contact*. The ticket you're on is left out, since it can't be linked to itself. On a company record the list isn't changed.
 
