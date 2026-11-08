@@ -87,6 +87,9 @@
 
 ## HubSpot: Company filters
 
+### 2.5.1 (08/11/2026)
+- Fixes *Couldn't load the ticket pipelines* in *Add existing Ticket*, so the **Pipeline** and **Status** drop-downs show. If it ever fails again, the message says why.
+
 ### 2.5.0 (08/11/2026)
 - *Add existing Ticket* has **Pipeline** and **Status** drop-downs under the purple bar. Status can be **Open**, **Closed**, or once a pipeline is picked, one of its statuses. Your choice is remembered, and it works with **Show all** too.
 

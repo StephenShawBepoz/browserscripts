@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.5.0
+// @version      2.5.1
 // @description  Add existing Contact and Add existing Ticket list only contacts and tickets at the record's companies, and tickets can be filtered by pipeline and status. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -88,7 +88,7 @@
     // status: 'any', 'open', 'closed' or 'stage:<id>' (a status of the chosen pipeline).
     const PIPE_KEY = 'oolio-company-tickets-pipeline';
     const STATUS_KEY = 'oolio-company-tickets-status';
-    const tf = { pipeline: readStr(PIPE_KEY, ''), status: readStr(STATUS_KEY, 'any'), list: null, state: 'idle' };
+    const tf = { pipeline: readStr(PIPE_KEY, ''), status: readStr(STATUS_KEY, 'any'), list: null, state: 'idle', error: '' };
     let pipelinesP = null;
     // Every ticket pipeline with its statuses: [{ id, label, active, stages: [{ id, label, closed }] }].
     // Never rejects: on failure the pipeline and status filters are left off.
@@ -97,8 +97,13 @@
       tf.state = 'loading';
       const abort = new AbortController();
       const timer = setTimeout(() => abort.abort(), LOOKUP_TIMEOUT);
-      pipelinesP = fetch('/api/crm-pipelines/v1/pipelines/0-5?portalId=' + portalId, { credentials: 'include', signal: abort.signal })
-        .then(r => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+      // HubSpot's API wants its CSRF header on every call, reads included
+      pipelinesP = fetch('/api/crm-pipelines/v1/pipelines/0-5?portalId=' + portalId, {
+        credentials: 'include',
+        signal: abort.signal,
+        headers: { Accept: 'application/json', 'X-HubSpot-CSRF-hubspotapi': csrf() }
+      })
+        .then(r => (r.ok ? r.json() : r.text().catch(() => '').then(t => Promise.reject(new Error('HubSpot returned ' + r.status + (t ? ': ' + t.slice(0, 120) : ''))))))
         .then(j => {
           const list = (Array.isArray(j) ? j : j.results || []).filter(pl => pl && pl.pipelineId != null).map(pl => ({
             id: String(pl.pipelineId),
@@ -108,7 +113,8 @@
               .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
               .map(st => ({ id: String(st.stageId), label: st.label || 'Unnamed status', closed: String((st.metadata || {}).isClosed) === 'true' }))
           }));
-          if (!list.length) throw new Error('no pipelines');
+          if (!list.length) throw new Error('HubSpot sent no pipelines');
+          if (!list.some(pl => pl.stages.length)) log('The pipelines came without their statuses, so only the pipeline filter works.');
           list.sort((a, b) => a.label.localeCompare(b.label));
           tf.list = list;
           tf.state = 'ok';
@@ -117,7 +123,11 @@
           if (tf.pipeline && !pl) tf.pipeline = '';
           if (tf.status.startsWith('stage:') && !(pl && pl.stages.some(st => 'stage:' + st.id === tf.status))) tf.status = 'any';
         })
-        .catch(err => { tf.state = 'failed'; log('Could not load the ticket pipelines, so pipeline and status filters are off.', err); })
+        .catch(err => {
+          tf.state = 'failed';
+          tf.error = err && err.name === 'AbortError' ? 'HubSpot took too long' : String((err && err.message) || err);
+          log('Could not load the ticket pipelines, so pipeline and status filters are off.', err);
+        })
         .finally(() => { clearTimeout(timer); safeRender(); });
       return pipelinesP;
     }
@@ -140,7 +150,10 @@
       return out;
     }
     if (isTicket) loadPipelines();
-    function csrf() { return (document.cookie.match(/hubspotapi-csrf=([^;]+)/) || [])[1] || ''; }
+    function csrf() {
+      const m = document.cookie.match(/(?:^|;\s*)hubspotapi-csrf=([^;]*)/) || document.cookie.match(/(?:^|;\s*)csrf\.app=([^;]*)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }
 
     function searchCompanies(filters) {
       const abort = new AbortController();
@@ -487,7 +500,7 @@
       if (bar.nextElementSibling !== row) bar.insertAdjacentElement('afterend', row);
       let html;
       if (tf.state === 'failed') {
-        html = '<span class="occ-note">Couldn\'t load the ticket pipelines, so every pipeline and status is shown.</span><button type="button" data-occ-tf="retry">Try again</button>';
+        html = `<span class="occ-note" title="${esc(tf.error)}">Couldn't load the ticket pipelines (${esc(tf.error.slice(0, 40))}), so every pipeline and status is shown.</span><button type="button" data-occ-tf="retry">Try again</button>`;
       } else if (!tf.list) {
         html = '<span class="occ-note">Loading pipelines…</span>';
       } else {
