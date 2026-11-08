@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.3.0
-// @description  Add existing Contact lists only contacts at the ticket's or deal's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
+// @version      2.4.0
+// @description  Add existing Contact and Add existing Ticket list only contacts and tickets at the record's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js
@@ -36,22 +36,29 @@
   if (window.__oolioCompanyFilters) return;
   window.__oolioCompanyFilters = true;
 
-  // Add existing Contact opens in its own frame, at /object-builder/<portal>/0-1/embed
-  if (/^\/object-builder\/\d+\/0-1\/embed/.test(location.pathname)) contactPanel();
+  // Add existing Contact and Add existing Ticket open in their own frames, at /object-builder/<portal>/<type>/embed
+  const panelType = (location.pathname.match(/^\/object-builder\/\d+\/(0-1|0-5)\/embed/) || [])[1];
+  if (panelType) contactPanel(panelType === '0-5' ? 'ticket' : 'contact');
   // Add existing Company is found by its heading, in whichever frame it opens
   companyPanel();
 
-  /* ======================== Add existing Contact ======================== */
-  // Lists only contacts at the ticket's or deal's companies and their parent companies.
+  /* ================= Add existing Contact and Add existing Ticket ================= */
+  // Lists only contacts (or tickets) at the record's companies and their parent companies.
 
-  function contactPanel() {
+  function contactPanel(kind) {
     // Only one copy may patch the page, or every search would be held back and filtered twice
     if (window.__oolioCompanyContacts) return;
     window.__oolioCompanyContacts = true;
 
+    const isTicket = kind === 'ticket';
+    const NOUN = isTicket ? 'tickets' : 'contacts';
+    const OBJECT_TYPE = isTicket ? '0-5' : '0-1';
     const EMAIL_KEY = 'oolio-company-contacts-email-only';
-    // HubSpot-defined association type IDs (contact -> X) seen in the panel's search request
-    const FROM_TYPE = { 15: 'ticket', 4: 'deal' };
+    // HubSpot-defined association type IDs (searched object -> record) seen in the panel's search request.
+    // contact -> ticket 15, contact -> deal 4; ticket -> ticket 452, contact 16, deal 28.
+    const FROM_TYPE = isTicket ? { 452: 'ticket', 16: 'contact', 28: 'deal' } : { 15: 'ticket', 4: 'deal' };
+    // Records whose companies can be looked up, if the type ID isn't one we know
+    const RECORD_TYPES = isTicket ? { '0-5': 'ticket', '0-1': 'contact', '0-3': 'deal' } : { '0-5': 'ticket', '0-3': 'deal' };
     const MAX_COMPANIES = 20;
     const PAGE_SIZE = '100'; // HubSpot offers 10, 20 or 100
     // How long each company lookup may take before the search goes ahead with all contacts
@@ -68,7 +75,7 @@
     let changedAt = 0; // when the bar was last clicked
     let caughtUp = 0; // when a search held from before that click went out with the new choice
     let sawSearch = false; // whether the panel has sent any contact search (for any record type)
-    const log = (...a) => console.info('[Oolio company contacts]', ...a);
+    const log = (...a) => console.info(isTicket ? '[Oolio company tickets]' : '[Oolio company contacts]', ...a);
 
     function readPref(key, fallback) {
       try { const v = localStorage.getItem(key); return v === null ? fallback : v === 'on'; } catch (e) { return fallback; }
@@ -124,16 +131,38 @@
       return lookups[key];
     }
 
-    // The panel's contact search for a single ticket or deal, if this request is one
+    // The record open behind the panel, from the page's address: { type, id }
+    function pageRecord() {
+      let path = '';
+      try { path = window.top.location.pathname; } catch (e) { return null; }
+      const m = path.match(/\/record\/(0-\d+)\/(\d+)/) || path.match(/\/(?:help-desk|inbox)\/.*\/(?:ticket|0-5)\/(\d+)/);
+      if (!m) return null;
+      return m[2] ? { type: m[1], id: m[2] } : { type: '0-5', id: m[1] };
+    }
+
+    // The panel's search for a single record, if this request is one
+    let unknownLogged = false;
     function contactSearch(url, body) {
       if (!url || url.indexOf('/api/graphql/crm') === -1 || typeof body !== 'string' || body.indexOf('SearchObjectsQuery') === -1) return null;
       sawSearch = true;
       let req;
       try { req = JSON.parse(body); } catch (e) { return null; }
       const v = req && req.variables;
-      const fromType = v && v.objectTypeId === '0-1' && FROM_TYPE[v.associationTypeId];
-      const ids = fromType && v.toObjectIds;
-      return Array.isArray(ids) && ids.length === 1 && ids[0] ? { req, v, fromType, fromId: ids[0] } : null;
+      const ids = v && v.objectTypeId === OBJECT_TYPE && v.toObjectIds;
+      if (!Array.isArray(ids) || ids.length !== 1 || !ids[0]) return null;
+      let fromType = FROM_TYPE[v.associationTypeId];
+      // On a company the tickets to pick from aren't narrowed by company
+      if (!fromType && isTicket && [339, 26].includes(Number(v.associationTypeId))) return null;
+      if (!fromType) {
+        // An association type we don't know (a labelled one, say): use the record open behind the panel
+        const rec = pageRecord();
+        fromType = rec && String(rec.id) === String(ids[0]) && RECORD_TYPES[rec.type];
+        if (!unknownLogged) {
+          unknownLogged = true;
+          log('Association type ' + v.associationTypeId + ' isn\'t one we know. ' + (fromType ? 'Using the ' + fromType + ' behind the panel.' : 'Not filtering.'));
+        }
+      }
+      return fromType ? { req, v, fromType, fromId: ids[0] } : null;
     }
 
     // The request body with our filters added to each of HubSpot's own filter groups
@@ -141,8 +170,10 @@
       const extra = [];
       if (state.on && companies.length) {
         extra.push({ property: 'associations.company', operator: 'IN', values: companies.map(c => c.id) });
+        // A ticket can't be linked to itself, so leave it out
+        if (isTicket && search.fromType === 'ticket') extra.push({ property: 'hs_object_id', operator: 'NEQ', value: String(search.fromId) });
       }
-      if (state.emailOnly) extra.push({ property: 'email', operator: 'HAS_PROPERTY' });
+      if (state.emailOnly && !isTicket) extra.push({ property: 'email', operator: 'HAS_PROPERTY' });
       if (!extra.length) return body;
       const v = search.v;
       const groups = v.filterGroups && v.filterGroups.length ? v.filterGroups : [{ filters: [] }];
@@ -159,7 +190,7 @@
     // Anything that goes wrong on our side sends HubSpot's request unchanged.
     // An older copy pasted in before this script lived on GitHub patches the same calls;
     // if it got here first, leave the filtering to it and just ask for it to be deleted.
-    const legacy = /SearchObjectsQuery/.test(String(XMLHttpRequest.prototype.send));
+    const legacy = !isTicket && /SearchObjectsQuery/.test(String(XMLHttpRequest.prototype.send));
     if (legacy) log('An older copy of this script is also installed. Delete it in Tampermonkey.');
     else {
       const xOpen = XMLHttpRequest.prototype.open;
@@ -183,7 +214,7 @@
       XMLHttpRequest.prototype.send = function (body) {
         let search = null;
         try { search = contactSearch(this.__occUrl, body); } catch (e) {}
-        if (!search || document.getElementById('occ-bar')) return xSend.apply(this, arguments); // an older copy is filtering
+        if (!search || (!isTicket && document.getElementById('occ-bar'))) return xSend.apply(this, arguments); // an older copy is filtering
 
         const xhr = this;
         const held = { body, at: Date.now() };
@@ -351,7 +382,7 @@
       const input = document.querySelector('[data-test-id="associate-panel-search"]');
       const section = input && input.closest('[data-test-id="ungated-search-view"]');
       if (!section) return;
-      const oldCopy = legacy || !!document.getElementById('occ-bar');
+      const oldCopy = legacy || (!isTicket && !!document.getElementById('occ-bar'));
       if (!oldCopy) setPageSize(section);
       if (state.status === 'unseen' && sawSearch) state.status = null; // it was just slow, and not for a ticket or deal
       if (!state.status && !oldCopy) {
@@ -391,15 +422,16 @@
       if (prev !== anchor) anchor.insertAdjacentElement('afterend', bar);
 
       const record = esc(state.fromType || 'record');
-      const all = state.emailOnly ? 'all contacts with an email address' : 'all contacts';
+      const emailOnly = state.emailOnly && !isTicket;
+      const all = emailOnly ? 'all contacts with an email address' : 'all ' + NOUN;
       const names = state.companies.map(c => c.name + (c.isParent ? ' (parent)' : '')).join(', ');
       const nameHtml = state.companies
         .map(c => '<b>' + esc(c.name) + '</b>' + (c.isParent ? ' <span class="occ-parent">(parent)</span>' : ''))
         .join(', ');
-      const emailBtn = `<button type="button" data-occ="email" aria-pressed="${state.emailOnly}" title="Only show contacts with an email address">Email only</button>`;
+      const emailBtn = isTicket ? '' : `<button type="button" data-occ="email" aria-pressed="${state.emailOnly}" title="Only show contacts with an email address">Email only</button>`;
       const companyBtn = !state.companies.length ? ''
-        : state.on ? '<button type="button" data-occ="company" title="Not here? Search every contact before you create a new one">Show all</button>'
-        : `<button type="button" data-occ="company" title="${esc('Only contacts at ' + names)}">Company only</button>`;
+        : state.on ? `<button type="button" data-occ="company" title="${isTicket ? 'Not here? Search every ticket' : 'Not here? Search every contact before you create a new one'}">Show all</button>`
+        : `<button type="button" data-occ="company" title="${esc('Only ' + NOUN + ' at ' + names)}">Company only</button>`;
       const label = (text, title) => `<span class="occ-label" title="${esc(title || text.replace(/<[^>]*>/g, ''))}">${MARK}<span class="occ-text">${text}</span></span>`;
       let cls, html;
       if (oldCopy) {
@@ -407,7 +439,7 @@
         html = label('An older copy of this script is also running. Delete version 1.2.0 or earlier in Tampermonkey.');
       } else if (state.status === 'unseen') {
         cls = 'warn';
-        html = label('The company filter isn\'t working here, so all contacts are listed. HubSpot may have changed.');
+        html = label(`The company filter isn't working here, so all ${NOUN} are listed. HubSpot may have changed.`);
       } else if (state.status === 'loading') {
         cls = '';
         html = label(`Finding this ${record}'s companies…`) + `<span class="occ-actions">${emailBtn}</span>`;
@@ -423,7 +455,7 @@
         html = label(`No company on this ${record}, so showing ${all}.`) + `<span class="occ-actions">${emailBtn}</span>`;
       } else if (state.on) {
         cls = '';
-        html = label(`Only contacts at ${nameHtml}`, names) + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
+        html = label(`Only ${NOUN} at ${nameHtml}`, names) + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;
       } else {
         cls = 'off';
         html = label('Showing ' + all) + `<span class="occ-actions">${emailBtn}${companyBtn}</span>`;

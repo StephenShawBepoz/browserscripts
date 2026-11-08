@@ -26,6 +26,7 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 #### Company filters
 **Sensible lists when you add a contact or a company to a record.**
 - *Add existing Contact* on a ticket or deal only lists people at that customer's companies and their head office, not every contact in HubSpot. **Show all** is one click away.
+- *Add existing Ticket* does the same for tickets, so linking tickets together only shows that customer's tickets.
 - *Add existing Company* shows each company's products, owner and contacts under its name, and lists its tickets with their owner and pipeline. Chips hide the products and lifecycle stages you don't deal with. Opportunities are hidden to start with.
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js)** · [How to use](docs/company-filters.md)
