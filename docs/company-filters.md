@@ -24,6 +24,14 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 
 **Had *Company contacts* before it was on GitHub?** Install it from the **Install** link at the top, then delete the old copy, called *HubSpot: company contacts in "Add existing Contact"* (version 1.2.0 or earlier): click the Tampermonkey icon, then **Dashboard**. Until you do, the bar reminds you.
 
+## Add existing Ticket
+
+1. On a ticket, contact or deal, click **Add** on the Tickets card and open the **Add existing** tab.
+2. The list only shows tickets at the record's companies and their parent companies, 100 to a page. The ticket you're on is left out. The purple bar under the search box names the companies it used.
+3. **Can't find it?** Click **Show all** to search every ticket. The next record starts with company tickets again.
+
+The amber messages are the same as for *Add existing Contact*. In the browser console, search for *Oolio company tickets*. On a company record the list isn't changed.
+
 ## Add existing Company
 
 <img src="../assets/screenshots/company-filters-company-panel.png" width="460" alt="Add existing Company with product chips, details under each company and a ticket list open">
