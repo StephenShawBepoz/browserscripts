@@ -29,6 +29,7 @@ To see 10 or 20 to a page, pick it from HubSpot's own page-size menu. It stays t
 1. On a ticket, contact or deal, click **Add** on the Tickets card and open the **Add existing** tab.
 2. The list only shows tickets at the record's companies and their parent companies, 100 to a page. The ticket you're on is left out. The purple bar under the search box names the companies it used.
 3. **Can't find it?** Click **Show all** to search every ticket. The next record starts with company tickets again.
+4. **Pipeline** and **Status** under the bar narrow the list further. Status can be **Open** or **Closed**, and once you pick a pipeline, any of its statuses. They're remembered for next time, so set them back to *All pipelines* and *Any status* if a ticket seems to be missing. They still apply after **Show all**.
 
 The amber messages are the same as for *Add existing Contact*. In the browser console, search for *Oolio company tickets*. On a company record the list isn't changed.
 
