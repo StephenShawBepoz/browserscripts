@@ -59,6 +59,11 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js)** · [How to use](docs/quick-actions.md)
 
+#### Quick set
+**Set the implementation fields on a ticket in one go.** An orange **Quick set** button on BP Implementation, Add Ons and Upgrades tickets opens a box with *BP | Implementation Category*, *Ticket owner*, *Accounts Status* and *Installer* 1 to 5. Type a name to pick someone, then **Save**. **Alt + Q** opens it from the keyboard.
+
+**[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js)** · [How to use](docs/quick-set.md)
+
 ### In Oolio Office
 
 #### Download Device Logs
