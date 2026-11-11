@@ -2,7 +2,7 @@
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
 // @version      0.1.0
-// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Accounts Status and Installers in one go.
+// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner and Installers in one go, with the Accounts Status alongside.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js
@@ -40,7 +40,7 @@
   const FIELDS = [
     { name: 'bp___implementation_category', label: 'BP | Implementation Category', kind: 'list' },
     { name: 'hubspot_owner_id', label: 'Ticket owner', kind: 'owner' },
-    { name: 'accounts_status', label: 'Accounts Status', kind: 'list' },
+    { name: 'accounts_status', label: 'Accounts Status', kind: 'list', viewOnly: true }, // shown, never changed here (Accounts own it)
     { name: 'installer', label: 'Installer', kind: 'owner' },
     { name: 'installer_2', label: 'Installer 2', kind: 'owner' },
     { name: 'installer_3', label: 'Installer 3', kind: 'owner' },
@@ -204,6 +204,8 @@
       .oolio-qs-f select, .oolio-qs-f input { box-sizing: border-box; width: 100%; height: 32px; padding: 4px 8px; border: 1px solid #cbd6e2;
         border-radius: 6px; background: #f5f8fa; font: inherit; font-size: 13px; color: #33475b; }
       .oolio-qs-f select:focus, .oolio-qs-f input:focus { outline: none; border-color: ${ORANGE}; box-shadow: 0 0 0 2px rgba(255,122,26,.25); background: #fff; }
+      .oolio-qs-view { display: flex; align-items: center; min-height: 32px; padding: 0 8px; border: 1px dashed #cbd6e2; border-radius: 6px;
+        box-sizing: border-box; font-size: 13px; color: #33475b; background: #fff; cursor: default; }
       .oolio-qs-pick { position: relative; display: flex; gap: 4px; }
       .oolio-qs-clear { all: unset; cursor: pointer; color: #7c98b6; padding: 0 4px; font-size: 16px; }
       .oolio-qs-clear:hover { color: #33475b; }
@@ -344,6 +346,17 @@
         const id = `oolio-qs-${f.name}`;
         setHTML(row, `<label for="${id}">${esc(f.label)}</label>`);
         const start = props[f.name] || '';
+        if (f.viewOnly) {
+          const opt = (lists[i] || []).find((o) => o.value === start);
+          const v = document.createElement('span');
+          v.id = id;
+          v.className = 'oolio-qs-view';
+          v.title = 'View only. Accounts set this one.';
+          v.textContent = start ? (opt ? opt.label : start) : '—';
+          row.appendChild(v);
+          body.appendChild(row);
+          return;
+        }
         fieldState[f.name] = { start, now: start };
         const onChange = (v) => { fieldState[f.name].now = v; row.classList.toggle('changed', v !== start); refreshSave(); };
         row.appendChild(f.kind === 'owner' ? ownerPicker(id, people, start, onChange) : listPicker(id, lists[i] || [], start, onChange));

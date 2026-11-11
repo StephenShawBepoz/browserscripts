@@ -9,14 +9,14 @@ Set a ticket's implementation fields in one go, without hunting through the side
 3. An orange box opens with:
    - **BP | Implementation Category**
    - **Ticket owner**
-   - **Accounts Status**
+   - **Accounts Status** (view only, so you can see where Accounts are up to; it can't be changed here)
    - **Installer**, **Installer 2**, **Installer 3** (click **+ More installers** for 4 and 5)
 4. Change what you need and click **Save** (or **Cmd + Enter** / **Ctrl + Enter**). The button says how many changes you've made, and each changed field is marked in orange.
 
 - **Picking a person.** Click a name field to see everyone, or type part of a name (or email) to narrow it down. People in a *BP |* team are listed first. **Enter** picks the top match, the arrow keys move up and down, **Esc** puts it back. The **×** clears the field.
 - **Only what you change is saved.** Fields you don't touch are left alone, so you won't undo someone else's change.
 - **HubSpot's own sidebar doesn't redraw by itself**, so after saving click **refresh** in the box to see the new values there.
-- The choices for Implementation Category and Accounts Status come straight from HubSpot, so new ones show up by themselves.
+- The choices for Implementation Category come straight from HubSpot, so new ones show up by themselves.
 - **Moving the box.** Drag it by the orange header and it opens there next time. Double-click the header to put it back top right.
 - **Other pipelines.** Click the Tampermonkey icon, then **Show on every ticket**, to have the button on all tickets.
 - The list of people is remembered for 12 hours. If someone new is missing, click the Tampermonkey icon, then **Reload the list of people**.
