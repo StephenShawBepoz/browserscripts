@@ -207,7 +207,7 @@
       .oolio-qs-pick { position: relative; display: flex; gap: 4px; }
       .oolio-qs-clear { all: unset; cursor: pointer; color: #7c98b6; padding: 0 4px; font-size: 16px; }
       .oolio-qs-clear:hover { color: #33475b; }
-      .oolio-qs-menu { position: absolute; left: 0; right: 0; top: 34px; z-index: 2; max-height: 220px; overflow: auto; background: #fff;
+      .oolio-qs-menu { position: fixed; z-index: 2147483002; max-height: 240px; overflow: auto; background: #fff;
         border: 1px solid #cbd6e2; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.15); }
       .oolio-qs-menu div { padding: 6px 8px; cursor: pointer; font-size: 13px; }
       .oolio-qs-menu div small { color: #7c98b6; margin-left: 6px; }
@@ -393,6 +393,17 @@
     let menu = null; let matches = []; let at = 0;
     const set = (v) => { value = v; input.value = nameOf(v); onChange(v); };
     const close = () => { if (menu) { menu.remove(); menu = null; } };
+    // Floats over the page so the box doesn't clip it; opens upwards when there's no room below
+    const place = () => {
+      if (!menu) return;
+      const r = input.getBoundingClientRect();
+      const below = innerHeight - r.bottom - 8;
+      menu.style.left = `${r.left}px`;
+      menu.style.width = `${r.width + 24}px`;
+      if (below >= 160 || below >= r.top) { menu.style.top = `${r.bottom + 2}px`; menu.style.bottom = ''; menu.style.maxHeight = `${Math.min(240, below)}px`; }
+      else { menu.style.bottom = `${innerHeight - r.top + 2}px`; menu.style.top = ''; menu.style.maxHeight = `${Math.min(240, r.top - 8)}px`; }
+    };
+    document.addEventListener('scroll', (e) => { if (menu && e.target !== menu) place(); }, true);
     let typed = false; // false: list everyone (just focused); true: filter by what's typed
     const draw = () => {
       const q = typed ? fold(input.value).trim() : '';
@@ -401,6 +412,7 @@
       if (typed) matches = matches.slice(0, 60);
       at = Math.min(at, Math.max(0, matches.length - 1));
       if (!menu) { menu = document.createElement('div'); menu.className = 'oolio-qs-menu'; wrap.appendChild(menu); }
+      place();
       let html = ''; let lastMine = null;
       matches.forEach((p, i) => {
         if (p.mine !== lastMine) { html += `<div class="grp">${p.mine ? 'Bepoz teams' : 'Everyone else'}</div>`; lastMine = p.mine; }
