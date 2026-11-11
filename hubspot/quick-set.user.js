@@ -191,11 +191,13 @@
         display: flex; flex-direction: column; background: #fff; border: 3px solid ${ORANGE}; border-radius: 12px;
         box-shadow: 0 12px 40px rgba(0,0,0,.28); font: 14px/1.35 "Lexend Deca", Helvetica, Arial, sans-serif; color: #33475b; }
       .oolio-qs-head { display: flex; align-items: center; gap: 8px; background: ${ORANGE}; color: #fff; padding: 10px 12px; border-radius: 8px 8px 0 0; cursor: move; user-select: none; }
-      .oolio-qs-head b { font-size: 15px; }
+      .oolio-qs-head svg { width: 16px; height: 16px; flex: none; }
+      .oolio-qs-head b { font-size: 15px; flex: none; }
       .oolio-qs-head .sub { opacity: .9; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
       .oolio-qs-x { all: unset; cursor: pointer; font-size: 20px; line-height: 1; padding: 0 4px; }
       .oolio-qs-body { padding: 10px 12px 4px; overflow: auto; }
       .oolio-qs-f { display: grid; grid-template-columns: 128px 1fr; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .oolio-qs-f[hidden] { display: none; }
       .oolio-qs-f label { font-size: 12px; font-weight: 600; color: #516f90; }
       .oolio-qs-f.changed label { color: ${ORANGE_DARK}; }
       .oolio-qs-f.changed label::after { content: " •"; }
