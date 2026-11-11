@@ -270,11 +270,19 @@
     return b;
   }
 
-  // Always a floating pill. Out of the box it sits bottom right, above Quick actions; drag it anywhere and
+  // Always a floating pill. Out of the box it sits bottom right (above Quick actions, if you have it); drag it anywhere and
   // every HubSpot tab uses that spot. It's kept inside the window when the window changes size.
   function pillSpot(b) {
     const pos = gmGet('pillPos', null);
-    if (!pos) { b.style.left = ''; b.style.top = ''; b.style.right = '24px'; b.style.bottom = '104px'; return; }
+    if (!pos) {
+      // Out of the box: bottom right, stacked just above the purple Quick actions bar if that's in the way
+      let bottom = 24;
+      const qa = document.getElementById('oqa-bar');
+      const r = qa && qa.getBoundingClientRect();
+      if (r && r.width && r.right > innerWidth - 200) bottom = Math.max(bottom, Math.round(innerHeight - r.top + 10));
+      b.style.left = ''; b.style.top = ''; b.style.right = '24px'; b.style.bottom = `${bottom}px`;
+      return;
+    }
     const w = b.offsetWidth || 120; const h = b.offsetHeight || 40;
     b.style.right = ''; b.style.bottom = '';
     b.style.left = `${Math.max(4, Math.min(innerWidth - w - 4, pos.x))}px`;
@@ -311,7 +319,8 @@
   function placeButton() {
     const b = button();
     if (!state.show) { b.remove(); return; }
-    if (b.parentElement !== document.body) { document.body.appendChild(b); pillSpot(b); }
+    if (b.parentElement !== document.body) document.body.appendChild(b);
+    if (!gmGet('pillPos', null)) pillSpot(b); // follows the Quick actions bar if that moves
   }
 
   async function onPage() {
