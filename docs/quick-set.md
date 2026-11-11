@@ -16,7 +16,7 @@ Set a ticket's implementation fields in one go, without hunting through the side
 4. Change what you need and click **Save** (or **Cmd + Enter** / **Ctrl + Enter**). The button says how many changes you've made, and each changed field is marked in orange.
 
 - **Picking a person.** Click a name field to see everyone, or type part of a name (or email) to narrow it down. People in a *BP |* team are listed first. **Enter** picks the top match, the arrow keys move up and down, **Esc** puts it back. The **×** clears the field.
-- **Dates.** Click the date to pick from a calendar, or type it. The **×** clears it.
+- **Dates.** Click the date to pick from a calendar, or type it. The **×** clears it. **Same day** next to Go Live Date copies the Install Date across, for a venue that goes live on the day it's installed. The two dates can be any days; neither has to come after the other.
 - **Only what you change is saved.** Fields you don't touch are left alone, so you won't undo someone else's change.
 - **HubSpot's own sidebar doesn't redraw by itself**, so after saving click **refresh** in the box to see the new values there.
 - The choices for Implementation Category come straight from HubSpot, so new ones show up by themselves.

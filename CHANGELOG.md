@@ -4,6 +4,7 @@
 
 ### 0.2.0 (12/11/2026)
 - New **Project Manager / Co-Ordinator** field, under Ticket owner. Click **Me** next to it to put yourself in.
+- **Same day** button next to Go Live Date copies the Install Date, for go-lives on install day.
 
 ### 0.1.0 (12/11/2026)
 - New. An orange **Quick set** button on BP Implementation, Add Ons and Upgrades tickets (record page and Help Desk) opens a box to set *BP | Implementation Category*, *Ticket owner*, *Install Date*, *Go Live Date* and *Installer* 1 to 5, then save them together. *Accounts Status* is shown too, view only. **Alt + Q** opens it.

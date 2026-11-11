@@ -43,7 +43,7 @@
     { name: 'coordinator', label: 'Project Manager / Co-Ordinator', kind: 'owner', me: true }, // me: a Me button puts you in
     { name: 'accounts_status', label: 'Accounts Status', kind: 'list', viewOnly: true }, // shown, never changed here (Accounts own it)
     { name: 'install_date', label: 'Install Date', kind: 'date' },
-    { name: 'go_live_date', label: 'Go Live Date', kind: 'date' },
+    { name: 'go_live_date', label: 'Go Live Date', kind: 'date', sameAs: 'install_date' }, // sameAs: a Same day button copies that date
     { name: 'installer', label: 'Installer', kind: 'owner' },
     { name: 'installer_2', label: 'Installer 2', kind: 'owner' },
     { name: 'installer_3', label: 'Installer 3', kind: 'owner' },
@@ -381,7 +381,7 @@
         fieldState[f.name] = { start, now: start };
         const onChange = (v) => { fieldState[f.name].now = v; row.classList.toggle('changed', v !== start); refreshSave(); };
         row.appendChild(f.kind === 'owner' ? ownerPicker(id, people, start, onChange, f.me ? me : '')
-          : f.kind === 'date' ? datePicker(id, start, onChange)
+          : f.kind === 'date' ? datePicker(id, start, onChange, f.sameAs)
           : listPicker(id, lists[i] || [], start, onChange));
         body.appendChild(row);
       });
@@ -409,7 +409,8 @@
   }
 
   // HubSpot keeps a date as YYYY-MM-DD, the same as the browser's date picker
-  function datePicker(id, start, onChange) {
+  // No earliest/latest limits on purpose: Go Live can be the same day as the install (or any day).
+  function datePicker(id, start, onChange, sameAs) {
     const wrap = document.createElement('div');
     wrap.className = 'oolio-qs-pick';
     const input = document.createElement('input');
@@ -424,6 +425,27 @@
     clear.title = 'Clear';
     clear.textContent = '×';
     clear.addEventListener('click', () => { input.value = ''; onChange(''); input.focus(); });
+    if (sameAs) {
+      const other = FIELDS.find((x) => x.name === sameAs);
+      const same = document.createElement('button');
+      same.type = 'button';
+      same.className = 'oolio-qs-me';
+      same.textContent = 'Same day';
+      same.title = `Same as the ${other ? other.label : sameAs}`;
+      same.addEventListener('click', () => {
+        const v = (fieldState[sameAs] && fieldState[sameAs].now) || '';
+        if (!v) {
+          const m = box && box.querySelector('.oolio-qs-foot .oolio-qs-msg');
+          if (m) { m.className = 'oolio-qs-msg err'; m.textContent = `Set the ${other ? other.label : sameAs} first.`; }
+          const o = document.getElementById(`oolio-qs-${sameAs}`);
+          if (o) o.focus();
+          return;
+        }
+        input.value = v.slice(0, 10);
+        onChange(input.value === begin ? start : input.value);
+      });
+      wrap.append(same);
+    }
     wrap.append(input, clear);
     return wrap;
   }
