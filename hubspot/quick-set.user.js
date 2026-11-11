@@ -184,7 +184,7 @@
       .oolio-qs-btn:hover { background: ${ORANGE_DARK}; }
       .oolio-qs-btn:focus-visible { outline: 2px solid #2d3e50; outline-offset: 2px; }
       .oolio-qs-btn svg { width: 14px; height: 14px; }
-      .oolio-qs-row { margin: 8px 0 4px; }
+      .oolio-qs-row { margin: 8px 0 4px; align-self: flex-start; }
       .oolio-qs-float { position: fixed; z-index: 2147483000; left: 50%; transform: translateX(-50%); bottom: 18px; }
 
       .oolio-qs-box { position: fixed; z-index: 2147483001; top: 72px; right: 24px; width: 380px; max-height: calc(100vh - 96px);
@@ -246,11 +246,14 @@
     return b;
   }
 
-  // Under the ticket's Pipeline / Ticket status on its record page; floating at the bottom elsewhere (Help Desk)
+  // Under Pipeline / Ticket status: in the left panel of a ticket record, in the right sidebar in Help Desk.
+  // Floats at the bottom of the screen if HubSpot moves things. (HubSpot's markers, checked November 2026.)
+  const RECORD_SPOT = '[data-test-id="properties-list"]';
+  const HELPDESK_SPOT = '[data-test-id="ticket-header-stage-dropdown"]';
   function placeButton() {
     const b = button();
     if (!state.show) { const w = b.parentElement; if (w && w.classList.contains('oolio-qs-wrap')) w.remove(); else b.remove(); return; }
-    const anchor = !state.ticket.helpDesk && document.querySelector('[data-test-id="properties-list"]');
+    const anchor = document.querySelector(state.ticket.helpDesk ? HELPDESK_SPOT : RECORD_SPOT);
     let wrap = b.parentElement && b.parentElement.classList.contains('oolio-qs-wrap') ? b.parentElement : null;
     if (!wrap) { wrap = document.createElement('div'); wrap.className = 'oolio-qs-wrap'; wrap.appendChild(b); }
     if (anchor) {
