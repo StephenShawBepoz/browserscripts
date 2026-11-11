@@ -9,6 +9,7 @@ Set a ticket's implementation fields in one go, without hunting through the side
 3. An orange box opens with:
    - **BP | Implementation Category**
    - **Ticket owner**
+   - **Project Manager / Co-Ordinator**, with a **Me** button that puts you in with one click
    - **Accounts Status** (view only, so you can see where Accounts are up to; it can't be changed here)
    - **Install Date** and **Go Live Date**
    - **Installer**, **Installer 2**, **Installer 3** (click **+ More installers** for 4 and 5)

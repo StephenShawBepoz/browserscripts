@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.1.0
-// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Install and Go Live dates and Installers in one go, with the Accounts Status alongside.
+// @version      0.2.0
+// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, with the Accounts Status alongside.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js
@@ -40,6 +40,7 @@
   const FIELDS = [
     { name: 'bp___implementation_category', label: 'BP | Implementation Category', kind: 'list' },
     { name: 'hubspot_owner_id', label: 'Ticket owner', kind: 'owner' },
+    { name: 'coordinator', label: 'Project Manager / Co-Ordinator', kind: 'owner', me: true }, // me: a Me button puts you in
     { name: 'accounts_status', label: 'Accounts Status', kind: 'list', viewOnly: true }, // shown, never changed here (Accounts own it)
     { name: 'install_date', label: 'Install Date', kind: 'date' },
     { name: 'go_live_date', label: 'Go Live Date', kind: 'date' },
@@ -148,7 +149,7 @@
   let ownersPromise = null;
   function owners(t) {
     if (ownersPromise) return ownersPromise;
-    const kept = gmGet('owners', null);
+    const kept = gmGet('owners2', null);
     if (kept && kept.portal === t.portal && Date.now() - kept.at < OWNERS_KEEP_MS && kept.list && kept.list.length) {
       ownersPromise = Promise.resolve(kept.list);
       return ownersPromise;
@@ -161,16 +162,32 @@
         ((d && d.results) || []).forEach((o) => {
           const name = [o.firstName, o.lastName].filter(Boolean).join(' ').trim() || o.email || `User ${o.id}`;
           const team = ((o.teams || []).find((x) => x.primary) || (o.teams || [])[0] || {}).name || '';
-          list.push({ id: String(o.id), name, email: o.email || '', team, mine: (o.teams || []).some((x) => MY_TEAMS.test(x.name || '')) });
+          list.push({ id: String(o.id), userId: String(o.userId || o.userIdIncludingInactive || ''), name, email: o.email || '', team, mine: (o.teams || []).some((x) => MY_TEAMS.test(x.name || '')) });
         });
         after = d && d.paging && d.paging.next ? d.paging.next.after : '';
         if (!after) break;
       }
       list.sort((a, b) => (b.mine - a.mine) || a.name.localeCompare(b.name));
-      gmSet('owners', { portal: t.portal, at: Date.now(), list });
+      gmSet('owners2', { portal: t.portal, at: Date.now(), list });
       return list;
     })().catch((e) => { ownersPromise = null; throw e; });
     return ownersPromise;
+  }
+
+  // Your own HubSpot user, as a person you can pick (for the Me button)
+  let mePromise = null;
+  function myOwnerId(t) {
+    if (!mePromise) {
+      mePromise = Promise.all([hubspot('login-verify/hub-user-info', t.portal), owners(t)])
+        .then(([d, list]) => {
+          const uid = String((d && d.user && d.user.user_id) || '');
+          const mine = uid && list.find((p) => p.userId === uid);
+          if (!mine) log('could not find you in the list of people, so there is no Me button');
+          return mine ? mine.id : '';
+        })
+        .catch((e) => { log('could not tell who you are:', e.message); mePromise = null; return ''; });
+    }
+    return mePromise;
   }
 
   /* ---------------- Look ---------------- */
@@ -209,6 +226,8 @@
       .oolio-qs-view { display: flex; align-items: center; min-height: 32px; padding: 0 8px; border: 1px dashed #cbd6e2; border-radius: 6px;
         box-sizing: border-box; font-size: 13px; color: #33475b; background: #fff; cursor: default; }
       .oolio-qs-pick { position: relative; display: flex; gap: 4px; }
+      .oolio-qs-me { all: unset; cursor: pointer; flex: none; background: ${ORANGE}; color: #fff; font-size: 12px; font-weight: 700; padding: 0 9px; border-radius: 6px; line-height: 32px; }
+      .oolio-qs-me:hover { background: ${ORANGE_DARK}; }
       .oolio-qs-clear { all: unset; cursor: pointer; color: #7c98b6; padding: 0 4px; font-size: 16px; }
       .oolio-qs-clear:hover { color: #33475b; }
       .oolio-qs-menu { position: fixed; z-index: 2147483002; max-height: 240px; overflow: auto; background: #fff;
@@ -322,8 +341,8 @@
 
     const myBox = box;
     try {
-      const [props, people, ...lists] = await Promise.all([
-        readTicket(t), owners(t),
+      const [props, people, me, ...lists] = await Promise.all([
+        readTicket(t), owners(t), myOwnerId(t),
         ...FIELDS.map((f) => (f.kind === 'list' ? listOptions(t, f.name) : null)),
       ]);
       if (box !== myBox) return;
@@ -361,7 +380,7 @@
         }
         fieldState[f.name] = { start, now: start };
         const onChange = (v) => { fieldState[f.name].now = v; row.classList.toggle('changed', v !== start); refreshSave(); };
-        row.appendChild(f.kind === 'owner' ? ownerPicker(id, people, start, onChange)
+        row.appendChild(f.kind === 'owner' ? ownerPicker(id, people, start, onChange, f.me ? me : '')
           : f.kind === 'date' ? datePicker(id, start, onChange)
           : listPicker(id, lists[i] || [], start, onChange));
         body.appendChild(row);
@@ -410,7 +429,7 @@
   }
 
   // Type a name to search; Enter picks the top match, arrows move, Esc gives up
-  function ownerPicker(id, people, start, onChange) {
+  function ownerPicker(id, people, start, onChange, meId) {
     const byId = new Map(people.map((p) => [p.id, p]));
     const nameOf = (v) => (!v ? '' : byId.has(v) ? byId.get(v).name : `User ${v} (inactive)`);
     const wrap = document.createElement('div');
@@ -489,6 +508,15 @@
       close();
     });
     clear.addEventListener('click', () => { set(''); input.focus(); });
+    if (meId) {
+      const mine = document.createElement('button');
+      mine.type = 'button';
+      mine.className = 'oolio-qs-me';
+      mine.title = 'Put yourself in';
+      mine.textContent = 'Me';
+      mine.addEventListener('click', () => { set(meId); close(); });
+      wrap.append(mine);
+    }
     return wrap;
   }
 
@@ -567,7 +595,7 @@
       gmSet('everyTicket', !gmGet('everyTicket', false));
       location.reload();
     });
-    GM_registerMenuCommand('Reload the list of people', () => { gmSet('owners', null); ownersPromise = null; });
+    GM_registerMenuCommand('Reload the list of people', () => { gmSet('owners2', null); ownersPromise = null; });
   }
 
   let timer = null;
