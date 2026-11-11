@@ -2,7 +2,7 @@
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
 // @version      0.1.0
-// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner and Installers in one go, with the Accounts Status alongside.
+// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Install and Go Live dates and Installers in one go, with the Accounts Status alongside.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js
@@ -35,12 +35,14 @@
 
   /* ---------------- Things you might want to change ---------------- */
 
-  // The fields in the box, top to bottom. "owner" fields pick a HubSpot user; the others are drop-downs
-  // whose choices come from HubSpot, so a new category shows up here by itself.
+  // The fields in the box, top to bottom. "owner" fields pick a HubSpot user, "date" fields a day; "list" fields
+  // are drop-downs whose choices come from HubSpot, so a new category shows up here by itself.
   const FIELDS = [
     { name: 'bp___implementation_category', label: 'BP | Implementation Category', kind: 'list' },
     { name: 'hubspot_owner_id', label: 'Ticket owner', kind: 'owner' },
     { name: 'accounts_status', label: 'Accounts Status', kind: 'list', viewOnly: true }, // shown, never changed here (Accounts own it)
+    { name: 'install_date', label: 'Install Date', kind: 'date' },
+    { name: 'go_live_date', label: 'Go Live Date', kind: 'date' },
     { name: 'installer', label: 'Installer', kind: 'owner' },
     { name: 'installer_2', label: 'Installer 2', kind: 'owner' },
     { name: 'installer_3', label: 'Installer 3', kind: 'owner' },
@@ -359,7 +361,9 @@
         }
         fieldState[f.name] = { start, now: start };
         const onChange = (v) => { fieldState[f.name].now = v; row.classList.toggle('changed', v !== start); refreshSave(); };
-        row.appendChild(f.kind === 'owner' ? ownerPicker(id, people, start, onChange) : listPicker(id, lists[i] || [], start, onChange));
+        row.appendChild(f.kind === 'owner' ? ownerPicker(id, people, start, onChange)
+          : f.kind === 'date' ? datePicker(id, start, onChange)
+          : listPicker(id, lists[i] || [], start, onChange));
         body.appendChild(row);
       });
       const first = body.querySelector('select, input');
@@ -383,6 +387,26 @@
     sel.value = start;
     sel.addEventListener('change', () => onChange(sel.value));
     return sel;
+  }
+
+  // HubSpot keeps a date as YYYY-MM-DD, the same as the browser's date picker
+  function datePicker(id, start, onChange) {
+    const wrap = document.createElement('div');
+    wrap.className = 'oolio-qs-pick';
+    const input = document.createElement('input');
+    input.id = id;
+    input.type = 'date';
+    input.value = /^\d{4}-\d{2}-\d{2}/.test(start) ? start.slice(0, 10) : '';
+    const begin = input.value;
+    input.addEventListener('change', () => onChange(input.value === begin ? start : input.value));
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'oolio-qs-clear';
+    clear.title = 'Clear';
+    clear.textContent = '×';
+    clear.addEventListener('click', () => { input.value = ''; onChange(''); input.focus(); });
+    wrap.append(input, clear);
+    return wrap;
   }
 
   // Type a name to search; Enter picks the top match, arrows move, Esc gives up
