@@ -197,14 +197,13 @@
     const s = document.createElement('style');
     s.id = 'oolio-qs-style';
     s.textContent = `
-      .oolio-qs-btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-        background: ${ORANGE}; color: #fff; font: 600 13px/1 "Lexend Deca", Helvetica, Arial, sans-serif; padding: 7px 12px;
-        border-radius: 999px; box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+      .oolio-qs-btn { all: unset; box-sizing: border-box; position: fixed; z-index: 2147483000; display: inline-flex; align-items: center; gap: 8px;
+        cursor: pointer; background: ${ORANGE}; color: #fff; font: 600 14px/1 "Lexend Deca", Helvetica, Arial, sans-serif; padding: 10px 16px 10px 13px;
+        border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.25); user-select: none; touch-action: none; }
       .oolio-qs-btn:hover { background: ${ORANGE_DARK}; }
+      .oolio-qs-btn.dragging { cursor: grabbing; opacity: .9; }
       .oolio-qs-btn:focus-visible { outline: 2px solid #2d3e50; outline-offset: 2px; }
-      .oolio-qs-btn svg { width: 14px; height: 14px; }
-      .oolio-qs-row { margin: 8px 0 4px; align-self: flex-start; }
-      .oolio-qs-float { position: fixed; z-index: 2147483000; left: 50%; transform: translateX(-50%); bottom: 18px; }
+      .oolio-qs-btn svg { width: 18px; height: 18px; flex: none; }
 
       .oolio-qs-box { position: fixed; z-index: 2147483001; top: 72px; right: 24px; width: 380px; max-height: calc(100vh - 96px);
         display: flex; flex-direction: column; background: #fff; border: 3px solid ${ORANGE}; border-radius: 12px;
@@ -249,11 +248,13 @@
     document.head.appendChild(s);
   }
 
-  const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 
   /* ---------------- The orange button ---------------- */
 
   let state = { key: '', ticket: null, props: null, show: false };
+
+  // A hard hat: the installer
+  const HARD_HAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M14 6a6 6 0 0 1 6 6v3"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><rect x="2" y="15" width="20" height="4" rx="1"/></svg>';
 
   function button() {
     let b = document.getElementById('oolio-qs-open');
@@ -262,30 +263,55 @@
       b.id = 'oolio-qs-open';
       b.type = 'button';
       b.className = 'oolio-qs-btn';
-      b.title = 'Set the category, owner, accounts status and installers (Alt + Q)';
-      setHTML(b, `${PENCIL}<span>Quick set</span>`);
-      b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); toggleBox(); });
+      b.title = 'Set the category, owner, project manager, dates and installers (Alt + Q). Drag to move it.';
+      setHTML(b, `${HARD_HAT}<span>Quick set</span>`);
+      pillDrag(b);
     }
     return b;
   }
 
-  // Under Pipeline / Ticket status: in the left panel of a ticket record, in the right sidebar in Help Desk.
-  // Floats at the bottom of the screen if HubSpot moves things. (HubSpot's markers, checked November 2026.)
-  const RECORD_SPOT = '[data-test-id="properties-list"]';
-  const HELPDESK_SPOT = '[data-test-id="ticket-header-stage-dropdown"]';
+  // Always a floating pill. Out of the box it sits bottom right, above Quick actions; drag it anywhere and
+  // every HubSpot tab uses that spot. It's kept inside the window when the window changes size.
+  function pillSpot(b) {
+    const pos = gmGet('pillPos', null);
+    if (!pos) { b.style.left = ''; b.style.top = ''; b.style.right = '24px'; b.style.bottom = '104px'; return; }
+    const w = b.offsetWidth || 120; const h = b.offsetHeight || 40;
+    b.style.right = ''; b.style.bottom = '';
+    b.style.left = `${Math.max(4, Math.min(innerWidth - w - 4, pos.x))}px`;
+    b.style.top = `${Math.max(4, Math.min(innerHeight - h - 4, pos.y))}px`;
+  }
+  function pillDrag(b) {
+    let down = null; let moved = false;
+    b.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      const r = b.getBoundingClientRect();
+      down = { x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top };
+      moved = false;
+      const move = (ev) => {
+        if (!moved && Math.hypot(ev.clientX - down.x, ev.clientY - down.y) < 5) return;
+        moved = true;
+        b.classList.add('dragging');
+        gmSet('pillPos', { x: ev.clientX - down.dx, y: ev.clientY - down.dy });
+        pillSpot(b);
+      };
+      const up = () => {
+        document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+        b.classList.remove('dragging');
+      };
+      document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    });
+    b.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (moved) { moved = false; return; } // that was a drag, not a click
+      toggleBox();
+    });
+    addEventListener('resize', () => pillSpot(b));
+  }
+
   function placeButton() {
     const b = button();
-    if (!state.show) { const w = b.parentElement; if (w && w.classList.contains('oolio-qs-wrap')) w.remove(); else b.remove(); return; }
-    const anchor = document.querySelector(state.ticket.helpDesk ? HELPDESK_SPOT : RECORD_SPOT);
-    let wrap = b.parentElement && b.parentElement.classList.contains('oolio-qs-wrap') ? b.parentElement : null;
-    if (!wrap) { wrap = document.createElement('div'); wrap.className = 'oolio-qs-wrap'; wrap.appendChild(b); }
-    if (anchor) {
-      wrap.className = 'oolio-qs-wrap oolio-qs-row';
-      if (anchor.nextElementSibling !== wrap) anchor.insertAdjacentElement('afterend', wrap);
-    } else {
-      wrap.className = 'oolio-qs-wrap oolio-qs-float';
-      if (wrap.parentElement !== document.body) document.body.appendChild(wrap);
-    }
+    if (!state.show) { b.remove(); return; }
+    if (b.parentElement !== document.body) { document.body.appendChild(b); pillSpot(b); }
   }
 
   async function onPage() {
@@ -327,7 +353,7 @@
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-label', 'Quick set');
     setHTML(box, `
-      <div class="oolio-qs-head">${PENCIL}<b>Quick set</b><span class="sub"></span><button class="oolio-qs-x" title="Close (Esc)" aria-label="Close">×</button></div>
+      <div class="oolio-qs-head">${HARD_HAT}<b>Quick set</b><span class="sub"></span><button class="oolio-qs-x" title="Close (Esc)" aria-label="Close">×</button></div>
       <div class="oolio-qs-body"><div class="oolio-qs-msg">Loading…</div></div>
       <div class="oolio-qs-foot"><span class="oolio-qs-msg"></span><button class="oolio-qs-save" disabled>Save</button></div>`);
     document.body.appendChild(box);
@@ -617,6 +643,7 @@
       gmSet('everyTicket', !gmGet('everyTicket', false));
       location.reload();
     });
+    GM_registerMenuCommand('Put the Quick set button back bottom right', () => { gmSet('pillPos', null); const b = document.getElementById('oolio-qs-open'); if (b) pillSpot(b); });
     GM_registerMenuCommand('Reload the list of people', () => { gmSet('owners2', null); ownersPromise = null; });
   }
 

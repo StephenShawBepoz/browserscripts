@@ -5,7 +5,7 @@
 Set a ticket's implementation fields in one go, without hunting through the sidebar.
 
 1. Open a ticket in a **BP | Implementation**, **BP | Implementation (Sub-Tickets)**, **BP | Add Ons** or **BP | Upgrades** pipeline, either as a record page or in Help Desk.
-2. Click the orange **Quick set** button under *Ticket status* (or press **Alt + Q**, **Option + Q** on a Mac).
+2. Click the orange **Quick set** pill with the hard hat, bottom right of the screen (or press **Alt + Q**, **Option + Q** on a Mac).
 3. An orange box opens with:
    - **BP | Implementation Category**
    - **Ticket owner**
@@ -20,6 +20,7 @@ Set a ticket's implementation fields in one go, without hunting through the side
 - **Only what you change is saved.** Fields you don't touch are left alone, so you won't undo someone else's change.
 - **HubSpot's own sidebar doesn't redraw by itself**, so after saving click **refresh** in the box to see the new values there.
 - The choices for Implementation Category come straight from HubSpot, so new ones show up by themselves.
+- **Moving the pill.** Drag it anywhere; every HubSpot tab uses the same spot. To put it back bottom right, click the Tampermonkey icon, then **Put the Quick set button back bottom right**.
 - **Moving the box.** Drag it by the orange header and it opens there next time. Double-click the header to put it back top right.
 - **Other pipelines.** Click the Tampermonkey icon, then **Show on every ticket**, to have the button on all tickets.
 - The list of people is remembered for 12 hours. If someone new is missing, click the Tampermonkey icon, then **Reload the list of people**.
