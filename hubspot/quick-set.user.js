@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.3.1
-// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite with the installers invited.
+// @version      0.4.0
+// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite (drag the time, with travel from the nearest office) with the installers invited.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js
@@ -13,8 +13,11 @@
 // @match        https://oolio-hubspot-addons.vercel.app/*
 // @icon         data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTQwLjA5OSAwQzE3My4xODEgMCAyMDAgMjYuNjk3OSAyMDAgNTkuNjMxNEMyMDAgOTIuNTY0OSAxNzMuMTgxIDExOS4yNjMgMTQwLjA5OSAxMTkuMjYzQzEyNC42NzcgMTE5LjI2MyAxMTAuNjE2IDExMy40NjEgOTkuOTk4NiAxMDMuOTNDODkuMzgzNyAxMTMuNDYxIDc1LjMyMjkgMTE5LjI2MyA1OS45MDEgMTE5LjI2M0MyNi44MTg2IDExOS4yNjMgMCA5Mi41NjQ5IDAgNTkuNjMxNEMwIDI2LjY5NzkgMjYuODE4NiAwIDU5LjkwMSAwQzc1LjMyMzIgMCA4OS4zODQxIDUuODAxOTUgMTAwLjAwMSAxNS4zMzI5QzExMC42MTYgNS44MDE3NyAxMjQuNjc3IDAgMTQwLjA5OSAwWk0xNDAuMDk5IDM5LjkxODVDMTI5LjE2MyAzOS45MTg1IDEyMC4yOTcgNDguNzQ0MyAxMjAuMjk3IDU5LjYzMTRDMTIwLjI5NyA3MC41MTg1IDEyOS4xNjMgNzkuMzQ0MiAxNDAuMDk5IDc5LjM0NDJDMTUxLjAzNSA3OS4zNDQyIDE1OS45MDEgNzAuNTE4NSAxNTkuOTAxIDU5LjYzMTRDMTU5LjkwMSA0OC43NDQzIDE1MS4wMzUgMzkuOTE4NSAxNDAuMDk5IDM5LjkxODVaTTU5LjkwMSAzOS45MTg1QzQ4Ljk2NDcgMzkuOTE4NSA0MC4wOTkgNDguNzQ0MyA0MC4wOTkgNTkuNjMxNEM0MC4wOTkgNzAuNTE4NSA0OC45NjQ3IDc5LjM0NDIgNTkuOTAxIDc5LjM0NDJDNzAuODM3MyA3OS4zNDQyIDc5LjcwMyA3MC41MTg1IDc5LjcwMyA1OS42MzE0Qzc5LjcwMyA0OC43NDQzIDcwLjgzNzMgMzkuOTE4NSA1OS45MDEgMzkuOTE4NVoiIGZpbGw9IiM2NzNBQjYiLz4KPC9zdmc+Cg==
 // @grant        GM_registerMenuCommand
+// @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @connect      nominatim.openstreetmap.org
+// @connect      routing.openstreetmap.de
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -66,6 +69,29 @@
 
   const OWNERS_KEEP_MS = 12 * 60 * 60 * 1000; // the list of HubSpot users is remembered for 12 hours
   const SHORTCUT = 'KeyQ'; // Alt + Q (Option + Q on a Mac) opens and closes the box
+
+  // Drive time from the nearest Oolio office, for the travel buffer when booking an onsite. Free, open
+  // services (the same ones Quick actions uses), so there are no keys in this public repo; each answer is
+  // remembered so an address is only looked up once.
+  //   Address lookup: https://operations.osmfoundation.org/policies/nominatim/
+  //   Driving routes: https://routing.openstreetmap.de/about.html
+  const SERVICES = {
+    geocode: 'https://nominatim.openstreetmap.org/search',
+    drive: 'https://routing.openstreetmap.de/routed-car',
+  };
+  const TRAVEL_KEEP_DAYS = 30;
+  const TRAVEL_ROUND_TO = 5; // minutes
+  // Bepoz / Oolio offices (as in Quick actions, from https://www.bepoz.com.au/contact, October 2026)
+  const OFFICES = [
+    { label: 'Melbourne office', lat: -37.79317, lon: 144.93836 },
+    { label: 'Sydney office', lat: -33.92007, lon: 151.18267 },
+    { label: 'Brisbane office', lat: -27.4352, lon: 153.10418 },
+    { label: 'Adelaide office', lat: -34.96593, lon: 138.60865 },
+    { label: 'Perth office', lat: -31.94759, lon: 115.82212 },
+    { label: 'Auckland office', lat: -36.86317, lon: 174.73379 },
+    { label: 'Warrington office', lat: 53.38277, lon: -2.59009 },
+    { label: 'South Carolina office', lat: 34.93248, lon: -80.99886 },
+  ];
 
   const ORANGE = '#ff7a1a';
   const ORANGE_DARK = '#e2620a';
@@ -197,6 +223,72 @@
     return mePromise;
   }
 
+  /* ---------------- Drive time from the nearest office ---------------- */
+
+  const REPO = 'https://github.com/StephenShawBepoz/browserscripts';
+  function getJson(url) {
+    if (typeof GM_xmlhttpRequest !== 'function') return fetch(url, { credentials: 'omit' }).then((r) => r.json());
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'GET', url, timeout: 15000, anonymous: true,
+        headers: { Accept: 'application/json', 'User-Agent': `OolioQuickSet (+${REPO})`, Referer: REPO },
+        onload: (r) => { try { resolve(JSON.parse(r.responseText)); } catch (e) { reject(new Error(`Unreadable reply (${r.status})`)); } },
+        onerror: () => reject(new Error('No reply')), ontimeout: () => reject(new Error('Timed out')),
+      });
+    });
+  }
+  const kmBetween = (a, b) => {
+    const rad = (x) => (x * Math.PI) / 180;
+    const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2;
+    return 12742 * Math.asin(Math.sqrt(h));
+  };
+  // "Shop 3/123 Smith St" or "Level 2, 45 King St" confuse the address lookup; keep the street number and name
+  const streetOnly = (street) => String(street || '').split(',').map((x) => x.trim())
+    .map((x) => x.replace(/^(?:shops?|units?|suites?|levels?|lvl|tenancy|kiosk|lot|building|floor)\s*[\w.-]*\s*[,/]?\s*/i, '').replace(/^[a-z]{0,2}\d+[a-z]?\s*\/\s*(?=\d)/i, ''))
+    .find((x) => /^\d/.test(x)) || String(street || '').trim();
+  async function lookUp(params) {
+    const u = new URL(SERVICES.geocode);
+    u.searchParams.set('format', 'jsonv2');
+    u.searchParams.set('limit', '1');
+    Object.entries(params).forEach(([k, v]) => { if (v) u.searchParams.set(k, v); });
+    const rows = await getJson(u.toString());
+    return Array.isArray(rows) && rows[0] ? { lat: +rows[0].lat, lon: +rows[0].lon } : null;
+  }
+
+  // { minutes, from: 'Perth office', venue } for the ticket's primary company, or null if there's no address
+  const travelPromises = {};
+  function travelFor(t) {
+    if (!travelPromises[t.id]) travelPromises[t.id] = (async () => {
+      const assoc = await hubspot(`crm/v4/objects/0-5/${t.id}/associations/0-2?limit=50`, t.portal);
+      const rows = (assoc && assoc.results) || [];
+      const primary = rows.find((r) => (r.associationTypes || []).some((x) => x.label === 'Primary' || (x.category === 'HUBSPOT_DEFINED' && x.typeId === 26))) || rows[0];
+      if (!primary) return null;
+      const id = String(primary.toObjectId);
+      const kept = gmGet(`travel:${id}`, null);
+      if (kept && Date.now() - kept.at < TRAVEL_KEEP_DAYS * 864e5) return kept.result;
+      const c = await hubspot(`crm/v3/objects/0-2/${id}?properties=name,address,address2,city,state,zip,country,latitude,longitude,longtitude`, t.portal);
+      const p = (c && c.properties) || {};
+      let place = null;
+      const lat = parseFloat(p.latitude); const lon = parseFloat(p.longitude || p.longtitude);
+      if (Math.abs(lat) > 0 && Math.abs(lon) > 0) place = { lat, lon };
+      const street = streetOnly([p.address, p.address2].filter(Boolean).join(', '));
+      if (!place && street) place = await lookUp({ street, city: p.city, state: p.state, postalcode: p.zip, countrycodes: 'au,nz' });
+      if (!place && street) place = await lookUp({ q: [street, p.city, p.state, p.zip].filter(Boolean).join(', '), countrycodes: 'au,nz' });
+      if (!place && (p.city || p.zip)) place = await lookUp({ city: p.city, state: p.state, postalcode: p.zip, countrycodes: 'au,nz' });
+      let result = null;
+      if (place) {
+        const office = OFFICES.reduce((best, o) => (kmBetween(o, place) < kmBetween(best, place) ? o : best));
+        const r = await getJson(`${SERVICES.drive}/route/v1/driving/${office.lon},${office.lat};${place.lon},${place.lat}?overview=false&alternatives=false&steps=false`);
+        const secs = r && r.code === 'Ok' && r.routes && r.routes[0] ? r.routes[0].duration : null;
+        if (secs != null) result = { minutes: Math.max(TRAVEL_ROUND_TO, Math.ceil(secs / 60 / TRAVEL_ROUND_TO) * TRAVEL_ROUND_TO), from: office.label, venue: p.name || '' };
+      }
+      gmSet(`travel:${id}`, { at: Date.now(), result });
+      return result;
+    })().catch((e) => { log('drive time:', e.message); delete travelPromises[t.id]; return null; });
+    return travelPromises[t.id];
+  }
+  const showMinutes = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`);
+
   /* ---------------- Look ---------------- */
 
   function addStyles() {
@@ -242,6 +334,7 @@
       .oolio-qs-menu div small { color: #7c98b6; margin-left: 6px; }
       .oolio-qs-menu div.on { background: #fff1e6; }
       .oolio-qs-menu .grp { cursor: default; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #7c98b6; background: #f5f8fa; }
+      .oolio-qs-drive { margin: 2px 0 8px 136px; font-size: 12px; color: #516f90; }
       .oolio-qs-more { all: unset; cursor: pointer; color: ${ORANGE_DARK}; font-size: 12px; font-weight: 600; margin: 0 0 8px 136px; }
       .oolio-qs-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid #eaf0f6; }
       .oolio-qs-msg { flex: 1; font-size: 12px; color: #516f90; }
@@ -432,6 +525,14 @@
           : f.kind === 'date' ? datePicker(id, start, onChange, f.sameAs)
           : listPicker(id, lists[i] || [], start, onChange));
         body.appendChild(row);
+      });
+      const drive = document.createElement('div');
+      drive.className = 'oolio-qs-drive';
+      drive.textContent = 'Drive: working it out…';
+      body.appendChild(drive);
+      travelFor(t).then((tr) => {
+        drive.textContent = tr ? `Drive: ${showMinutes(tr.minutes)} from the ${tr.from}` : 'Drive: no address on the company';
+        drive.title = 'From the nearest Oolio office, without traffic. Book onsite adds it before and after the visit.';
       });
       const first = body.querySelector('select, input');
       if (first) first.focus();
@@ -656,9 +757,12 @@
     // Unsaved changes go in first, so the ticket matches the invite
     if (Object.keys(changes()).length && !(await save())) return;
     const subject = (state.props && state.props.subject) || '';
+    say('Working out the drive…');
+    const travel = await Promise.race([travelFor(t), new Promise((r) => setTimeout(() => r(null), 6000))]);
     try {
       sessionStorage.setItem(BOOKING_KEY, JSON.stringify({
-        ticket: t.id, at: Date.now(), title: `Onsite: ${subject}`.trim(), subject,
+        ticket: t.id, at: Date.now(), title: `Onsite: ${subject}`.trim(), subject, travel,
+        installDate: (fieldState.install_date && fieldState.install_date.now) || '',
         people: people.map((p) => ({ name: p.name, email: p.email })),
       }));
     } catch (e) { log('could not hand over the installers:', e.message); }
@@ -706,17 +810,18 @@
     }, 500);
   }
 
-  // Runs inside HubSpot's Schedule window: invites the installers handed over by Book onsite
+  // Runs inside HubSpot's Schedule window: drag to pick the time (always), and invites the installers
+  // handed over by Book onsite (with the travel buffer)
   function scheduleWindow() {
     let job = null;
     try { job = JSON.parse(sessionStorage.getItem(BOOKING_KEY) || 'null'); } catch (e) { /* none */ }
-    if (!job || Date.now() - job.at > BOOKING_KEEP_MS) return;
+    if (job && Date.now() - job.at > BOOKING_KEEP_MS) job = null;
     // Only the ticket it was meant for
     try {
       const m = window.parent.location.pathname.match(/\/record\/0-5\/(\d+)/);
-      if (!m || m[1] !== String(job.ticket)) return;
-    } catch (e) { return; }
-    sessionStorage.removeItem(BOOKING_KEY);
+      if (job && (!m || m[1] !== String(job.ticket))) job = null;
+    } catch (e) { job = null; }
+    if (job) sessionStorage.removeItem(BOOKING_KEY);
 
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     async function until(fn, ms = 15000) {
@@ -731,12 +836,25 @@
     const press = (el) => ['mousedown', 'mouseup', 'click'].forEach((type) =>
       el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
 
+    function toast(text, ms = 8000) {
+      document.querySelectorAll('.oolio-qs-toast').forEach((x) => x.remove());
+      const n = document.createElement('div');
+      n.className = 'oolio-qs-toast';
+      n.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483000;background:${ORANGE};color:#fff;font:600 13px/1.3 "Lexend Deca",Helvetica,Arial,sans-serif;padding:8px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80%`;
+      n.textContent = text;
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), ms);
+    }
+
+    const showDay = dragToBook(job && job.travel, toast, setInput, wait);
+    if (!job) return;
+
     function note(missed, added = []) {
       const n = document.createElement('div');
       n.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483000;background:${ORANGE};color:#fff;font:600 13px/1.3 "Lexend Deca",Helvetica,Arial,sans-serif;padding:8px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80%`;
       n.textContent = missed.length
         ? `${added.length ? `Quick set invited ${added.join(', ')}, but couldn't add` : "Quick set couldn't add"} ${missed.join(', ')}. Add them under Attendees by hand.`
-        : `Quick set invited ${added.join(', ')}. Pick the time, then Schedule meeting.`;
+        : `Quick set invited ${added.join(', ')}. Drag down a day to pick the time on site${job.travel ? ` (travel of ${showMinutes(job.travel.minutes)} each way is added)` : ''}, then Schedule meeting.`;
       document.body.appendChild(n);
       setTimeout(() => n.remove(), missed.length ? 12000 : 6000);
     }
@@ -801,9 +919,106 @@
       if (isOpen()) btn.click();
       await wait(200);
       if (isOpen()) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      if (job.installDate) await showDay(job.installDate);
       log('Schedule window: invited', added.join(', ') || 'nobody', missed.length ? `; not found: ${missed.join(', ')}` : '');
       note(missed, added);
     })();
+  }
+
+  // Drag down a day in HubSpot's Schedule calendar to pick the time: an orange block follows the mouse, and
+  // letting go fills in the date, start and end. With a travel buffer (from Book onsite) the drive there and
+  // back shows as striped blocks and is included in the booking, so the installers' calendars are blocked.
+  function dragToBook(travel, toast, setInput, wait) {
+    const CELL = /^WEEK-day-(\d+)-(\d+)-(\d{4})-(\d+)$/; // HubSpot's hour cells: day-month-year-hour
+    const travelMins = travel && travel.minutes > 0 ? travel.minutes : 0;
+    const cellAt = (x, y) => document.elementsFromPoint(x, y).find((e) => CELL.test(e.getAttribute('data-test-id') || ''));
+    const dayKey = (cell) => { const m = cell.getAttribute('data-test-id').match(CELL); return `${m[1]}-${m[2]}-${m[3]}`; };
+    const midnight = (key) => { const c = document.querySelector(`[data-test-id="WEEK-day-${key}-0"]`); return c && c.getBoundingClientRect(); };
+    const minutesAt = (key, y) => { const r = midnight(key); return r ? Math.max(0, Math.min(1440, ((y - r.top) / r.height) * 60)) : 0; };
+    const pad = (n) => String(n).padStart(2, '0');
+    const inputOf = (id) => document.querySelector(`[data-test-id="${id}"] input`);
+    const clock = (mins, twelve) => {
+      const h = Math.floor(mins / 60) % 24; const m = mins % 60;
+      return twelve ? `${((h + 11) % 12) + 1}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}` : `${pad(h)}:${pad(m)}`;
+    };
+    const span = (a, b) => `${clock(a, true).replace(':00', '')}–${clock(b, true).replace(':00', '')}`;
+
+    let drag = null; let swallowClick = false; let layer = null;
+    function draw(key, start, end) {
+      const r = midnight(key);
+      if (!r) return;
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147482000';
+        document.body.appendChild(layer);
+      }
+      const px = (mins) => r.top + (mins / 60) * r.height;
+      const block = (from, to, css, text = '') => `<div style="position:fixed;left:${r.left + 2}px;width:${r.width - 4}px;top:${px(from)}px;height:${Math.max(2, px(to) - px(from))}px;border-radius:4px;box-sizing:border-box;${css}">${text}</div>`;
+      const stripes = `background:repeating-linear-gradient(45deg,rgba(255,122,26,.35) 0 6px,rgba(255,122,26,.12) 6px 12px);border:1px dashed ${ORANGE}`;
+      const label = `<span style="display:block;padding:3px 6px;font:600 11px/1.3 'Lexend Deca',Helvetica,Arial,sans-serif;color:#fff">On site ${esc(span(start, end))}</span>`;
+      setHTML(layer, (travelMins ? block(start - travelMins, start, stripes) + block(end, end + travelMins, stripes) : '')
+        + block(start, end, `background:rgba(255,122,26,.85);border:1px solid ${ORANGE_DARK}`, label));
+    }
+    const clear = () => { if (layer) { layer.remove(); layer = null; } };
+
+    document.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      const cell = cellAt(e.clientX, e.clientY);
+      if (!cell) return;
+      const key = dayKey(cell);
+      drag = { key, y0: e.clientY, m0: minutesAt(key, e.clientY), active: false };
+    }, true);
+    document.addEventListener('mousemove', (e) => {
+      if (!drag) return;
+      if (!drag.active && Math.abs(e.clientY - drag.y0) < 8) return;
+      if (!drag.active) { drag.active = true; document.body.style.userSelect = 'none'; }
+      e.preventDefault();
+      const m1 = minutesAt(drag.key, e.clientY);
+      drag.start = Math.floor(Math.min(drag.m0, m1) / 15) * 15;
+      drag.end = Math.max(drag.start + 15, Math.ceil(Math.max(drag.m0, m1) / 15) * 15);
+      draw(drag.key, drag.start, drag.end);
+    }, true);
+    document.addEventListener('mouseup', (e) => {
+      const d = drag; drag = null;
+      document.body.style.userSelect = '';
+      if (!d || !d.active) return;
+      e.preventDefault(); e.stopPropagation();
+      swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
+      apply(d.key, d.start, d.end);
+    }, true);
+    document.addEventListener('click', (e) => { if (swallowClick) { e.preventDefault(); e.stopPropagation(); swallowClick = false; } }, true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drag) { drag = null; document.body.style.userSelect = ''; clear(); } }, true);
+
+    // Open the calendar on a given day (Book onsite passes the Install Date), keeping the times as they are
+    return async function showDay(isoDate) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate || '');
+      const dateIn = inputOf('date-picker-start');
+      if (!m || !dateIn) return;
+      const want = (dateIn.getAttribute('data-format') || 'DD/MM/YYYY').replace('DD', m[3]).replace('MM', m[2]).replace('YYYY', m[1]);
+      if (dateIn.value === want) return;
+      dateIn.focus(); setInput(dateIn, want); await wait(250);
+      ['keydown', 'keyup'].forEach((type) => dateIn.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })));
+      dateIn.blur();
+    };
+
+    async function apply(key, start, end) {
+      const from = Math.max(0, start - travelMins); const to = Math.min(1439, end + travelMins);
+      const [dd, mm, yyyy] = key.split('-').map(Number);
+      const dateIn = inputOf('date-picker-start'); const startIn = inputOf('time-picker-start'); const endIn = inputOf('time-picker-end');
+      if (!dateIn || !startIn || !endIn) { clear(); toast("Couldn't find HubSpot's date and time boxes. Type the times in instead."); return; }
+      const fmt = (dateIn.getAttribute('data-format') || 'DD/MM/YYYY').replace('DD', pad(dd)).replace('MM', pad(mm)).replace('YYYY', yyyy);
+      const twelve = /am|pm/i.test(startIn.value || startIn.placeholder || 'AM');
+      const enter = (el) => ['keydown', 'keyup'].forEach((type) => el.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })));
+      const put = async (el, v) => { el.focus(); setInput(el, v); await wait(250); enter(el); el.blur(); await wait(250); };
+      await put(dateIn, fmt);
+      await put(startIn, clock(from, twelve)); // HubSpot moves the end to keep the length, so the end goes last
+      await put(endIn, clock(to, twelve));
+      clear();
+      const ok = startIn.value.replace(/\s/g, '').toLowerCase() === clock(from, twelve).replace(/\s/g, '').toLowerCase();
+      toast(!ok ? "HubSpot didn't take the new time. Check Start and End before you schedule."
+        : travelMins ? `On site ${span(start, end)}, booked ${span(from, to)} with ${showMinutes(travelMins)} travel each way from the ${travel.from}.`
+          : `Booked ${span(from, to)}.`, 9000);
+    }
   }
 
   // Drag the box by its orange header; it remembers where you left it
