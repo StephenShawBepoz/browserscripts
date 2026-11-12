@@ -2,6 +2,9 @@
 
 ## HubSpot: Quick set
 
+### 0.3.1 (12/11/2026)
+- **Book onsite** now reliably ticks each installer in Attendees, including people listed under *Users*. It waits for the Schedule window to finish loading, checks each person is ticked (trying again if not), then clears the search and closes the list. The orange note says who was invited and who couldn't be added.
+
 ### 0.3.0 (12/11/2026)
 - New **Book onsite** button. It opens HubSpot's Schedule window for the ticket with every installer invited and the title *Onsite: [ticket name]*. Pick a time and click Schedule meeting. Works on record pages and in Help Desk.
 
