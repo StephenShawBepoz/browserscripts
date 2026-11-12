@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.4.0
+// @version      0.5.0
 // @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite (drag the time, with travel from the nearest office) with the installers invited.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -253,6 +253,23 @@
     Object.entries(params).forEach(([k, v]) => { if (v) u.searchParams.set(k, v); });
     const rows = await getJson(u.toString());
     return Array.isArray(rows) && rows[0] ? { lat: +rows[0].lat, lon: +rows[0].lon } : null;
+  }
+
+  // The record's primary company (a company record is its own), or null
+  async function primaryCompanyId(portal, type, id) {
+    if (type === '0-2') return String(id);
+    const assoc = await hubspot(`crm/v4/objects/${type}/${id}/associations/0-2?limit=50`, portal);
+    const rows = (assoc && assoc.results) || [];
+    const primary = rows.find((r) => (r.associationTypes || []).some((x) => x.label === 'Primary' || (x.category === 'HUBSPOT_DEFINED' && [1, 5, 26, 280].includes(x.typeId)))) || rows[0];
+    return primary ? String(primary.toObjectId) : null;
+  }
+  // "Unit 7/652 Northeast Road, Holden Hill SA 5088"
+  async function companyAddress(portal, companyId) {
+    const c = await hubspot(`crm/v3/objects/0-2/${companyId}?properties=name,address,address2,city,state,zip`, portal);
+    const p = (c && c.properties) || {};
+    const street = [p.address, p.address2].map((x) => String(x || '').trim()).filter(Boolean).join(', ');
+    const town = [p.city, p.state, p.zip].map((x) => String(x || '').trim()).filter(Boolean).join(' ');
+    return { name: p.name || '', text: [street, town].filter(Boolean).join(', ') };
   }
 
   // { minutes, from: 'Perth office', venue } for the ticket's primary company, or null if there's no address
@@ -847,6 +864,7 @@
     }
 
     const showDay = dragToBook(job && job.travel, toast, setInput, wait);
+    fillAddress(toast, setInput);
     if (!job) return;
 
     function note(missed, added = []) {
@@ -925,6 +943,38 @@
     })();
   }
 
+  // Location > In-person shows an empty Address box: put the primary company's address in it. Only an empty
+  // box is filled, and only once each time it appears, so clearing it or typing your own sticks.
+  function fillAddress(toast, setInput) {
+    let rec = null;
+    try {
+      const m = window.parent.location.pathname.match(/^\/contacts\/(\d+)\/record\/(0-[1235])\/(\d+)/);
+      if (m) rec = { portal: m[1], type: m[2], id: m[3] };
+    } catch (e) { /* not a record page */ }
+    if (!rec) return;
+    let addressPromise = null;
+    const address = () => addressPromise || (addressPromise = primaryCompanyId(rec.portal, rec.type, rec.id)
+      .then((cid) => (cid ? companyAddress(rec.portal, cid) : null))
+      .catch((e) => { log('company address:', e.message); addressPromise = null; return null; }));
+    const box = () => document.querySelector('input[data-test-id="location-type-input"], [data-test-id="location-type-input"] input');
+    let busy = false;
+    new MutationObserver(async () => {
+      const input = box();
+      if (!input || busy || input.dataset.oolioQsTried || input.value.trim()) return;
+      busy = true;
+      input.dataset.oolioQsTried = '1';
+      const a = await address();
+      busy = false;
+      const now = box();
+      if (!a || !a.text) { toast('No address on the company to put in.', 5000); return; }
+      if (now && !now.value.trim()) {
+        setInput(now, a.text);
+        now.blur();
+        toast(`Address from ${a.name || 'the company'}: ${a.text}`, 6000);
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   // Drag down a day in HubSpot's Schedule calendar to pick the time: an orange block follows the mouse, and
   // letting go fills in the date, start and end. With a travel buffer (from Book onsite) the drive there and
   // back shows as striped blocks and is included in the booking, so the installers' calendars are blocked.
@@ -974,6 +1024,8 @@
     }, true);
     document.addEventListener('mousemove', (e) => {
       if (!drag) return;
+      // Let go outside this window (over the Quick set box, say): finish where the block last was
+      if (e.buttons === 0) { const d = drag; drag = null; document.body.style.userSelect = ''; if (d.active) apply(d.key, d.start, d.end); else clear(); return; }
       if (!drag.active && Math.abs(e.clientY - drag.y0) < 8) return;
       if (!drag.active) { drag.active = true; document.body.style.userSelect = 'none'; }
       e.preventDefault();
