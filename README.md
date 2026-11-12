@@ -60,7 +60,7 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-actions.user.js)** · [How to use](docs/quick-actions.md)
 
 #### Quick set
-**Set the implementation fields on a ticket in one go.** A floating orange **Quick set** pill (with a hard hat) on BP Implementation, Add Ons and Upgrades tickets opens a box to set *BP | Implementation Category*, *Ticket owner*, *Project Manager / Co-Ordinator* (one click on **Me** for yourself), *Install Date*, *Go Live Date* and *Installer* 1 to 5, with the *Accounts Status* shown alongside (view only). Type a name to pick someone, then **Save**. **Book onsite** opens HubSpot's Schedule window with the installers already invited. **Alt + Q** opens the box from the keyboard.
+**Set the implementation fields on a ticket in one go.** A floating orange **Quick set** pill (with a hard hat) on BP Implementation, Add Ons and Upgrades tickets opens a box to set *BP | Implementation Category*, *Ticket owner*, *Project Manager / Co-Ordinator* (one click on **Me** for yourself), *Install Date*, *Go Live Date* and *Installer* 1 to 5, with the *Accounts Status* shown alongside (view only). Type a name to pick someone, then **Save**. **Book onsite** opens HubSpot's Schedule window with the installers already invited: drag down a day to pick the time, and the drive from the nearest office is added either side. **Alt + Q** opens the box from the keyboard.
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js)** · [How to use](docs/quick-set.md)
 

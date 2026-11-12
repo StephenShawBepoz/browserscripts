@@ -21,12 +21,15 @@ Click **Book onsite** at the bottom left of the box to book the visit in HubSpot
 
 1. Pick the installers in the box (Installer 1 to 5). If you've changed anything, Book onsite saves it first.
 2. Click **Book onsite**. HubSpot's Schedule window opens with the title *Onsite: [ticket name]* and every installer added under **Attendees**. An orange note at the top says who was invited.
-3. Pick the day and time, then click **Schedule meeting** as usual. Nothing is booked until you do, and the meeting is logged on the ticket like any other.
+3. The calendar opens on the **Install Date** week (if the ticket has one). **Drag down a day** to mark the time you'll be on site. Striped blocks above and below show the drive there and back, and the booking covers both, so the installers' calendars are blocked for the travel too. Start date, Start time and End time fill themselves in, and an orange note says, for example, *On site 9 AM–1 PM, booked 8:35 AM–1:25 PM with 25 min travel each way from the Adelaide office*.
+4. Check it, then click **Schedule meeting** as usual. Nothing is booked until you do, and the meeting is logged on the ticket like any other.
 
 - Installers are matched by their HubSpot email. If someone can't be found, the orange note says so; add them under Attendees by hand.
 - Anyone already invited isn't added twice.
 - In Help Desk, the Schedule window opens over the page and closes by itself once you schedule or cancel. **×** top right closes it too.
 - If you've typed your own title, it's left alone.
+- **Drive time** is shown in the box under the fields, for example *Drive: 25 min from the Adelaide office*. It's worked out from the ticket's primary company address and the nearest Oolio office, by car without traffic, rounded up to 5 minutes, and remembered for 30 days. If the company has no address, there's no travel buffer.
+- **Dragging works in any Schedule window**, not just Book onsite (without the travel blocks). Press **Esc** while dragging to cancel. A plain click still does what HubSpot normally does.
 
 ## Tips
 

@@ -2,6 +2,11 @@
 
 ## HubSpot: Quick set
 
+### 0.4.0 (12/11/2026)
+- **Drag to pick the time.** In HubSpot's Schedule window, drag down a day: an orange block follows the mouse and the date, start and end fill themselves in. Works in any Schedule window.
+- **Travel buffer.** The box shows the drive from the nearest Oolio office (for example *25 min from the Adelaide office*). After **Book onsite**, dragging shows the drive there and back as striped blocks and books the whole lot, so installers' calendars are blocked for travel too.
+- **Book onsite** opens the calendar on the Install Date's week.
+
 ### 0.3.1 (12/11/2026)
 - **Book onsite** now reliably ticks each installer in Attendees, including people listed under *Users*. It waits for the Schedule window to finish loading, checks each person is ticked (trying again if not), then clears the search and closes the list. The orange note says who was invited and who couldn't be added.
 
