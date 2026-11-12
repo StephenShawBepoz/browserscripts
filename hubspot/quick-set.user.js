@@ -763,7 +763,10 @@
         if (!isOpen()) { btn.click(); await until(isOpen, 3000); }
         return until(() => pop() && pop().querySelector('input[type="search"]'), 3000);
       }
-      // The ticked row for this email, looked up fresh each time (HubSpot redraws the list as results arrive)
+      // Each result row holds a real tick box; its checked state is what HubSpot uses (aria-selected stays false)
+      const tickBox = (row) => row && row.querySelector('input[type="checkbox"]');
+      const isTicked = (row) => { const cb = tickBox(row); return cb ? cb.checked : row.getAttribute('aria-selected') === 'true'; };
+      // The row for this email, looked up fresh each time (HubSpot redraws the list as results arrive)
       const rowFor = (email) => {
         const p = pop();
         const row = p && [...p.querySelectorAll('[role="option"]')].find((o) => !o.querySelector('button') && o.textContent.toLowerCase().includes(email));
@@ -783,9 +786,10 @@
           await wait(450);
           const row = rowFor(email);
           if (!row) continue;
-          if (row.getAttribute('aria-selected') === 'true') { ok = true; break; } // already invited
-          press(attempt === 1 ? (row.querySelector('label') || row) : row); // the row worked in testing; the label is a fallback
-          ok = !!(await until(() => { const r = rowFor(email); return r && r.getAttribute('aria-selected') === 'true'; }, 1500));
+          if (isTicked(row)) { ok = true; break; } // already invited
+          const cb = tickBox(row);
+          if (cb && attempt === 0) cb.click(); else press(row); // the tick box first, the row as a fallback
+          ok = !!(await until(() => isTicked(rowFor(email)), 2000));
           if (!ok) log(`Schedule window: ${person.name} not ticked yet, trying again`);
         }
         (ok ? added : missed).push(person.name);
