@@ -2,6 +2,11 @@
 
 ## HubSpot: Quick set
 
+### 0.5.0 (12/11/2026)
+- **In-person address.** Choosing **Location > In-person** in HubSpot's Schedule window fills the empty Address box with the company's address, and says which company it came from.
+- When a ticket has no company marked *Primary* (common on sub-tickets), Quick set now uses the company named in the ticket, for both the address and the drive time, instead of whichever HubSpot lists first.
+- A drag that you let go outside the calendar (over the Quick set box, say) now still sets the time instead of leaving the orange block on screen.
+
 ### 0.4.0 (12/11/2026)
 - **Drag to pick the time.** In HubSpot's Schedule window, drag down a day: an orange block follows the mouse and the date, start and end fill themselves in. Works in any Schedule window.
 - **Travel buffer.** The box shows the drive from the nearest Oolio office (for example *25 min from the Adelaide office*). After **Book onsite**, dragging shows the drive there and back as striped blocks and books the whole lot, so installers' calendars are blocked for travel too.

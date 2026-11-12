@@ -29,7 +29,8 @@ Click **Book onsite** at the bottom left of the box to book the visit in HubSpot
 - In Help Desk, the Schedule window opens over the page and closes by itself once you schedule or cancel. **×** top right closes it too.
 - If you've typed your own title, it's left alone.
 - **Drive time** is shown in the box under the fields, for example *Drive: 25 min from the Adelaide office*. It's worked out from the ticket's primary company address and the nearest Oolio office, by car without traffic, rounded up to 5 minutes, and remembered for 30 days. If the company has no address, there's no travel buffer.
-- **Dragging works in any Schedule window**, not just Book onsite (without the travel blocks). Press **Esc** while dragging to cancel. A plain click still does what HubSpot normally does.
+- **In-person address.** Pick **Location > In-person** and the empty Address box fills with the company's address (the ticket's primary company; with none marked primary, the company named in the ticket). An orange note says which company it came from. It only fills an empty box, so you can type over it. Works on ticket, deal and contact records.
+- **Dragging works in any Schedule window**, not just Book onsite (without the travel blocks). Press **Esc** while dragging to cancel. If you let go outside the calendar, the time is still set when the mouse comes back. A plain click still does what HubSpot normally does.
 
 ## Tips
 
