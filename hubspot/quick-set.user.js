@@ -1,21 +1,21 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.2.0
-// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, with the Accounts Status alongside.
+// @version      0.3.0
+// @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite with the installers invited.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js
 // @downloadURL  https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/quick-set.user.js
 // @match        https://app.hubspot.com/help-desk/*
 // @match        https://app.hubspot.com/contacts/*
+// @match        https://app.hubspot.com/calendar-select-iframe/*
 // @match        https://oolio-hubspot-addons.vercel.app/*
 // @icon         data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTQwLjA5OSAwQzE3My4xODEgMCAyMDAgMjYuNjk3OSAyMDAgNTkuNjMxNEMyMDAgOTIuNTY0OSAxNzMuMTgxIDExOS4yNjMgMTQwLjA5OSAxMTkuMjYzQzEyNC42NzcgMTE5LjI2MyAxMTAuNjE2IDExMy40NjEgOTkuOTk4NiAxMDMuOTNDODkuMzgzNyAxMTMuNDYxIDc1LjMyMjkgMTE5LjI2MyA1OS45MDEgMTE5LjI2M0MyNi44MTg2IDExOS4yNjMgMCA5Mi41NjQ5IDAgNTkuNjMxNEMwIDI2LjY5NzkgMjYuODE4NiAwIDU5LjkwMSAwQzc1LjMyMzIgMCA4OS4zODQxIDUuODAxOTUgMTAwLjAwMSAxNS4zMzI5QzExMC42MTYgNS44MDE3NyAxMjQuNjc3IDAgMTQwLjA5OSAwWk0xNDAuMDk5IDM5LjkxODVDMTI5LjE2MyAzOS45MTg1IDEyMC4yOTcgNDguNzQ0MyAxMjAuMjk3IDU5LjYzMTRDMTIwLjI5NyA3MC41MTg1IDEyOS4xNjMgNzkuMzQ0MiAxNDAuMDk5IDc5LjM0NDJDMTUxLjAzNSA3OS4zNDQyIDE1OS45MDEgNzAuNTE4NSAxNTkuOTAxIDU5LjYzMTRDMTU5LjkwMSA0OC43NDQzIDE1MS4wMzUgMzkuOTE4NSAxNDAuMDk5IDM5LjkxODVaTTU5LjkwMSAzOS45MTg1QzQ4Ljk2NDcgMzkuOTE4NSA0MC4wOTkgNDguNzQ0MyA0MC4wOTkgNTkuNjMxNEM0MC4wOTkgNzAuNTE4NSA0OC45NjQ3IDc5LjM0NDIgNTkuOTAxIDc5LjM0NDJDNzAuODM3MyA3OS4zNDQyIDc5LjcwMyA3MC41MTg1IDc5LjcwMyA1OS42MzE0Qzc5LjcwMyA0OC43NDQzIDcwLjgzNzMgMzkuOTE4NSA1OS45MDEgMzkuOTE4NVoiIGZpbGw9IiM2NzNBQjYiLz4KPC9zdmc+Cg==
 // @grant        GM_registerMenuCommand
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @run-at       document-idle
-// @noframes
 // ==/UserScript==
 
 (function () {
@@ -32,6 +32,13 @@
   // A second copy (installed twice) stays out of the way
   if (window.__oolioQuickSet) return;
   window.__oolioQuickSet = true;
+
+  // Hand-over to HubSpot's Schedule window (it's a separate frame): who to invite, kept for a couple of minutes
+  const BOOKING_KEY = 'oolio-quick-set-booking';
+  const BOOKING_KEEP_MS = 2 * 60 * 1000;
+
+  const IN_SCHEDULE_WINDOW = location.pathname.startsWith('/calendar-select-iframe/');
+  if (!IN_SCHEDULE_WINDOW && window.top !== window) return; // e.g. a ticket page loaded inside Help Desk
 
   /* ---------------- Things you might want to change ---------------- */
 
@@ -240,6 +247,10 @@
       .oolio-qs-msg { flex: 1; font-size: 12px; color: #516f90; }
       .oolio-qs-msg.err { color: #d93f4c; }
       .oolio-qs-msg.ok { color: #00a36c; }
+      .oolio-qs-book { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border: 2px solid ${ORANGE}; color: ${ORANGE_DARK};
+        font-weight: 600; font-size: 13px; padding: 6px 10px; border-radius: 6px; flex: none; }
+      .oolio-qs-book:hover { background: #fff1e6; }
+      .oolio-qs-book svg { width: 15px; height: 15px; }
       .oolio-qs-save { all: unset; cursor: pointer; background: ${ORANGE}; color: #fff; font-weight: 600; font-size: 13px; padding: 8px 14px; border-radius: 6px; }
       .oolio-qs-save[disabled] { opacity: .45; cursor: default; }
       .oolio-qs-save:not([disabled]):hover { background: ${ORANGE_DARK}; }
@@ -364,10 +375,11 @@
     setHTML(box, `
       <div class="oolio-qs-head">${HARD_HAT}<b>Quick set</b><span class="sub"></span><button class="oolio-qs-x" title="Close (Esc)" aria-label="Close">×</button></div>
       <div class="oolio-qs-body"><div class="oolio-qs-msg">Loading…</div></div>
-      <div class="oolio-qs-foot"><span class="oolio-qs-msg"></span><button class="oolio-qs-save" disabled>Save</button></div>`);
+      <div class="oolio-qs-foot"><button class="oolio-qs-book" title="Open HubSpot's Schedule window with the installers invited">${CALENDAR}<span>Book onsite</span></button><span class="oolio-qs-msg"></span><button class="oolio-qs-save" disabled>Save</button></div>`);
     document.body.appendChild(box);
     box.querySelector('.oolio-qs-x').addEventListener('click', closeBox);
     box.querySelector('.oolio-qs-save').addEventListener('click', save);
+    box.querySelector('.oolio-qs-book').addEventListener('click', bookOnsite);
     box.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !box.querySelector('.oolio-qs-menu')) { e.stopPropagation(); closeBox(); }
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
@@ -382,6 +394,7 @@
       ]);
       if (box !== myBox) return;
       state.props = props;
+      state.people = people;
       box.querySelector('.sub').textContent = props.subject || `Ticket ${t.id}`;
       fieldState = {};
       const body = box.querySelector('.oolio-qs-body');
@@ -596,7 +609,7 @@
   async function save() {
     const t = state.ticket;
     const props = changes();
-    if (!box || !t || saving || !Object.keys(props).length) return;
+    if (!box || !t || saving || !Object.keys(props).length) return false;
     saving = true;
     const b = box.querySelector('.oolio-qs-save');
     const m = box.querySelector('.oolio-qs-foot .oolio-qs-msg');
@@ -611,14 +624,155 @@
       m.className = 'oolio-qs-msg ok';
       setHTML(m, `Saved. HubSpot shows it after a <button class="oolio-qs-link">refresh</button>.`);
       m.querySelector('.oolio-qs-link').addEventListener('click', () => location.reload());
+      return true;
     } catch (e) {
       log('save failed:', e);
       m.className = 'oolio-qs-msg err';
       m.textContent = `Not saved. ${e.message}`;
       refreshSave();
+      return false;
     } finally {
       saving = false;
     }
+  }
+
+  /* ---------------- Book onsite ---------------- */
+  // Opens HubSpot's own Schedule window for this ticket and invites the installers in the box, so the meeting is
+  // logged on the ticket as usual. Nothing is booked until you click Schedule there.
+
+  const CALENDAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>';
+
+  async function bookOnsite() {
+    const t = state.ticket;
+    if (!box || !t) return;
+    const m = box.querySelector('.oolio-qs-foot .oolio-qs-msg');
+    const say = (text, cls = '') => { m.className = `oolio-qs-msg ${cls}`; m.textContent = text; };
+    const byId = new Map((state.people || []).map((p) => [p.id, p]));
+    const people = FIELDS.filter((f) => /^installer/.test(f.name))
+      .map((f) => fieldState[f.name] && fieldState[f.name].now).filter(Boolean)
+      .filter((id, i, a) => a.indexOf(id) === i)
+      .map((id) => byId.get(id)).filter((p) => p && p.email);
+    if (!people.length) { say('Pick an installer first.', 'err'); return; }
+    // Unsaved changes go in first, so the ticket matches the invite
+    if (Object.keys(changes()).length && !(await save())) return;
+    const subject = (state.props && state.props.subject) || '';
+    try {
+      sessionStorage.setItem(BOOKING_KEY, JSON.stringify({
+        ticket: t.id, at: Date.now(), title: `Onsite: ${subject}`.trim(), subject,
+        people: people.map((p) => ({ name: p.name, email: p.email })),
+      }));
+    } catch (e) { log('could not hand over the installers:', e.message); }
+    log('booking onsite with', people.map((p) => p.name).join(', '));
+    closeBox();
+    if (t.helpDesk) { scheduleOverlay(t); return; }
+    const sched = document.querySelector('[data-selenium-test="create-engagement-schedule-button"]');
+    if (sched) sched.click();
+    else location.assign(`/contacts/${t.portal}/record/0-5/${t.id}?interaction=schedule`);
+  }
+
+  // Help Desk has no Schedule window of its own, so the ticket's record page opens over it with the window
+  // already open (HubSpot's ?interaction=schedule). It closes itself once you schedule or cancel.
+  function scheduleOverlay(t) {
+    if (document.getElementById('oolio-qs-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'oolio-qs-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483003;background:rgba(34,34,34,.55)';
+    const frame = document.createElement('iframe');
+    frame.src = `/contacts/${t.portal}/record/0-5/${t.id}?interaction=schedule`;
+    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .2s';
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.title = 'Close (Esc)';
+    x.textContent = '×';
+    x.style.cssText = `position:absolute;top:14px;right:16px;z-index:2;width:36px;height:36px;border:0;border-radius:50%;cursor:pointer;background:#fff;color:${ORANGE_DARK};font:700 22px/36px sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.2)`;
+    overlay.append(frame, x);
+    document.body.appendChild(overlay);
+    let shown = false;
+    const close = (ask) => {
+      if (ask && shown && !confirm('Close without scheduling? Anything you have entered will be lost.')) return;
+      clearInterval(timer); overlay.remove(); document.removeEventListener('keydown', onEsc, true);
+    };
+    const onEsc = (e) => { if (e.key === 'Escape') close(true); };
+    document.addEventListener('keydown', onEsc, true);
+    x.addEventListener('click', () => close(true));
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries++;
+      let d; try { d = frame.contentDocument; } catch (e) { return; }
+      const sched = d && [...d.querySelectorAll('iframe')].find((f) => /calendar-select-iframe/.test(f.src) && f.getBoundingClientRect().width > 0);
+      if (sched && !shown) { shown = true; frame.style.opacity = '1'; }
+      if (!shown && tries > 60) { close(false); alert("HubSpot's Schedule window didn't open. Try Book onsite from the ticket's record page."); }
+      if (shown && !sched) setTimeout(() => close(false), 600); // scheduled or cancelled
+    }, 500);
+  }
+
+  // Runs inside HubSpot's Schedule window: invites the installers handed over by Book onsite
+  function scheduleWindow() {
+    let job = null;
+    try { job = JSON.parse(sessionStorage.getItem(BOOKING_KEY) || 'null'); } catch (e) { /* none */ }
+    if (!job || Date.now() - job.at > BOOKING_KEEP_MS) return;
+    // Only the ticket it was meant for
+    try {
+      const m = window.parent.location.pathname.match(/\/record\/0-5\/(\d+)/);
+      if (!m || m[1] !== String(job.ticket)) return;
+    } catch (e) { return; }
+    sessionStorage.removeItem(BOOKING_KEY);
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function until(fn, ms = 15000) {
+      for (let waited = 0; waited < ms; waited += 150) { const v = fn(); if (v) return v; await wait(150); }
+      return null;
+    }
+    const setInput = (input, value) => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const press = (el) => ['mousedown', 'mouseup', 'click'].forEach((type) =>
+      el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
+
+    function note(missed) {
+      const n = document.createElement('div');
+      n.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483000;background:${ORANGE};color:#fff;font:600 13px/1.3 "Lexend Deca",Helvetica,Arial,sans-serif;padding:8px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80%`;
+      n.textContent = missed.length
+        ? `Quick set couldn't find ${missed.join(', ')} in Attendees. Add them by hand.`
+        : `Quick set invited ${job.people.map((p) => p.name).join(', ')}. Pick the time, then Schedule.`;
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), missed.length ? 12000 : 6000);
+    }
+
+    (async () => {
+      const btn = await until(() => document.querySelector('[data-test-id="unified-attendee-select"] button[data-dropdown]'));
+      if (!btn) { log('Schedule window: no Attendees box found'); note(job.people.map((p) => p.name)); return; }
+
+      // Title, unless someone's already typed their own (Quick actions puts in the ticket name, which is fine to replace)
+      const title = document.querySelector('input[data-test-id="title-input"]');
+      if (title && (!title.value.trim() || title.value.trim() === job.subject.trim())) setInput(title, job.title);
+
+      const missed = [];
+      for (const person of job.people) {
+        if (btn.getAttribute('data-dropdown-open') !== 'true') { btn.click(); await wait(400); }
+        const pop = () => document.getElementById(btn.getAttribute('aria-owns'));
+        const search = await until(() => pop() && pop().querySelector('input[type="search"]'), 5000);
+        if (!search) { missed.push(person.name); continue; }
+        setInput(search, person.email);
+        const email = person.email.toLowerCase();
+        const option = await until(() => {
+          const p = pop();
+          const row = p && [...p.querySelectorAll('[role="option"]')].find((o) => !o.querySelector('button') && o.textContent.toLowerCase().includes(email));
+          return row ? (row.querySelector('[role="option"]') || row) : null;
+        }, 6000);
+        if (!option) { missed.push(person.name); log('Schedule window: no match for', person.email); continue; }
+        if (option.getAttribute('aria-selected') !== 'true') press(option); // already invited: leave it
+        await wait(500);
+      }
+      // Tidy up: clear the search and close the list
+      const p = document.getElementById(btn.getAttribute('aria-owns'));
+      const search = p && p.querySelector('input[type="search"]');
+      if (search) setInput(search, '');
+      if (btn.getAttribute('data-dropdown-open') === 'true') btn.click();
+      note(missed);
+    })();
   }
 
   // Drag the box by its orange header; it remembers where you left it
@@ -641,6 +795,8 @@
   }
 
   /* ---------------- Start ---------------- */
+
+  if (IN_SCHEDULE_WINDOW) { scheduleWindow(); return; }
 
   addStyles();
   document.addEventListener('keydown', (e) => {
