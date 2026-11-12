@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.5.1
+// @version      0.6.0
 // @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite (drag the time, with travel from the nearest office) with the installers invited.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -373,6 +373,18 @@
       .oolio-qs-save { all: unset; cursor: pointer; background: ${ORANGE}; color: #fff; font-weight: 600; font-size: 13px; padding: 8px 14px; border-radius: 6px; }
       .oolio-qs-save[disabled] { opacity: .45; cursor: default; }
       .oolio-qs-save:not([disabled]):hover { background: ${ORANGE_DARK}; }
+      .oolio-qs-hold { padding: 6px 8px; }
+      .oolio-qs-holds { margin: 0 0 8px; border: 1px dashed ${ORANGE}; border-radius: 8px; padding: 6px 8px; background: #fff8f2; }
+      .oolio-qs-holds b { display: block; font-size: 12px; color: ${ORANGE_DARK}; margin-bottom: 4px; }
+      .oolio-qs-hrow { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0; }
+      .oolio-qs-hrow span { flex: 1; }
+      .oolio-qs-hrow small { color: #7c98b6; }
+      .oolio-qs-hrow button { all: unset; cursor: pointer; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 5px; }
+      .oolio-qs-hrow .yes { background: ${ORANGE}; color: #fff; }
+      .oolio-qs-hrow .yes:hover { background: ${ORANGE_DARK}; }
+      .oolio-qs-hrow .no { color: #516f90; border: 1px solid #cbd6e2; }
+      .oolio-qs-hrow .no:hover { background: #f5f8fa; }
+      .oolio-qs-hrow button[disabled] { opacity: .5; cursor: default; }
       .oolio-qs-link { all: unset; cursor: pointer; color: #0091ae; font-size: 12px; text-decoration: underline; }
     `;
     document.head.appendChild(s);
@@ -494,11 +506,12 @@
     setHTML(box, `
       <div class="oolio-qs-head">${HARD_HAT}<b>Quick set</b><span class="sub"></span><button class="oolio-qs-x" title="Close (Esc)" aria-label="Close">×</button></div>
       <div class="oolio-qs-body"><div class="oolio-qs-msg">Loading…</div></div>
-      <div class="oolio-qs-foot"><button class="oolio-qs-book" title="Open HubSpot's Schedule window with the installers invited">${CALENDAR}<span>Book onsite</span></button><span class="oolio-qs-msg"></span><button class="oolio-qs-save" disabled>Save</button></div>`);
+      <div class="oolio-qs-foot"><button class="oolio-qs-book" title="Open HubSpot's Schedule window with the installers invited">${CALENDAR}<span>Book onsite</span></button><button class="oolio-qs-book oolio-qs-hold" title="Hold the installers' time while you wait on the customer. Books it like Book onsite, marked HOLD. Confirm or release it here later.">${HOURGLASS}<span>Hold</span></button><span class="oolio-qs-msg"></span><button class="oolio-qs-save" disabled>Save</button></div>`);
     document.body.appendChild(box);
     box.querySelector('.oolio-qs-x').addEventListener('click', closeBox);
     box.querySelector('.oolio-qs-save').addEventListener('click', save);
-    box.querySelector('.oolio-qs-book').addEventListener('click', bookOnsite);
+    box.querySelector('.oolio-qs-book:not(.oolio-qs-hold)').addEventListener('click', () => bookOnsite(false));
+    box.querySelector('.oolio-qs-hold').addEventListener('click', () => bookOnsite(true));
     box.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !box.querySelector('.oolio-qs-menu')) { e.stopPropagation(); closeBox(); }
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
@@ -560,6 +573,7 @@
         drive.textContent = tr ? `Drive: ${showMinutes(tr.minutes)} from the ${tr.from}` : 'Drive: no address on the company';
         drive.title = 'From the nearest Oolio office, without traffic. Book onsite adds it before and after the visit.';
       });
+      showHolds(t, body, myBox);
       const first = body.querySelector('select, input');
       if (first) first.focus();
       refreshSave();
@@ -769,7 +783,85 @@
 
   const CALENDAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>';
 
-  async function bookOnsite() {
+  const HOURGLASS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>';
+
+  /* ---------------- Holds ---------------- */
+  // A hold is an ordinary HubSpot meeting whose title starts with HOLD, so it blocks the installers' calendars
+  // like any booking. Confirm takes HOLD off the title; Release marks the meeting cancelled.
+  const HOLD_PREFIX = 'HOLD – ';
+  const HOLD_TITLE = /^\s*HOLD\b\s*[–:-]?\s*/i;
+  const HOLD_NOTE = "ON HOLD: waiting on the customer to confirm. Don't go until it's confirmed (HOLD comes off the title).";
+
+  async function ticketHolds(t) {
+    const a = await hubspot(`crm/v4/objects/0-5/${t.id}/associations/0-47?limit=500`, t.portal);
+    const ids = [...new Set(((a && a.results) || []).map((r) => String(r.toObjectId)))].slice(-100);
+    if (!ids.length) return [];
+    const d = await hubspot('crm/v3/objects/0-47/batch/read', t.portal, { method: 'POST', body: {
+      properties: ['hs_meeting_title', 'hs_meeting_start_time', 'hs_meeting_end_time', 'hs_meeting_outcome', 'hs_meeting_body', 'hubspot_owner_id', 'hs_attendee_owner_ids'],
+      inputs: ids.map((id) => ({ id })),
+    } });
+    const now = Date.now();
+    return ((d && d.results) || []).filter((m) => {
+      const p = m.properties || {};
+      return HOLD_TITLE.test(p.hs_meeting_title || '') && p.hs_meeting_outcome !== 'CANCELED'
+        && Date.parse(p.hs_meeting_end_time || p.hs_meeting_start_time) > now;
+    }).sort((x, y) => Date.parse(x.properties.hs_meeting_start_time) - Date.parse(y.properties.hs_meeting_start_time));
+  }
+
+  function whenText(p) {
+    const a = new Date(p.hs_meeting_start_time); const b = p.hs_meeting_end_time ? new Date(p.hs_meeting_end_time) : null;
+    const day = a.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+    const tm = (d) => d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }).replace(':00', '');
+    return `${day}, ${tm(a)}${b ? `–${tm(b)}` : ''}`;
+  }
+
+  async function showHolds(t, body, myBox) {
+    let holds;
+    try { holds = await ticketHolds(t); } catch (e) { log('could not read holds:', e.message); return; }
+    if (box !== myBox || !holds.length) return;
+    const byId = new Map((state.people || []).map((p) => [p.id, p]));
+    const wrap = document.createElement('div');
+    wrap.className = 'oolio-qs-holds';
+    setHTML(wrap, `<b>On hold, waiting on the customer</b>`);
+    for (const m of holds) {
+      const p = m.properties;
+      const who = [...new Set([p.hubspot_owner_id, ...String(p.hs_attendee_owner_ids || '').split(';')].filter(Boolean))]
+        .map((id) => byId.get(String(id))).filter(Boolean).map((o) => o.name.split(' ')[0]);
+      const row = document.createElement('div');
+      row.className = 'oolio-qs-hrow';
+      setHTML(row, `<span>${esc(whenText(p))}${who.length ? ` <small>${esc(who.join(', '))}</small>` : ''}</span>
+        <button class="yes" title="The customer said yes: take HOLD off the meeting">Confirm</button>
+        <button class="no" title="The customer said no: cancel the meeting and free the installers">Release</button>`);
+      const [yes, no] = row.querySelectorAll('button');
+      const act = async (confirmIt) => {
+        if (!confirmIt && !confirm(`Release the hold on ${whenText(p)}? The meeting is cancelled and the installers' time is freed.`)) return;
+        yes.disabled = no.disabled = true;
+        const today = new Date().toLocaleDateString('en-AU');
+        const rest = (p.hs_meeting_title || '').replace(HOLD_TITLE, '');
+        const props = confirmIt
+          ? { hs_meeting_title: rest }
+          : { hs_meeting_title: `RELEASED – ${rest}`, hs_meeting_outcome: 'CANCELED' };
+        if (p.hs_meeting_body && /ON HOLD:/.test(p.hs_meeting_body)) {
+          props.hs_meeting_body = p.hs_meeting_body.replace(/ON HOLD:[^<\n]*/, confirmIt ? `CONFIRMED by the customer on ${today}.` : `RELEASED on ${today}: the customer didn't go ahead.`);
+        }
+        try {
+          await hubspot(`crm/v3/objects/0-47/${m.id}`, t.portal, { method: 'PATCH', body: { properties: props } });
+          setHTML(row, `<span>${esc(whenText(p))} <small>${confirmIt ? 'confirmed' : 'released'}</small></span>`);
+          log(confirmIt ? 'confirmed' : 'released', 'hold', m.id);
+        } catch (e) {
+          yes.disabled = no.disabled = false;
+          alert(`Couldn't ${confirmIt ? 'confirm' : 'release'} the hold. ${e.message}`);
+        }
+      };
+      yes.addEventListener('click', () => act(true));
+      no.addEventListener('click', () => act(false));
+      wrap.appendChild(row);
+    }
+    const drive = body.querySelector('.oolio-qs-drive');
+    body.insertBefore(wrap, drive ? drive.nextSibling : null);
+  }
+
+  async function bookOnsite(hold) {
     const t = state.ticket;
     if (!box || !t) return;
     const m = box.querySelector('.oolio-qs-foot .oolio-qs-msg');
@@ -787,12 +879,12 @@
     const travel = await Promise.race([travelFor(t), new Promise((r) => setTimeout(() => r(null), 6000))]);
     try {
       sessionStorage.setItem(BOOKING_KEY, JSON.stringify({
-        ticket: t.id, at: Date.now(), title: `Onsite: ${subject}`.trim(), subject, travel,
+        ticket: t.id, at: Date.now(), title: `${hold ? HOLD_PREFIX : ''}Onsite: ${subject}`.trim(), subject, travel, hold: !!hold,
         installDate: (fieldState.install_date && fieldState.install_date.now) || '',
         people: people.map((p) => ({ name: p.name, email: p.email })),
       }));
     } catch (e) { log('could not hand over the installers:', e.message); }
-    log('booking onsite with', people.map((p) => p.name).join(', '));
+    log(hold ? 'holding' : 'booking onsite with', people.map((p) => p.name).join(', '));
     closeBox();
     if (t.helpDesk) { scheduleOverlay(t); return; }
     const sched = document.querySelector('[data-selenium-test="create-engagement-schedule-button"]');
@@ -880,9 +972,9 @@
       const n = document.createElement('div');
       n.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483000;background:${ORANGE};color:#fff;font:600 13px/1.3 "Lexend Deca",Helvetica,Arial,sans-serif;padding:8px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80%`;
       const did = [host && `made ${host} the host`, added.length && `invited ${added.join(', ')}`].filter(Boolean).join(' and ');
-      n.textContent = missed.length
+      n.textContent = (job.hold ? 'HOLD. ' : '') + (missed.length
         ? `${did ? `Quick set ${did}, but couldn't add` : "Quick set couldn't add"} ${missed.join(', ')}. Add them under Attendees by hand.`
-        : `Quick set ${did || 'is ready'}. Drag down a day to pick the time on site${job.travel ? ` (travel of ${showMinutes(job.travel.minutes)} each way is added)` : ''}, then Schedule meeting.`;
+        : `Quick set ${did || 'is ready'}. Drag down a day to pick the time on site${job.travel ? ` (travel of ${showMinutes(job.travel.minutes)} each way is added)` : ''}, then Schedule meeting.`);
       document.body.appendChild(n);
       setTimeout(() => n.remove(), missed.length ? 12000 : 6000);
     }
@@ -918,6 +1010,8 @@
         const row = p && [...p.querySelectorAll('[role="option"]')].find((o) => !o.querySelector('button') && o.textContent.toLowerCase().includes(email));
         return row ? (row.querySelector('[role="option"]') || row) : null;
       };
+
+      if (job.hold) await markHold();
 
       // Installer 1 hosts the meeting (HubSpot puts the host in as an attendee and drops the old one);
       // the other installers are invited. If the host can't be changed, everyone is invited instead.
@@ -957,6 +1051,19 @@
       log('Schedule window:', hosted ? `host ${first.name};` : '', 'invited', added.join(', ') || 'nobody', missed.length ? `; not found: ${missed.join(', ')}` : '');
       note(missed, added, hosted ? first.name : '');
     })();
+
+    // Puts the ON HOLD line at the top of the attendee description
+    async function markHold() {
+      const ed = document.querySelector('[data-test-id="attendee-description-editor"] .ProseMirror, [data-selenium-test="attendee-description-editor"] .ProseMirror');
+      if (!ed || /ON HOLD/.test(ed.textContent)) return;
+      ed.focus();
+      const r = document.createRange(); r.setStart(ed.firstElementChild || ed, 0); r.collapse(true);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      document.execCommand('insertText', false, HOLD_NOTE);
+      if (ed.textContent.trim() !== HOLD_NOTE) document.execCommand('insertParagraph');
+      ed.blur();
+      await wait(500);
+    }
 
     // Host box: same kind of searchable list as Attendees, but its rows have no tick box. A row is chosen
     // with a full mouse press on the row carrying data-option-value (a plain click does nothing).
