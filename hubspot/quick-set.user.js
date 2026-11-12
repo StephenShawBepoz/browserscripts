@@ -943,6 +943,10 @@
     };
     const span = (a, b) => `${clock(a, true).replace(':00', '')}–${clock(b, true).replace(':00', '')}`;
 
+    // HubSpot's date picker pop-up stays open after a typed date; a click outside it closes it
+    const closePopups = () => ['mousedown', 'mouseup', 'click'].forEach((type) =>
+      document.body.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
+
     let drag = null; let swallowClick = false; let layer = null;
     function draw(key, start, end) {
       const r = midnight(key);
@@ -999,6 +1003,8 @@
       dateIn.focus(); setInput(dateIn, want); await wait(250);
       ['keydown', 'keyup'].forEach((type) => dateIn.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })));
       dateIn.blur();
+      await wait(250);
+      closePopups();
     };
 
     async function apply(key, start, end) {
@@ -1010,7 +1016,7 @@
       const twelve = /am|pm/i.test(startIn.value || startIn.placeholder || 'AM');
       const enter = (el) => ['keydown', 'keyup'].forEach((type) => el.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })));
       const put = async (el, v) => { el.focus(); setInput(el, v); await wait(250); enter(el); el.blur(); await wait(250); };
-      await put(dateIn, fmt);
+      if (dateIn.value !== fmt) { await put(dateIn, fmt); swallowClick = false; closePopups(); await wait(200); }
       await put(startIn, clock(from, twelve)); // HubSpot moves the end to keep the length, so the end goes last
       await put(endIn, clock(to, twelve));
       clear();
