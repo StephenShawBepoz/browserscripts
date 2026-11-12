@@ -2,6 +2,9 @@
 
 ## HubSpot: Quick set
 
+### 0.5.1 (12/11/2026)
+- **Installer 1 hosts the visit.** Book onsite now makes Installer 1 the meeting's **Host** in HubSpot's Schedule window, so it's booked in their calendar, and invites Installer 2 to 5 as attendees. If Installer 1 can't be made the host, everyone is invited as before and the orange note says so.
+
 ### 0.5.0 (12/11/2026)
 - **In-person address.** Choosing **Location > In-person** in HubSpot's Schedule window fills the empty Address box with the company's address, and says which company it came from.
 - When a ticket has no company marked *Primary* (common on sub-tickets), Quick set now uses the company named in the ticket, for both the address and the drive time, instead of whichever HubSpot lists first.

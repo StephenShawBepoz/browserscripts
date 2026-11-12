@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.5.0
+// @version      0.5.1
 // @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite (drag the time, with travel from the nearest office) with the installers invited.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -876,12 +876,13 @@
     fillAddress(toast, setInput);
     if (!job) return;
 
-    function note(missed, added = []) {
+    function note(missed, added = [], host = '') {
       const n = document.createElement('div');
       n.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483000;background:${ORANGE};color:#fff;font:600 13px/1.3 "Lexend Deca",Helvetica,Arial,sans-serif;padding:8px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80%`;
+      const did = [host && `made ${host} the host`, added.length && `invited ${added.join(', ')}`].filter(Boolean).join(' and ');
       n.textContent = missed.length
-        ? `${added.length ? `Quick set invited ${added.join(', ')}, but couldn't add` : "Quick set couldn't add"} ${missed.join(', ')}. Add them under Attendees by hand.`
-        : `Quick set invited ${added.join(', ')}. Drag down a day to pick the time on site${job.travel ? ` (travel of ${showMinutes(job.travel.minutes)} each way is added)` : ''}, then Schedule meeting.`;
+        ? `${did ? `Quick set ${did}, but couldn't add` : "Quick set couldn't add"} ${missed.join(', ')}. Add them under Attendees by hand.`
+        : `Quick set ${did || 'is ready'}. Drag down a day to pick the time on site${job.travel ? ` (travel of ${showMinutes(job.travel.minutes)} each way is added)` : ''}, then Schedule meeting.`;
       document.body.appendChild(n);
       setTimeout(() => n.remove(), missed.length ? 12000 : 6000);
     }
@@ -918,8 +919,14 @@
         return row ? (row.querySelector('[role="option"]') || row) : null;
       };
 
+      // Installer 1 hosts the meeting (HubSpot puts the host in as an attendee and drops the old one);
+      // the other installers are invited. If the host can't be changed, everyone is invited instead.
+      const [first, ...others] = job.people;
+      const hosted = await makeHost(first);
+      if (!hosted) log(`Schedule window: couldn't make ${first.name} the host, inviting them instead`);
+
       const added = []; const missed = [];
-      for (const person of job.people) {
+      for (const person of hosted ? others : job.people) {
         const email = person.email.toLowerCase();
         let ok = false;
         for (let attempt = 0; attempt < 3 && !ok; attempt++) {
@@ -947,9 +954,37 @@
       await wait(200);
       if (isOpen()) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       if (job.installDate) await showDay(job.installDate);
-      log('Schedule window: invited', added.join(', ') || 'nobody', missed.length ? `; not found: ${missed.join(', ')}` : '');
-      note(missed, added);
+      log('Schedule window:', hosted ? `host ${first.name};` : '', 'invited', added.join(', ') || 'nobody', missed.length ? `; not found: ${missed.join(', ')}` : '');
+      note(missed, added, hosted ? first.name : '');
     })();
+
+    // Host box: same kind of searchable list as Attendees, but its rows have no tick box. A row is chosen
+    // with a full mouse press on the row carrying data-option-value (a plain click does nothing).
+    async function makeHost(person) {
+      const hb = document.querySelector('[data-test-id="paginated-host-select"]');
+      if (!hb || !person) return false; // Meeting rotation picked, or no Host box
+      const email = person.email.toLowerCase();
+      if (hb.textContent.toLowerCase().includes(email)) return true;
+      const hp = () => document.getElementById(hb.getAttribute('aria-owns'));
+      const isOpen = () => hb.getAttribute('data-dropdown-open') === 'true' && hp();
+      const option = () => { const p = hp(); return p && [...p.querySelectorAll('[role="option"][data-option-value]')].find((o) => o.textContent.toLowerCase().includes(email)); };
+      let ok = false;
+      for (let attempt = 0; attempt < 2 && !ok; attempt++) {
+        if (!isOpen()) { hb.click(); await until(isOpen, 3000); }
+        const search = await until(() => hp() && hp().querySelector('input[type="search"]'), 3000);
+        if (!search) continue;
+        if (search.value !== person.email) setInput(search, person.email);
+        if (!(await until(option, 7000))) break; // not a HubSpot user
+        await wait(350);
+        const o = option();
+        if (!o) continue;
+        press(o);
+        ok = !!(await until(() => hb.textContent.toLowerCase().includes(email), 2500));
+      }
+      if (isOpen()) { hb.click(); await wait(200); }
+      await wait(400); // let HubSpot swap the host into Attendees before anyone else is added
+      return ok;
+    }
   }
 
   // Location > In-person shows an empty Address box: put the primary company's address in it. Only an empty
