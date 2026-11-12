@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Quick set
 // @namespace    oolio-userscripts
-// @version      0.3.0
+// @version      0.3.1
 // @description  An orange box on BP Implementation tickets to set the Implementation Category, Ticket owner, Project Manager, Install and Go Live dates and Installers in one go, and book the onsite with the installers invited.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -731,12 +731,12 @@
     const press = (el) => ['mousedown', 'mouseup', 'click'].forEach((type) =>
       el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
 
-    function note(missed) {
+    function note(missed, added = []) {
       const n = document.createElement('div');
       n.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483000;background:${ORANGE};color:#fff;font:600 13px/1.3 "Lexend Deca",Helvetica,Arial,sans-serif;padding:8px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80%`;
       n.textContent = missed.length
-        ? `Quick set couldn't find ${missed.join(', ')} in Attendees. Add them by hand.`
-        : `Quick set invited ${job.people.map((p) => p.name).join(', ')}. Pick the time, then Schedule.`;
+        ? `${added.length ? `Quick set invited ${added.join(', ')}, but couldn't add` : "Quick set couldn't add"} ${missed.join(', ')}. Add them under Attendees by hand.`
+        : `Quick set invited ${added.join(', ')}. Pick the time, then Schedule meeting.`;
       document.body.appendChild(n);
       setTimeout(() => n.remove(), missed.length ? 12000 : 6000);
     }
@@ -745,33 +745,60 @@
       const btn = await until(() => document.querySelector('[data-test-id="unified-attendee-select"] button[data-dropdown]'));
       if (!btn) { log('Schedule window: no Attendees box found'); note(job.people.map((p) => p.name)); return; }
 
+      // Let the window settle first. Quick actions fills in the description here, and moving the cursor
+      // closes the Attendees list, so wait for that (or a few seconds) before touching anything.
+      await until(() => {
+        const ed = document.querySelector('[data-test-id="attendee-description-editor"] .ProseMirror, [data-selenium-test="attendee-description-editor"] .ProseMirror');
+        return ed && ed.textContent.trim();
+      }, 3500);
+      await wait(700);
+
       // Title, unless someone's already typed their own (Quick actions puts in the ticket name, which is fine to replace)
       const title = document.querySelector('input[data-test-id="title-input"]');
       if (title && (!title.value.trim() || title.value.trim() === job.subject.trim())) setInput(title, job.title);
 
-      const missed = [];
-      for (const person of job.people) {
-        if (btn.getAttribute('data-dropdown-open') !== 'true') { btn.click(); await wait(400); }
-        const pop = () => document.getElementById(btn.getAttribute('aria-owns'));
-        const search = await until(() => pop() && pop().querySelector('input[type="search"]'), 5000);
-        if (!search) { missed.push(person.name); continue; }
-        setInput(search, person.email);
-        const email = person.email.toLowerCase();
-        const option = await until(() => {
-          const p = pop();
-          const row = p && [...p.querySelectorAll('[role="option"]')].find((o) => !o.querySelector('button') && o.textContent.toLowerCase().includes(email));
-          return row ? (row.querySelector('[role="option"]') || row) : null;
-        }, 6000);
-        if (!option) { missed.push(person.name); log('Schedule window: no match for', person.email); continue; }
-        if (option.getAttribute('aria-selected') !== 'true') press(option); // already invited: leave it
-        await wait(500);
+      const pop = () => document.getElementById(btn.getAttribute('aria-owns'));
+      const isOpen = () => btn.getAttribute('data-dropdown-open') === 'true' && pop();
+      async function openList() {
+        if (!isOpen()) { btn.click(); await until(isOpen, 3000); }
+        return until(() => pop() && pop().querySelector('input[type="search"]'), 3000);
       }
+      // The ticked row for this email, looked up fresh each time (HubSpot redraws the list as results arrive)
+      const rowFor = (email) => {
+        const p = pop();
+        const row = p && [...p.querySelectorAll('[role="option"]')].find((o) => !o.querySelector('button') && o.textContent.toLowerCase().includes(email));
+        return row ? (row.querySelector('[role="option"]') || row) : null;
+      };
+
+      const added = []; const missed = [];
+      for (const person of job.people) {
+        const email = person.email.toLowerCase();
+        let ok = false;
+        for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          const search = await openList();
+          if (!search) continue;
+          if (search.value !== person.email) setInput(search, person.email);
+          // Wait for the results to arrive and stop changing
+          if (!(await until(() => rowFor(email), 7000))) break; // no such person in HubSpot's list
+          await wait(450);
+          const row = rowFor(email);
+          if (!row) continue;
+          if (row.getAttribute('aria-selected') === 'true') { ok = true; break; } // already invited
+          press(attempt === 1 ? (row.querySelector('label') || row) : row); // the row worked in testing; the label is a fallback
+          ok = !!(await until(() => { const r = rowFor(email); return r && r.getAttribute('aria-selected') === 'true'; }, 1500));
+          if (!ok) log(`Schedule window: ${person.name} not ticked yet, trying again`);
+        }
+        (ok ? added : missed).push(person.name);
+      }
+
       // Tidy up: clear the search and close the list
-      const p = document.getElementById(btn.getAttribute('aria-owns'));
-      const search = p && p.querySelector('input[type="search"]');
-      if (search) setInput(search, '');
-      if (btn.getAttribute('data-dropdown-open') === 'true') btn.click();
-      note(missed);
+      const search = pop() && pop().querySelector('input[type="search"]');
+      if (search && search.value) { setInput(search, ''); await wait(200); }
+      if (isOpen()) btn.click();
+      await wait(200);
+      if (isOpen()) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      log('Schedule window: invited', added.join(', ') || 'nobody', missed.length ? `; not found: ${missed.join(', ')}` : '');
+      note(missed, added);
     })();
   }
 
