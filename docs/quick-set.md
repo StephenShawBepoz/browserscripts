@@ -43,6 +43,8 @@ When the customer decides, open Quick set on the ticket. Upcoming holds are list
 - **Confirm** takes HOLD off the title and notes the confirmation in the description.
 - **Release** asks first, then marks the meeting cancelled and changes its title to *RELEASED –*.
 
+Confirm and Release change the meeting in HubSpot. Whether that also updates the event in the installers' Outlook calendars isn't checked yet, so after a Release, check the time has been freed in Outlook (delete the event there if it hasn't).
+
 - **Drive time** is shown in the box under the fields, for example *Drive: 25 min from the Adelaide office*. It's worked out from the ticket's primary company address and the nearest Oolio office, by car without traffic, rounded up to 5 minutes, and remembered for 30 days. If the company has no address, there's no travel buffer.
 - **In-person address.** Pick **Location > In-person** and the empty Address box fills with the company's address (the ticket's primary company; with none marked primary, the company named in the ticket). An orange note says which company it came from. It only fills an empty box, so you can type over it. Works on ticket, deal and contact records.
 - **Dragging works in any Schedule window**, not just Book onsite (without the travel blocks). Press **Esc** while dragging to cancel. If you let go outside the calendar, the time is still set when the mouse comes back. A plain click still does what HubSpot normally does.

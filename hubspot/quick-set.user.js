@@ -831,10 +831,10 @@
       row.className = 'oolio-qs-hrow';
       setHTML(row, `<span>${esc(whenText(p))}${who.length ? ` <small>${esc(who.join(', '))}</small>` : ''}</span>
         <button class="yes" title="The customer said yes: take HOLD off the meeting">Confirm</button>
-        <button class="no" title="The customer said no: cancel the meeting and free the installers">Release</button>`);
+        <button class="no" title="The customer said no: mark the meeting cancelled and RELEASED">Release</button>`);
       const [yes, no] = row.querySelectorAll('button');
       const act = async (confirmIt) => {
-        if (!confirmIt && !confirm(`Release the hold on ${whenText(p)}? The meeting is cancelled and the installers' time is freed.`)) return;
+        if (!confirmIt && !confirm(`Release the hold on ${whenText(p)}? The meeting is marked cancelled in HubSpot.`)) return;
         yes.disabled = no.disabled = true;
         const today = new Date().toLocaleDateString('en-AU');
         const rest = (p.hs_meeting_title || '').replace(HOLD_TITLE, '');
