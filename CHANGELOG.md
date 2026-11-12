@@ -2,6 +2,10 @@
 
 ## HubSpot: Quick set
 
+### 0.6.0 (13/11/2026)
+- **Hold.** A new **Hold** button next to Book onsite books the visit the same way (Installer 1 hosts, the others are invited, drag to pick the time), but marked as a hold: the title starts *HOLD –* and the description starts *ON HOLD: waiting on the customer to confirm*. The installers' time is blocked while you wait on the customer.
+- **Confirm or release a hold.** The box lists the ticket's upcoming holds with **Confirm** (takes HOLD off the title) and **Release** (marks the meeting cancelled and its title *RELEASED –*).
+
 ### 0.5.1 (12/11/2026)
 - **Installer 1 hosts the visit.** Book onsite now makes Installer 1 the meeting's **Host** in HubSpot's Schedule window, so it's booked in their calendar, and invites Installer 2 to 5 as attendees. If Installer 1 can't be made the host, everyone is invited as before and the orange note says so.
 

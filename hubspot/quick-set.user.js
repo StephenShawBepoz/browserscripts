@@ -994,6 +994,7 @@
       // Title, unless someone's already typed their own (Quick actions puts in the ticket name, which is fine to replace)
       const title = document.querySelector('input[data-test-id="title-input"]');
       if (title && (!title.value.trim() || title.value.trim() === job.subject.trim())) setInput(title, job.title);
+      else if (title && job.hold && !HOLD_TITLE.test(title.value)) setInput(title, HOLD_PREFIX + title.value.trim()); // a hold always says so
 
       const pop = () => document.getElementById(btn.getAttribute('aria-owns'));
       const isOpen = () => btn.getAttribute('data-dropdown-open') === 'true' && pop();

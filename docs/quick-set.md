@@ -29,6 +29,20 @@ Click **Book onsite** at the bottom left of the box to book the visit in HubSpot
 - Anyone already invited isn't added twice.
 - In Help Desk, the Schedule window opens over the page and closes by itself once you schedule or cancel. **×** top right closes it too.
 - If you've typed your own title, it's left alone.
+
+## Hold
+
+Use **Hold** when you need to block the installers' time but the customer hasn't said yes yet.
+
+1. Click **Hold** (next to Book onsite). HubSpot's Schedule window opens just like Book onsite: Installer 1 hosts, the others are invited, and you drag to pick the time.
+2. The title starts **HOLD –** and the description starts *ON HOLD: waiting on the customer to confirm*, so the installers can see it isn't confirmed.
+3. Click **Schedule meeting**. The installers' calendars show the time as booked.
+
+When the customer decides, open Quick set on the ticket. Upcoming holds are listed under **On hold, waiting on the customer**:
+
+- **Confirm** takes HOLD off the title and notes the confirmation in the description.
+- **Release** asks first, then marks the meeting cancelled and changes its title to *RELEASED –*.
+
 - **Drive time** is shown in the box under the fields, for example *Drive: 25 min from the Adelaide office*. It's worked out from the ticket's primary company address and the nearest Oolio office, by car without traffic, rounded up to 5 minutes, and remembered for 30 days. If the company has no address, there's no travel buffer.
 - **In-person address.** Pick **Location > In-person** and the empty Address box fills with the company's address (the ticket's primary company; with none marked primary, the company named in the ticket). An orange note says which company it came from. It only fills an empty box, so you can type over it. Works on ticket, deal and contact records.
 - **Dragging works in any Schedule window**, not just Book onsite (without the travel blocks). Press **Esc** while dragging to cancel. If you let go outside the calendar, the time is still set when the mouse comes back. A plain click still does what HubSpot normally does.
