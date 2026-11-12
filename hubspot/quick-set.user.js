@@ -260,8 +260,20 @@
     if (type === '0-2') return String(id);
     const assoc = await hubspot(`crm/v4/objects/${type}/${id}/associations/0-2?limit=50`, portal);
     const rows = (assoc && assoc.results) || [];
-    const primary = rows.find((r) => (r.associationTypes || []).some((x) => x.label === 'Primary' || (x.category === 'HUBSPOT_DEFINED' && [1, 5, 26, 280].includes(x.typeId)))) || rows[0];
-    return primary ? String(primary.toObjectId) : null;
+    const primary = rows.find((r) => (r.associationTypes || []).some((x) => x.label === 'Primary' || (x.category === 'HUBSPOT_DEFINED' && [1, 5, 26, 280].includes(x.typeId))));
+    if (primary) return String(primary.toObjectId);
+    if (rows.length < 2) return rows[0] ? String(rows[0].toObjectId) : null;
+    // No primary company (common on sub-tickets): the one named in the record's name, else the first
+    const ids = rows.slice(0, 8).map((r) => String(r.toObjectId));
+    try {
+      const rec = await hubspot(`crm/v3/objects/${type}/${id}?properties=subject,dealname`, portal);
+      const title = ((rec && rec.properties && (rec.properties.subject || rec.properties.dealname)) || '').toLowerCase();
+      const named = await Promise.all(ids.map((cid) => hubspot(`crm/v3/objects/0-2/${cid}?properties=name`, portal)
+        .then((c) => ({ cid, name: ((c && c.properties && c.properties.name) || '').trim().toLowerCase() })).catch(() => ({ cid, name: '' }))));
+      const hit = named.filter((c) => c.name && title.includes(c.name)).sort((a, b) => b.name.length - a.name.length)[0];
+      if (hit) return hit.cid;
+    } catch (e) { log('picking the company:', e.message); }
+    return ids[0];
   }
   // "Unit 7/652 Northeast Road, Holden Hill SA 5088"
   async function companyAddress(portal, companyId) {
@@ -276,11 +288,8 @@
   const travelPromises = {};
   function travelFor(t) {
     if (!travelPromises[t.id]) travelPromises[t.id] = (async () => {
-      const assoc = await hubspot(`crm/v4/objects/0-5/${t.id}/associations/0-2?limit=50`, t.portal);
-      const rows = (assoc && assoc.results) || [];
-      const primary = rows.find((r) => (r.associationTypes || []).some((x) => x.label === 'Primary' || (x.category === 'HUBSPOT_DEFINED' && x.typeId === 26))) || rows[0];
-      if (!primary) return null;
-      const id = String(primary.toObjectId);
+      const id = await primaryCompanyId(t.portal, '0-5', t.id);
+      if (!id) return null;
       const kept = gmGet(`travel:${id}`, null);
       if (kept && Date.now() - kept.at < TRAVEL_KEEP_DAYS * 864e5) return kept.result;
       const c = await hubspot(`crm/v3/objects/0-2/${id}?properties=name,address,address2,city,state,zip,country,latitude,longitude,longtitude`, t.portal);
