@@ -2,6 +2,9 @@
 
 ## HubSpot: Quick set
 
+### 0.3.0 (12/11/2026)
+- New **Book onsite** button. It opens HubSpot's Schedule window for the ticket with every installer invited and the title *Onsite: [ticket name]*. Pick a time and click Schedule meeting. Works on record pages and in Help Desk.
+
 ### 0.2.0 (12/11/2026)
 - New **Project Manager / Co-Ordinator** field, under Ticket owner. Click **Me** next to it to put yourself in.
 - **Same day** button next to Go Live Date copies the Install Date, for go-lives on install day.

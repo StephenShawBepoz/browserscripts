@@ -15,6 +15,21 @@ Set a ticket's implementation fields in one go, without hunting through the side
    - **Installer**, **Installer 2**, **Installer 3** (click **+ More installers** for 4 and 5)
 4. Change what you need and click **Save** (or **Cmd + Enter** / **Ctrl + Enter**). The button says how many changes you've made, and each changed field is marked in orange.
 
+## Book onsite
+
+Click **Book onsite** at the bottom left of the box to book the visit in HubSpot's own **Schedule** window, with the installers already invited.
+
+1. Pick the installers in the box (Installer 1 to 5). If you've changed anything, Book onsite saves it first.
+2. Click **Book onsite**. HubSpot's Schedule window opens with the title *Onsite: [ticket name]* and every installer added under **Attendees**. An orange note at the top says who was invited.
+3. Pick the day and time, then click **Schedule meeting** as usual. Nothing is booked until you do, and the meeting is logged on the ticket like any other.
+
+- Installers are matched by their HubSpot email. If someone can't be found, the orange note says so; add them under Attendees by hand.
+- Anyone already invited isn't added twice.
+- In Help Desk, the Schedule window opens over the page and closes by itself once you schedule or cancel. **×** top right closes it too.
+- If you've typed your own title, it's left alone.
+
+## Tips
+
 - **Picking a person.** Click a name field to see everyone, or type part of a name (or email) to narrow it down. People in a *BP |* team are listed first. **Enter** picks the top match, the arrow keys move up and down, **Esc** puts it back. The **×** clears the field.
 - **Dates.** Click the date to pick from a calendar, or type it. The **×** clears it. **Same day** next to Go Live Date copies the Install Date across, for a venue that goes live on the day it's installed. The two dates can be any days; neither has to come after the other.
 - **Only what you change is saved.** Fields you don't touch are left alone, so you won't undo someone else's change.
