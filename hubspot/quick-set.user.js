@@ -765,7 +765,7 @@
       }
       // Each result row holds a real tick box; its checked state is what HubSpot uses (aria-selected stays false)
       const tickBox = (row) => row && row.querySelector('input[type="checkbox"]');
-      const isTicked = (row) => { const cb = tickBox(row); return cb ? cb.checked : row.getAttribute('aria-selected') === 'true'; };
+      const isTicked = (row) => { if (!row) return false; const cb = tickBox(row); return cb ? cb.checked : row.getAttribute('aria-selected') === 'true'; };
       // The row for this email, looked up fresh each time (HubSpot redraws the list as results arrive)
       const rowFor = (email) => {
         const p = pop();
