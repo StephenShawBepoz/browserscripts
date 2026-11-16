@@ -373,6 +373,9 @@
   .pill.adyen { border-color: #0ABF53; background: #E6F8EE; color: #06612A; }
   .pill.wpay { border-color: #1E6FD9; background: #E8F1FC; color: #0E4A99; }
   .pill.amber { border-color: #E8A33D; background: #FFF4E0; color: #7A4B00; }
+  .pill.pos { border-color: transparent; color: #fff; }
+  .pill.ordermate { background: #D93025; } .pill.oolio-one { background: #673AB6; } .pill.bepoz { background: #1D5FBF; }
+  .pill.deliverit { background: #1E8E3E; } .pill.swiftpos { background: #E8710A; }
 
   /* cards and notes bounce in as you scroll */
   .reveal { opacity: 0; transform: translateY(60px) scale(.94) rotate(var(--r, -1.5deg)); }
@@ -1103,7 +1106,8 @@
             <p class="why">Sensible lists when you add contacts or companies.</p>
             <ul>
               <li><b>Add existing Contact</b> only lists people at that customer's companies and head office. <b>Show all</b> is one click away.</li>
-              <li><b>Add existing Company</b> shows each company's products, owner, contacts and tickets, and hides the stages you don't deal with.</li>
+              <li><b>Add existing Ticket</b> does the same for tickets, and narrows them by pipeline and status.</li>
+              <li><b>Add existing Company</b> shows each company's products, owner, contacts and tickets, and hides the products (OrderMate has its own chip) and stages you don't deal with.</li>
             </ul>
             <div class="actions">
               <a class="btn btn-gum install" href="https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/company-contacts.user.js" data-say="Click Install, then Install again on Tampermonkey's screen, then refresh HubSpot. Had the old Company contacts script? This replaces it.">
@@ -1137,7 +1141,7 @@
         </div>
       </article>
 
-      <article class="card reveal" data-script="payments-badge" data-name="Payments badge" style="--i:2" data-say="Green for Adyen, blue for WPay. Hover the badge in HubSpot for the merchant ID. A dashed outline means the Acquirer field is blank, so it's worth filling in.">
+      <article class="card reveal" data-script="payments-badge" data-name="Payments badge" style="--i:2" data-say="Which POS, then green for Adyen, blue for WPay. Red OrderMate on a help@ ticket? Pass it on, no detours. Hover the badge in HubSpot for the merchant ID.">
         <div class="tilt">
           <a class="pen" href="https://github.com/StephenShawBepoz/browserscripts/blob/main/docs/payments-badge.md" aria-label="Payments badge guide">
             <img src="assets/screenshots/payments-badge.png" alt="An Adyen Balance badge by a Help Desk ticket title and a Payments line on each company card" loading="lazy" style="object-position: right top">
@@ -1147,8 +1151,8 @@
           </a>
           <div class="body">
             <h3>Payments badge</h3>
-            <p class="why">Adyen or WPay, at a glance.</p>
-            <p>An <span class="pill adyen">Adyen</span> or <span class="pill wpay">WPay</span> badge under the company's name, next to the Help Desk ticket title and on company cards. Hover it for the merchant ID.</p>
+            <p class="why">Which POS, and Adyen or WPay, at a glance.</p>
+            <p>The venue's POS (<span class="pill pos ordermate">OrderMate</span> <span class="pill pos oolio-one">Oolio One</span> <span class="pill pos bepoz">Bepoz</span> <span class="pill pos deliverit">DeliverIT</span> <span class="pill pos swiftpos">SwiftPOS</span>) and an <span class="pill adyen">Adyen</span> or <span class="pill wpay">WPay</span> badge, next to the Help Desk ticket title, under the company's name and on company cards. Hover the badge for the merchant ID.</p>
             <div class="actions">
               <a class="btn btn-gum install" href="https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/payments-badge.user.js" data-say="Click Install, then Install again on Tampermonkey's screen, then refresh HubSpot. It only reads HubSpot, it never changes anything.">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Install
