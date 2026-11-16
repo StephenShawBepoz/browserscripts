@@ -12,25 +12,29 @@
    - Every **company card** in the sidebar gets a **Payments:** line too, so a ticket with two companies shows both.
 3. Hover the badge to see where it came from and the merchant ID.
 
-## POS on the company card
+## Which POS the venue runs
 
-Under **Payments:**, each company card also gets a **POS:** line from the company's *Product(s)* field, so you can tell straight away which POS a venue runs and where its ticket should go.
+The POS comes from the company's *Product(s)* field, so you can tell straight away which POS a venue runs and where its ticket should go:
 
-<img src="../assets/screenshots/payments-pos-cards.png" width="360" alt="Company cards in a ticket's sidebar, each with a Payments line and a POS line: OrderMate in red, Bepoz in blue, Oolio POS in purple, SwiftPOS in orange, DeliverIT in green">
+- **At the top**, first in the badge row: the POS of the record's primary company, next to a Help Desk ticket's title or under a record's name.
+- **On every company card**, a **POS:** line under **Payments:**.
+
+<img src="../assets/screenshots/payments-pos-cards.png" width="360" alt="A ticket with a purple Oolio One pill at the top, and company cards each with a Payments line and a POS line: Oolio One in purple, OrderMate in red, Bepoz in blue, SwiftPOS in orange, DeliverIT in green, and a grey Not set">
 <sub>Made-up example.</sub>
 
 | Pill | Product |
 |---|---|
 | Red **OrderMate** | OrderMate |
-| Purple **Oolio POS** | Oolio POS (HubSpot calls it *Oolio One*) |
+| Purple **Oolio One** | Oolio One |
 | Blue **Bepoz** | Bepoz |
 | Green **DeliverIT** | Deliverit |
 | Orange **SwiftPOS** | SwiftPOS |
-| Grey | Anything else, such as Idealpos |
+| Dark grey | Anything else, such as Idealpos |
+| Light grey **Not set** (**POS not set** at the top) | *Product(s)* has no POS in it. It's worth filling in. |
 
 - A venue with two POS products gets two pills.
 - *Oolio Pay* isn't shown here, because the **Payments:** line covers it.
-- No **POS:** line means *Product(s)* is empty on that company.
+- Hover the pill to see which company it's about.
 
 ## OPAY details
 

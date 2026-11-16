@@ -47,7 +47,7 @@ Small add-ons for HubSpot, Oolio Office and myTNT that take the extra clicks out
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/send-shortcut.user.js)** · [How to use](docs/send-shortcut.md)
 
 #### Payments badge
-**See at a glance whether a venue is on Adyen or WPay.** A green **Adyen** or blue **WPay** badge under the record's name (companies, contacts, deals, tickets), next to a Help Desk ticket's title, and on the company cards in a ticket's sidebar. Each company card also gets a **POS:** line in the venue's POS colour (OrderMate red, Oolio POS purple, Bepoz blue, DeliverIT green, SwiftPOS orange), so you can see where a ticket belongs. A purple **OPAY** button beside it shows the merchant IDs, last 7 days sales and MOTO terminal serials.
+**See at a glance whether a venue is on Adyen or WPay.** A green **Adyen** or blue **WPay** badge under the record's name (companies, contacts, deals, tickets), next to a Help Desk ticket's title, and on the company cards in a ticket's sidebar. The venue's POS shows first, in its own colour (OrderMate red, Oolio One purple, Bepoz blue, DeliverIT green, SwiftPOS orange, or **POS not set**), at the top and on each company card, so you can see where a ticket belongs. A purple **OPAY** button beside it shows the merchant IDs, last 7 days sales and MOTO terminal serials.
 
 **[Install](https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/payments-badge.user.js)** · [How to use](docs/payments-badge.md)
 

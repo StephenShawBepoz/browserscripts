@@ -23,8 +23,11 @@
 
 ## HubSpot: Payments badge
 
-### 1.3.0 (16/11/2026)
-- Each company card gets a **POS:** line under **Payments:**, from the company's *Product(s)*: red OrderMate, purple Oolio POS, blue Bepoz, green DeliverIT, orange SwiftPOS, grey for anything else. Oolio Pay is left out, because the Payments line covers it.
+### 1.4.0 (16/11/2026)
+- Shows which POS the venue runs, from the company's *Product(s)*, as a filled pill: red OrderMate, purple Oolio One, blue Bepoz, green DeliverIT, orange SwiftPOS, dark grey for anything else.
+  - At the top: first in the badge row next to a Help Desk ticket's title or under a record's name, for the primary company.
+  - On every company card: a **POS:** line under **Payments:**.
+- A company with no POS in *Product(s)* says **Not set** (**POS not set** at the top), so it can be filled in. Oolio Pay doesn't count as a POS, because the Payments line covers it.
 
 ### 1.2.0 (22/10/2026)
 - New **OPAY** button next to the badge, for example *OPAY · 7 days $5,425 · MOTO 1*. Click it for the venue's merchant IDs (Advanced, Manage, WPay, Account holder), Pay and POS sales for the last 7 days, the last Pay sale date, and the MOTO terminal count and serials from its newest OPAY ticket, with a Copy button on each ID and serial.

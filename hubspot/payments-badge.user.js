@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Payments badge
 // @namespace    oolio-userscripts
-// @version      1.3.0
+// @version      1.4.0
 // @description  Shows whether a company pays through Adyen or WPay and which POS it runs, plus its OPAY details (merchant IDs, last 7 days sales, MOTO terminal serials), on company, contact, deal and ticket records and Help Desk.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -64,7 +64,7 @@
   // Oolio Pay is left out: the Payments line covers it. Any other product shows in grey.
   const POS = {
     OrderMate: { label: 'OrderMate', bg: '#D93025' },
-    'Oolio POS': { label: 'Oolio POS', bg: '#673AB6' }, // HubSpot calls it "Oolio One"
+    'Oolio POS': { label: 'Oolio One', bg: '#673AB6' },
     Bepoz: { label: 'Bepoz', bg: '#1D5FBF' },
     Deliverit: { label: 'DeliverIT', bg: '#1E8E3E' },
     SwiftPOS: { label: 'SwiftPOS', bg: '#E8710A' },
@@ -286,6 +286,7 @@
     .opb-line .opb-pill { padding: 0 7px; }
     /* POS pills: filled, so the POS stands out when deciding where a ticket goes */
     .opb-pill.opb-pos { border-color: transparent; color: #fff; font-weight: 700; }
+    .opb-pill.opb-pos.none { border-color: #CBD6E2; background: #EAF0F6; color: #516F90; font-weight: 600; }
     /* The OPAY details button and the box it opens */
     button.opb-pill.opb-opay { border-color: #673AB6; background: #F3EEFB; color: #45237F; font: inherit; cursor: pointer; }
     button.opb-pill.opb-opay:hover, button.opb-pill.opb-opay[aria-expanded="true"] { background: #E6DCF7; }
@@ -313,10 +314,12 @@
     const name = withName ? `${esc(c.name)}: ` : '';
     return kinds.map((k, i) => `<span class="opb-pill opb-${k}${pay.guessed ? ' guessed' : ''}">${i ? '' : CARD}${i ? '' : name}${esc(text(k))}</span>`).join('');
   }
-  // The company's POS: a filled pill per product
-  function posHTML(id) {
+  // The company's POS: a filled pill per product, or a grey "Not set" when Product(s) has no POS in it.
+  // At the top of the page it says "POS not set", since there's no "POS:" in front of it there.
+  function posHTML(id, top) {
     const c = cache.get(id);
-    if (!c || !c.pos || !c.pos.length) return '';
+    if (!c || !c.pos) return '';
+    if (!c.pos.length) return `<span class="opb-pill opb-pos none">${top ? 'POS not set' : 'Not set'}</span>`;
     return c.pos.map((v) => {
       const d = POS[v];
       return `<span class="opb-pill opb-pos" style="background:${d ? d.bg : OTHER_POS}">${esc(d ? d.label : v)}</span>`;
@@ -397,6 +400,11 @@
   }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBox(); });
 
+  const posTip = (id) => {
+    const c = id && cache.get(id);
+    if (!c || !c.pos) return '';
+    return `${c.name}\nPOS: ${c.pos.length ? c.pos.map((v) => (POS[v] ? POS[v].label : v)).join(', ') : 'not set in Product(s)'}`;
+  };
   const tipFor = (id) => {
     const c = cache.get(id);
     return c && c.pay ? `${c.name}\n${c.pay.why.join('\n')}` : '';
@@ -440,10 +448,12 @@
     const live = p && state && state.key === `${p.type}/${p.portal}/${p.id}` && !state.loading && !state.error;
     const ids = live ? state.companies : [];
 
-    // Top: the company itself, or the record's primary company (named, when there's more than one),
-    // followed by its OPAY button
+    // Top: the primary company's POS, then the payments badge (named, when there's more than one company)
+    // and its OPAY button
     const first = topCompany(ids);
-    if (first) placeTop(badgeHTML(first, p.type !== 'company' && ids.length > 1) + opayHTML(first), tipFor(first));
+    const primary = ids[0];
+    const topHTML = (primary ? posHTML(primary, true) : '') + (first ? badgeHTML(first, p.type !== 'company' && ids.length > 1) + opayHTML(first) : '');
+    if (topHTML) placeTop(topHTML, [posTip(primary), first ? tipFor(first) : ''].filter(Boolean).join('\n\n'));
     else top?.remove();
     if (box && box.dataset.id !== first) closeBox();
 
@@ -456,7 +466,7 @@
       const on = isEnabled() && id;
       cardLine(card, 'pay', 'Payments:', on ? badgeHTML(id, false) : '', on ? tipFor(id) : '');
       const c = on && cache.get(id);
-      cardLine(card, 'pos', 'POS:', on ? posHTML(id) : '', c && c.pos ? `Product(s): ${c.pos.join(', ')}` : '');
+      cardLine(card, 'pos', 'POS:', on ? posHTML(id) : '', on ? posTip(id) : '');
     });
   }
 
