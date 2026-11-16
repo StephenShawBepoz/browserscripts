@@ -12,6 +12,26 @@
    - Every **company card** in the sidebar gets a **Payments:** line too, so a ticket with two companies shows both.
 3. Hover the badge to see where it came from and the merchant ID.
 
+## POS on the company card
+
+Under **Payments:**, each company card also gets a **POS:** line from the company's *Product(s)* field, so you can tell straight away which POS a venue runs and where its ticket should go.
+
+<img src="../assets/screenshots/payments-pos-cards.png" width="360" alt="Company cards in a ticket's sidebar, each with a Payments line and a POS line: OrderMate in red, Bepoz in blue, Oolio POS in purple, SwiftPOS in orange, DeliverIT in green">
+<sub>Made-up example.</sub>
+
+| Pill | Product |
+|---|---|
+| Red **OrderMate** | OrderMate |
+| Purple **Oolio POS** | Oolio POS (HubSpot calls it *Oolio One*) |
+| Blue **Bepoz** | Bepoz |
+| Green **DeliverIT** | Deliverit |
+| Orange **SwiftPOS** | SwiftPOS |
+| Grey | Anything else, such as Idealpos |
+
+- A venue with two POS products gets two pills.
+- *Oolio Pay* isn't shown here, because the **Payments:** line covers it.
+- No **POS:** line means *Product(s)* is empty on that company.
+
 ## OPAY details
 
 A purple **OPAY** button sits next to the badge, for example **OPAY · 7 days $5,425 · MOTO 1**. Click it to open a box with:

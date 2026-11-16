@@ -23,6 +23,9 @@
 
 ## HubSpot: Payments badge
 
+### 1.3.0 (16/11/2026)
+- Each company card gets a **POS:** line under **Payments:**, from the company's *Product(s)*: red OrderMate, purple Oolio POS, blue Bepoz, green DeliverIT, orange SwiftPOS, grey for anything else. Oolio Pay is left out, because the Payments line covers it.
+
 ### 1.2.0 (22/10/2026)
 - New **OPAY** button next to the badge, for example *OPAY · 7 days $5,425 · MOTO 1*. Click it for the venue's merchant IDs (Advanced, Manage, WPay, Account holder), Pay and POS sales for the last 7 days, the last Pay sale date, and the MOTO terminal count and serials from its newest OPAY ticket, with a Copy button on each ID and serial.
 - Now also on contact and deal records, for their primary company.
@@ -107,6 +110,11 @@
 - First version, installed by hand.
 
 ## HubSpot: Company filters
+
+### 2.4.0 (16/11/2026)
+- **OrderMate** has its own chip in *Add existing Company*, so you can show or hide OrderMate venues on their own. It used to be part of **Other**.
+- If you had **Other** switched off, OrderMate starts off too, so nothing you see changes until you click it. *Other* now covers Deliverit, Fortis and the rest.
+- OrderMate pills are red, SwiftPOS orange and Deliverit green under each company, matching the POS colours in Payments badge.
 
 ### 2.3.0 (21/10/2026)
 - Shows as installed on the [HubSpot add-ons page](https://oolio-hubspot-addons.vercel.app). On that page it only says it's there; it doesn't run anything.

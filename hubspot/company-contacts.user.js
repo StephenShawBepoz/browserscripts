@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HubSpot: Company filters
 // @namespace    oolio-userscripts
-// @version      2.3.0
+// @version      2.4.0
 // @description  Add existing Contact lists only contacts at the ticket's or deal's companies. Add existing Company shows each company's products, owner and contacts, and filters by product and lifecycle stage. Both show 100 per page.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
@@ -462,11 +462,14 @@
       { value: 'Bepoz', label: 'Bepoz', bg: '#E3ECF7', fg: '#1B4F8A' },
       { value: 'Oolio POS', label: 'Oolio One', bg: '#F3EEF9', fg: '#673AB6' },
       { value: 'Oolio Pay', label: 'OolioPay', bg: '#E0F4F1', fg: '#0B7F73' },
-      { value: 'SwiftPOS', label: 'SwiftPOS', bg: '#F0F0F0', fg: '#555555' },
+      { value: 'OrderMate', label: 'OrderMate', bg: '#FDECEA', fg: '#B3261E' },
+      { value: 'SwiftPOS', label: 'SwiftPOS', bg: '#FFF0E3', fg: '#A84B00' },
       { value: 'Idealpos', label: 'Idealpos', bg: '#F0F0F0', fg: '#555555' },
     ];
     // Other values of the product property in this portal, so "Other" can be asked for by name
-    const OTHER_VALUES = ['Deliverit', 'OrderMate', 'Fortis', 'Captial', 'eBev'];
+    const OTHER_VALUES = ['Deliverit', 'Fortis', 'Captial', 'eBev'];
+    // Colours for products under "Other" that still get their own pill colour
+    const OTHER_PILLS = { Deliverit: { label: 'Deliverit', bg: '#E6F4EA', fg: '#1E7B34' } };
     const OTHER = '__other';
     const NONE = '__none';
     // Lifecycle stages, chosen in settings. Opportunity also has a chip after the products.
@@ -499,8 +502,9 @@
     /* ---------------- Your settings (saved in this browser) ---------------- */
     const STORE_KEY = 'oolio-company-search';
     const DEFAULTS = {
-      off: ['Idealpos', 'SwiftPOS', OTHER, OPP], // chips switched off: those companies are hidden
+      off: ['OrderMate', 'Idealpos', 'SwiftPOS', OTHER, OPP], // chips switched off: those companies are hidden
       oppStartsOff: true,                   // OPP has been switched off once for older saved settings
+      orderMateChip: true,                  // OrderMate moved out of Other: older settings were brought in line once
       showHidden: false,                    // show hidden companies faded instead
       pageSize: 100,                        // 10, 30 or 100. 0 leaves HubSpot's choice alone
       owner: true,
@@ -523,6 +527,12 @@
         if (Object.keys(saved).length && !saved.oppStartsOff) {
           s.oppStartsOff = true;
           if (!s.off.includes(OPP)) s.off = [...s.off, OPP];
+          try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) { /* private window */ }
+        }
+        // Settings saved before OrderMate had its own chip: it was part of Other, so it starts the way Other is
+        if (Object.keys(saved).length && !saved.orderMateChip) {
+          s.orderMateChip = true;
+          if (s.off.includes(OTHER) && !s.off.includes('OrderMate')) s.off = [...s.off, 'OrderMate'];
           try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) { /* private window */ }
         }
         return s;
@@ -1315,7 +1325,7 @@
       const prods = [...new Set(recs.flatMap(productsOf))];
       const pills = prods.length
         ? prods.map((v) => {
-          const d = productDef(v);
+          const d = productDef(v) || OTHER_PILLS[v];
           const style = d ? ` style="background:${d.bg};color:${d.fg}"` : '';
           return `<span class="ocp-pill${isOff(chipKey(v)) ? ' ocp-muted' : ''}"${style}>${esc(d ? d.label : v)}</span>`;
         }).join('')
@@ -1398,7 +1408,7 @@
 
     /* ---------------- Filter bar above the list ---------------- */
     const CHIPS = [...PRODUCTS.map((p) => ({ key: p.value, label: p.label })),
-      { key: OTHER, label: 'Other', title: 'Any other product, such as OrderMate or Deliverit' },
+      { key: OTHER, label: 'Other', title: 'Any other product, such as Deliverit or Fortis' },
       { key: NONE, label: 'No product', title: 'Companies with no product set' },
       { key: OPP, label: 'Opportunity', title: 'Companies whose lifecycle stage is Opportunity', divider: true }];
 
