@@ -41,7 +41,7 @@ The amber messages are the same as for *Add existing Contact*. In the browser co
 1. On a contact or ticket, go to the Companies card, click **Add** and pick **Add existing**.
 2. Each company shows its products, owner and contacts underneath, plus **Tickets** and **Open** (opens the company in a new tab). Click the contacts or **Tickets** link to list them right there. Each ticket shows its owner, pipeline and created date.
 3. The chips above the list choose which companies you see, and HubSpot only searches those, so the count and pages only include your companies. Click a chip to switch it on or off, and the script remembers your choice.
-   - **Products:** Idealpos, SwiftPOS and Other start switched off.
+   - **Products:** OrderMate, Idealpos, SwiftPOS and Other start switched off. OrderMate has its own chip; *Other* covers the rest, such as Deliverit and Fortis.
    - **Opportunity:** companies whose lifecycle stage is *Opportunity* start hidden. Click the chip to show them.
    - **Other lifecycle stages:** pick them in settings under **Companies: lifecycle stages to show**. The bar says how many are hidden.
 4. **Show** brings hidden companies back, faded. If a whole page is hidden, click **Next page** in the bar.

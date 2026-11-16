@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HubSpot: Payments badge
 // @namespace    oolio-userscripts
-// @version      1.2.0
-// @description  Shows whether a company pays through Adyen or WPay, plus its OPAY details (merchant IDs, last 7 days sales, MOTO terminal serials), on company, contact, deal and ticket records and Help Desk.
+// @version      1.3.0
+// @description  Shows whether a company pays through Adyen or WPay and which POS it runs, plus its OPAY details (merchant IDs, last 7 days sales, MOTO terminal serials), on company, contact, deal and ticket records and Help Desk.
 // @author       Stephen Shaw
 // @homepageURL  https://github.com/StephenShawBepoz/browserscripts
 // @updateURL    https://raw.githubusercontent.com/StephenShawBepoz/browserscripts/main/hubspot/payments-badge.user.js
@@ -40,7 +40,7 @@
   // The company fields the badge reads. "Acquirer - POS" decides; the merchant IDs fill in when it's blank.
   // The rest are for the OPAY details.
   const PROPS = ['name', 'acquirer', 'adyen_merchant_id___pos', 'balance___merchant_id___pos', 'adyen_account_holder_id', 'wpay___merchant_id___pos',
-    'sales_last_7_days', 'pos_sales_last_7_days', 'last_sales_date'];
+    'sales_last_7_days', 'pos_sales_last_7_days', 'last_sales_date', 'product'];
   // Merchant IDs (the "store ID"), in the order the OPAY details list them: Advanced / Manage / WPay Merchant ID - POS, Adyen Account Holder Id
   const MIDS = [
     ['balance___merchant_id___pos', 'Advanced MID'],
@@ -59,6 +59,18 @@
     WPay: { wpay: true, label: 'WPay' },
     'Adyen + WPay': { adyen: true, wpay: true, label: 'Adyen + WPay' },
   };
+
+  // The POS on the company card, from the company's "Product(s)" field (internal value -> label and colour).
+  // Oolio Pay is left out: the Payments line covers it. Any other product shows in grey.
+  const POS = {
+    OrderMate: { label: 'OrderMate', bg: '#D93025' },
+    'Oolio POS': { label: 'Oolio POS', bg: '#673AB6' }, // HubSpot calls it "Oolio One"
+    Bepoz: { label: 'Bepoz', bg: '#1D5FBF' },
+    Deliverit: { label: 'DeliverIT', bg: '#1E8E3E' },
+    SwiftPOS: { label: 'SwiftPOS', bg: '#E8710A' },
+  };
+  const NOT_POS = ['Oolio Pay'];
+  const OTHER_POS = '#5C6F82';
 
   // HubSpot's own markers (checked on company records, ticket records and Help Desk, October 2026)
   const HEADER_CONTACT = '[data-test-id="ticket-header-contact-detail-link"]'; // the contact's name in a Help Desk ticket title
@@ -205,7 +217,10 @@
   // companyId -> { at, name, pay, opay, moto } so moving between tickets of the same venue doesn't ask again
   // (moto is undefined until it's been read, null when there's no ticket with MOTO details)
   const cache = new Map();
-  const remember = (id, v) => cache.set(id, { at: Date.now(), name: clean(v.name) || `Company ${id}`, pay: classify(v), opay: opayFrom(v) });
+  const remember = (id, v) => cache.set(id, { at: Date.now(), name: clean(v.name) || `Company ${id}`, pay: classify(v), opay: opayFrom(v), pos: posFrom(v) });
+
+  // The POS products on the company, in the order HubSpot lists them
+  const posFrom = (v) => clean(v.product).split(';').map((x) => x.trim()).filter((x) => x && !NOT_POS.includes(x));
 
   // The OPAY details kept from the company: { mids: [[label, id]], pay7, pos7, lastSale } or null when there are none
   function opayFrom(v) {
@@ -269,6 +284,8 @@
       color: inherit; font-family: inherit; font-size: inherit; line-height: inherit; }
     .opb-line .opb { font-size: 11px; line-height: 16px; }
     .opb-line .opb-pill { padding: 0 7px; }
+    /* POS pills: filled, so the POS stands out when deciding where a ticket goes */
+    .opb-pill.opb-pos { border-color: transparent; color: #fff; font-weight: 700; }
     /* The OPAY details button and the box it opens */
     button.opb-pill.opb-opay { border-color: #673AB6; background: #F3EEFB; color: #45237F; font: inherit; cursor: pointer; }
     button.opb-pill.opb-opay:hover, button.opb-pill.opb-opay[aria-expanded="true"] { background: #E6DCF7; }
@@ -295,6 +312,15 @@
     const text = (k) => (k === 'other' ? pay.label : kinds.length > 1 ? (k === 'adyen' ? 'Adyen' : 'WPay') : pay.label);
     const name = withName ? `${esc(c.name)}: ` : '';
     return kinds.map((k, i) => `<span class="opb-pill opb-${k}${pay.guessed ? ' guessed' : ''}">${i ? '' : CARD}${i ? '' : name}${esc(text(k))}</span>`).join('');
+  }
+  // The company's POS: a filled pill per product
+  function posHTML(id) {
+    const c = cache.get(id);
+    if (!c || !c.pos || !c.pos.length) return '';
+    return c.pos.map((v) => {
+      const d = POS[v];
+      return `<span class="opb-pill opb-pos" style="background:${d ? d.bg : OTHER_POS}">${esc(d ? d.label : v)}</span>`;
+    }).join('');
   }
   // The OPAY button that follows the badge: "OPAY · 7 days $5,425 · 1 MOTO"
   const money = (n, dp = 0) => '$' + n.toLocaleString('en-AU', { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -421,23 +447,36 @@
     else top?.remove();
     if (box && box.dataset.id !== first) closeBox();
 
-    // Company cards in the sidebar (tickets, and other companies' cards on a company page)
+    // Company cards in the sidebar (tickets, and other companies' cards on a company page):
+    // a "Payments:" line, then a "POS:" line, under the card's other details
     document.querySelectorAll(COMPANY_TITLE).forEach((title) => {
       const card = title.closest('[data-test-id^="chicklet-"]');
       const id = card && (card.getAttribute('data-test-id').match(/^chicklet-(\d+)$/) || [])[1];
-      let line = card && card.querySelector('.opb-line');
-      const html = isEnabled() && id ? badgeHTML(id, false) : '';
-      if (!html) { line?.remove(); return; }
-      if (!line) {
-        // The card's list of details ("Company owner:" and so on); the card itself if it has none
-        const list = card.querySelector('[data-test-id^="formatted-property-"]')?.closest('ul');
-        line = document.createElement(list ? 'li' : 'div');
-        line.className = 'opb-line';
-        setHTML(line, 'Payments:<span class="opb"></span>');
-        (list || card).appendChild(line);
-      }
-      fill(line.querySelector('.opb'), html, tipFor(id));
+      if (!card) return;
+      const on = isEnabled() && id;
+      cardLine(card, 'pay', 'Payments:', on ? badgeHTML(id, false) : '', on ? tipFor(id) : '');
+      const c = on && cache.get(id);
+      cardLine(card, 'pos', 'POS:', on ? posHTML(id) : '', c && c.pos ? `Product(s): ${c.pos.join(', ')}` : '');
     });
+  }
+
+  // One line on a company card; removed when there's nothing to show
+  function cardLine(card, kind, label, html, tip) {
+    let line = card.querySelector(`.opb-line[data-kind="${kind}"]`);
+    if (!html) { line?.remove(); return; }
+    if (!line) {
+      // The card's list of details ("Company owner:" and so on); the card itself if it has none
+      const list = card.querySelector('[data-test-id^="formatted-property-"]')?.closest('ul');
+      line = document.createElement(list ? 'li' : 'div');
+      line.className = 'opb-line';
+      line.dataset.kind = kind;
+      setHTML(line, `${label}<span class="opb"></span>`);
+      const host = list || card;
+      // Payments always sits above POS, whichever arrives first
+      const pos = kind === 'pay' && host.querySelector(':scope > .opb-line[data-kind="pos"]');
+      if (pos) host.insertBefore(line, pos); else host.appendChild(line);
+    }
+    fill(line.querySelector('.opb'), html, tip);
   }
 
   // Company cards for companies the check didn't cover (e.g. "Associated companies" on a company page)
